@@ -6,12 +6,20 @@ namespace Fluence.Desktop.ViewModels;
 
 public sealed class DocumentTabViewModel
 {
-    public DocumentTabViewModel(string path, string displayName, bool isActive, bool isDirty, Action<string> activate, Action<string> close)
+    public DocumentTabViewModel(
+        string path,
+        string displayName,
+        bool isActive,
+        bool isDirty,
+        bool isTool,
+        Action<string> activate,
+        Action<string> close)
     {
         Path = path;
         DisplayName = displayName;
         IsActive = isActive;
         IsDirty = isDirty;
+        IsTool = isTool;
         ActivateCommand = new RelayCommand(() => activate(Path));
         CloseCommand = new RelayCommand(() => close(Path));
     }
@@ -23,6 +31,8 @@ public sealed class DocumentTabViewModel
     public bool IsActive { get; }
 
     public bool IsDirty { get; }
+
+    public bool IsTool { get; }
 
     public string DisplayTitle => IsDirty ? $"{DisplayName} *" : DisplayName;
 

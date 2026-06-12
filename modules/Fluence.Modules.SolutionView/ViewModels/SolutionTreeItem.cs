@@ -27,6 +27,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
         ICommand? deleteCommand = null,
         ICommand? loadSolutionCommand = null,
         ICommand? closeSolutionCommand = null,
+        ICommand? manageNuGetPackagesCommand = null,
         ICommand? buildCommand = null,
         ICommand? restoreCommand = null,
         ICommand? cleanCommand = null,
@@ -49,6 +50,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
         DeleteCommand = deleteCommand;
         LoadSolutionCommand = loadSolutionCommand;
         CloseSolutionCommand = closeSolutionCommand;
+        ManageNuGetPackagesCommand = manageNuGetPackagesCommand;
         BuildCommand = buildCommand;
         RestoreCommand = restoreCommand;
         CleanCommand = cleanCommand;
@@ -75,6 +77,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public ICommand? DeleteCommand { get; set; }
     public ICommand? LoadSolutionCommand { get; set; }
     public ICommand? CloseSolutionCommand { get; set; }
+    public ICommand? ManageNuGetPackagesCommand { get; }
     public ICommand? BuildCommand { get; }
     public ICommand? RestoreCommand { get; }
     public ICommand? CleanCommand { get; }
@@ -94,12 +97,14 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public bool HasDeleteCommand => DeleteCommand is not null;
     public bool HasLoadSolutionCommand => LoadSolutionCommand is not null;
     public bool HasCloseSolutionCommand => CloseSolutionCommand is not null;
+    public bool HasManageNuGetPackagesCommand => ManageNuGetPackagesCommand is not null;
     public bool HasContextMenu => HasOpenCommand ||
                                   HasCopyCommand ||
                                   HasPasteCommand ||
                                   HasDeleteCommand ||
                                   HasLoadSolutionCommand ||
                                   HasCloseSolutionCommand ||
+                                  HasManageNuGetPackagesCommand ||
                                   HasAdvancedCommands;
     public bool HasAdvancedCommands => HasBuildCommand ||
                                        HasRestoreCommand ||

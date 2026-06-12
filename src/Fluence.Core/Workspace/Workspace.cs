@@ -42,9 +42,25 @@ public sealed class Workspace
         CurrentFilePath = TabSession.ActiveDocument?.Path;
     }
 
+    public void OpenToolTab(string id, string displayName, object contentViewModel)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        ArgumentNullException.ThrowIfNull(contentViewModel);
+
+        var document = OpenDocument.FromTool(id, displayName, contentViewModel);
+        TabSession = TabSession.AddOrActivate(document);
+        CurrentFilePath = TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument
+            ? TabSession.ActiveDocument.Path
+            : null;
+    }
+
     public void UpdateActiveDocumentContent(string content)
     {
-        TabSession.ActiveDocument?.UpdateContent(content);
+        if (TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument)
+        {
+            TabSession.ActiveDocument.UpdateContent(content);
+        }
     }
 
     public void MarkActiveDocumentSaved()
@@ -84,13 +100,17 @@ public sealed class Workspace
     public void ActivateDocument(string path)
     {
         TabSession = TabSession.Activate(path);
-        CurrentFilePath = TabSession.ActiveDocument?.Path;
+        CurrentFilePath = TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument
+            ? TabSession.ActiveDocument.Path
+            : null;
     }
 
     public void CloseDocument(string path)
     {
         TabSession = TabSession.Close(path);
-        CurrentFilePath = TabSession.ActiveDocument?.Path;
+        CurrentFilePath = TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument
+            ? TabSession.ActiveDocument.Path
+            : null;
 
         if (Mode == WorkspaceMode.FileOnly && TabSession.ActiveDocument is null)
         {

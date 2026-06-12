@@ -13,6 +13,7 @@ using Fluence.Infrastructure.Pty;
 using Fluence.Modules.DotnetCli;
 using Fluence.Modules.Editor;
 using Fluence.Modules.FileExplorer;
+using Fluence.Modules.NuGetExplorer;
 using Fluence.Modules.SolutionView;
 using Fluence.Modules.Terminal;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +54,7 @@ internal static class Bootstrapper
             new FileExplorerModule(),
             new SolutionViewModule(),
             new EditorModule(),
+            new NuGetExplorerModule(),
             new TerminalModule(),
             new DotnetCliModule(),
         };

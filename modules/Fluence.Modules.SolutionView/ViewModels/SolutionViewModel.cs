@@ -148,6 +148,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
             CreateDeleteCommand(node),
             CreateLoadSolutionCommand(node),
             CreateCloseSolutionCommand(node),
+            CreateManageNuGetPackagesCommand(node),
             CreateBuildCommand(node),
             CreateRestoreCommand(node),
             CreateCleanCommand(node),
@@ -207,6 +208,21 @@ public sealed partial class SolutionViewModel : ViewModelBase
         node.Kind == SolutionTreeNodeKind.Solution && node.Path is not null
             ? new RelayCommand(() => CloseSolution(node.Path))
             : null;
+
+    private ICommand? CreateManageNuGetPackagesCommand(SolutionTreeNode node)
+    {
+        var solutionPath = node.Kind switch
+        {
+            SolutionTreeNodeKind.Solution when node.Path is not null => node.Path,
+            SolutionTreeNodeKind.Project when node.Path is not null => _workspace.Current.CurrentSolutionPath,
+            SolutionTreeNodeKind.File when node.Path is not null && IsProjectPath(node.Path) => _workspace.Current.CurrentSolutionPath,
+            _ => null,
+        };
+
+        return string.IsNullOrWhiteSpace(solutionPath)
+            ? null
+            : new RelayCommand(() => _eventBus.Publish(new ManageNuGetPackagesRequestedEvent(solutionPath)));
+    }
 
     private ICommand? CreateBuildCommand(SolutionTreeNode node) => node.Kind switch
     {
@@ -331,6 +347,9 @@ public sealed partial class SolutionViewModel : ViewModelBase
         string.Equals(Path.GetExtension(path), ".sln", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(Path.GetExtension(path), ".slnx", StringComparison.OrdinalIgnoreCase);
 
+    private static bool IsProjectPath(string path) =>
+        Path.GetExtension(path).EndsWith("proj", StringComparison.OrdinalIgnoreCase);
+
     private async Task AddProjectReferenceAsync(string projectPath, CancellationToken cancellationToken)
     {
         if (_loadedSnapshot is null) return;
@@ -378,7 +397,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
         }
     }
 
-    private Task ReloadCurrentSolutionAsync()
+    public Task ReloadCurrentSolutionAsync()
     {
         var solutionPath = _workspace.Current.CurrentSolutionPath;
         if (string.IsNullOrWhiteSpace(solutionPath))

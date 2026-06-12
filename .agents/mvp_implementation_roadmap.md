@@ -411,6 +411,11 @@ Project System básico:
 - [x] Show startup project indicator in Solution View
 - [x] Run uses startup project in solution mode when selected
 
+NuGet Explorer follow-up:
+
+- [ ] Support private package sources / private feeds
+- [ ] Support `Directory.Packages.props` / Central Package Management
+
 Important:
 
 Solution View is NOT File Explorer.
@@ -655,6 +660,8 @@ Always remember:
 - [ ] Post-MVP: add `Microsoft.Build` for safe `.csproj` inspection/editing
 - [ ] Post-MVP: evaluate `Buildalyzer.Workspaces` as the first Roslyn workspace bridge
 - [ ] Post-MVP: evaluate `Microsoft.CodeAnalysis.Workspaces.MSBuild` if Buildalyzer workspace integration is not enough
+- [ ] NuGet Explorer: support private package sources / private feeds
+- [ ] NuGet Explorer: support `Directory.Packages.props` / Central Package Management
 
 ## Terminal
 

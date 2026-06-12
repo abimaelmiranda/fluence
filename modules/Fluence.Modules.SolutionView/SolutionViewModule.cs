@@ -32,6 +32,7 @@ public sealed class SolutionViewModule : IIdeModule
     public void Initialize(IModuleHost host)
     {
         host.Events.Subscribe<OpenSolutionRequestedEvent>(e => _ = OpenSolutionAsync(host, e.Path));
+        host.Events.Subscribe<RefreshSolutionViewRequestedEvent>(_event => { _ = RefreshSolutionViewAsync(host); });
         host.Workspace.Changed += (_, _) => UpdateSidebar(host);
         UpdateSidebar(host);
         host.SetModuleState(Name, ModuleState.Active);
@@ -56,5 +57,10 @@ public sealed class SolutionViewModule : IIdeModule
     {
         var handler = host.Services.GetRequiredService<ICommandHandler<OpenSolutionWorkspaceCommand>>();
         await handler.HandleAsync(new OpenSolutionWorkspaceCommand(path));
+    }
+
+    private static Task RefreshSolutionViewAsync(IModuleHost host)
+    {
+        return host.Services.GetRequiredService<SolutionViewModel>().ReloadCurrentSolutionAsync();
     }
 }

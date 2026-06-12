@@ -13,7 +13,7 @@ public sealed class SaveActiveDocumentCommandHandler(IWorkspaceContext workspace
         cancellationToken.ThrowIfCancellationRequested();
 
         var document = workspace.Current.TabSession.ActiveDocument;
-        if (document is null)
+        if (document is null || document.Kind != OpenDocumentKind.TextDocument)
         {
             return;
         }

@@ -1,0 +1,215 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.NuGetExplorer.ViewModels"
+             xmlns:models="using:Fluence.Modules.NuGetExplorer"
+             x:Class="Fluence.Modules.NuGetExplorer.Views.NuGetExplorerView"
+             x:DataType="vm:NuGetExplorerViewModel"
+             Background="{StaticResource FluenceBrushShell}">
+
+    <Grid RowDefinitions="Auto,*" Margin="10" RowSpacing="8">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0"
+                       Text="NuGet Package Manager"
+                       FontFamily="{StaticResource FluenceFontFamily}"
+                       FontSize="{StaticResource FluenceFontSizeTitle}"
+                       Foreground="{StaticResource FluenceBrushTextPrimary}"
+                       VerticalAlignment="Center"/>
+            <CheckBox Grid.Column="1"
+                      Content="Include prerelease"
+                      IsChecked="{Binding IncludePrerelease}"
+                      FontFamily="{StaticResource FluenceFontFamily}"
+                      Foreground="{StaticResource FluenceBrushTextSecondary}"
+                      VerticalAlignment="Center"/>
+            <Button Grid.Column="2"
+                    Content="Refresh"
+                    Command="{Binding RefreshCommand}"/>
+        </Grid>
+
+        <TabControl Grid.Row="1">
+            <TabItem Header="Browse">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8" Margin="0,8,0,0">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBox x:Name="SearchTextBox"
+                                 Grid.Column="0"
+                                 PlaceholderText="Search nuget.org"
+                                 Text="{Binding SearchQuery}"/>
+                        <Button Grid.Column="1"
+                                Content="Search"
+                                Command="{Binding SearchCommand}"/>
+                    </Grid>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="2*,3*" ColumnSpacing="8">
+                        <Border Grid.Column="0"
+                                BorderBrush="{StaticResource FluenceBrushBorder}"
+                                BorderThickness="1">
+                            <ListBox ItemsSource="{Binding BrowseResults}"
+                                     SelectedItem="{Binding SelectedBrowsePackage}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:NuGetPackageSearchItem">
+                                        <Grid ColumnDefinitions="32,*" ColumnSpacing="8" Margin="6,4">
+                                            <Border Grid.Column="0"
+                                                    Width="28"
+                                                    Height="28"
+                                                    CornerRadius="4"
+                                                    Background="{StaticResource FluenceBrushSurface}"
+                                                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                                                    BorderThickness="1">
+                                                <Grid>
+                                                    <TextBlock Text="📦"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                                                    <Image Source="{Binding Icon}"
+                                                           Width="24"
+                                                           Height="24"
+                                                           Stretch="Uniform"
+                                                           IsVisible="{Binding HasIcon}"/>
+                                                </Grid>
+                                            </Border>
+                                            <Grid Grid.Column="1" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+                                                <TextBlock Grid.Row="0"
+                                                           Grid.Column="0"
+                                                           Text="{Binding Id}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                                                <TextBlock Grid.Row="0"
+                                                           Grid.Column="1"
+                                                           Text="{Binding Version}"
+                                                           Margin="8,0,0,0"
+                                                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                <TextBlock Grid.Row="1"
+                                                           Grid.ColumnSpan="2"
+                                                           Text="{Binding Description}"
+                                                           MaxLines="1"
+                                                           TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                            </Grid>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+
+                        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
+                            <TextBlock Text="{Binding SelectedBrowsePackageTitle}"
+                                       FontSize="{StaticResource FluenceFontSizeTitle}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                            <ComboBox Grid.Row="1"
+                                      PlaceholderText="Select version"
+                                      ItemsSource="{Binding AvailableVersions}"
+                                      SelectedItem="{Binding SelectedVersion}"
+                                      MaxDropDownHeight="260"
+                                      MaxWidth="240"
+                                      HorizontalAlignment="Left"/>
+                            <Border Grid.Row="2"
+                                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                                    BorderThickness="1">
+                                <ScrollViewer>
+                                    <ItemsControl ItemsSource="{Binding TargetProjects}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:NuGetProjectSelection">
+                                                <CheckBox Content="{Binding Name}"
+                                                          IsChecked="{Binding IsSelected}"
+                                                          Margin="6,2"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                            <Button Grid.Row="3"
+                                    Content="Install"
+                                    Command="{Binding InstallSelectedPackageCommand}"
+                                    IsEnabled="{Binding CanModifyPackages}"
+                                    HorizontalAlignment="Right"/>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Installed">
+                <Grid RowDefinitions="*,Auto" RowSpacing="8" Margin="0,8,0,0">
+                    <Border Grid.Row="0"
+                            BorderBrush="{StaticResource FluenceBrushBorder}"
+                            BorderThickness="1">
+                        <Grid RowDefinitions="Auto,*">
+                            <Grid Grid.Row="0"
+                                  ColumnDefinitions="2*,*,*"
+                                  Margin="6,4">
+                                <TextBlock Grid.Column="0" Text="Package" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="1" Text="Version" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="2" Text="Project" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding InstalledPackages}"
+                                     SelectedItem="{Binding SelectedInstalledPackage}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:NuGetInstalledPackage">
+                                        <Grid ColumnDefinitions="2*,*,*" Margin="6,4">
+                                            <TextBlock Grid.Column="0" Text="{Binding Id}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Version}"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding ProjectName}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+                    <Button Grid.Row="1"
+                            Content="Remove selected"
+                            Command="{Binding RemoveSelectedPackageCommand}"
+                            IsEnabled="{Binding CanModifyPackages}"
+                            HorizontalAlignment="Right"/>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Updates">
+                <Grid RowDefinitions="*,Auto" RowSpacing="8" Margin="0,8,0,0">
+                    <Border Grid.Row="0"
+                            BorderBrush="{StaticResource FluenceBrushBorder}"
+                            BorderThickness="1">
+                        <Grid RowDefinitions="Auto,*">
+                            <Grid Grid.Row="0"
+                                  ColumnDefinitions="2*,*,*"
+                                  Margin="6,4">
+                                <TextBlock Grid.Column="0" Text="Package" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="1" Text="Latest" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="2" Text="Affected projects" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding UpdateCandidates}"
+                                     SelectedItem="{Binding SelectedUpdate}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:NuGetPackageUpdate">
+                                        <Grid ColumnDefinitions="2*,*,*" Margin="6,4">
+                                            <TextBlock Grid.Column="0" Text="{Binding Id}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding LatestVersion}"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding ProjectCountLabel}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+                    <Button Grid.Row="1"
+                            Content="Update selected"
+                            Command="{Binding UpdateSelectedPackageCommand}"
+                            IsEnabled="{Binding CanModifyPackages}"
+                            HorizontalAlignment="Right"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="1"
+                Background="{StaticResource FluenceBrushSurface}"
+                Padding="8"
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Left"
+                IsVisible="{Binding HasStatusMessage}">
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+        </Border>
+    </Grid>
+</UserControl>

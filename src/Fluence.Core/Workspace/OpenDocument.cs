@@ -5,16 +5,27 @@ namespace Fluence.Core.Workspace;
 
 public sealed class OpenDocument
 {
-    private OpenDocument(string path, string displayName, string content)
+    private OpenDocument(
+        string path,
+        string displayName,
+        string content,
+        OpenDocumentKind kind,
+        object? contentViewModel)
     {
         Path = path;
         DisplayName = displayName;
         Content = content;
+        Kind = kind;
+        ContentViewModel = contentViewModel;
     }
 
     public string Path { get; }
 
     public string DisplayName { get; }
+
+    public OpenDocumentKind Kind { get; }
+
+    public object? ContentViewModel { get; }
 
     public string Content { get; private set; }
 
@@ -46,6 +57,15 @@ public sealed class OpenDocument
             displayName = path;
         }
 
-        return new OpenDocument(path, displayName, content);
+        return new OpenDocument(path, displayName, content, OpenDocumentKind.TextDocument, null);
+    }
+
+    public static OpenDocument FromTool(string id, string displayName, object contentViewModel)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        ArgumentNullException.ThrowIfNull(contentViewModel);
+
+        return new OpenDocument(id, displayName, string.Empty, OpenDocumentKind.Tool, contentViewModel);
     }
 }

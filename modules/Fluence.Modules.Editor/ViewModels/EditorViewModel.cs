@@ -24,13 +24,15 @@ public sealed partial class EditorViewModel : ViewModelBase
         _workspace.Changed += OnWorkspaceChanged;
     }
 
-    public bool HasActiveDocument => _workspace.Current.TabSession.ActiveDocument is not null;
+    public bool HasActiveDocument => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument;
 
-    public string? ActiveDocumentPath => _workspace.Current.TabSession.ActiveDocument?.Path;
+    public string? ActiveDocumentPath => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument
+        ? _workspace.Current.TabSession.ActiveDocument.Path
+        : null;
 
     public async Task SaveIfDirtyAsync()
     {
-        if (_workspace.Current.TabSession.ActiveDocument?.IsDirty == true)
+        if (_workspace.Current.TabSession.ActiveDocument is { Kind: OpenDocumentKind.TextDocument, IsDirty: true })
             await _saveHandler.HandleAsync(new SaveActiveDocumentCommand());
     }
 
@@ -45,7 +47,9 @@ public sealed partial class EditorViewModel : ViewModelBase
     private void RefreshFromWorkspace()
     {
         _isRefreshingFromWorkspace = true;
-        ActiveText = _workspace.Current.TabSession.ActiveDocument?.Content ?? string.Empty;
+        ActiveText = _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument
+            ? _workspace.Current.TabSession.ActiveDocument.Content
+            : string.Empty;
         _isRefreshingFromWorkspace = false;
         OnPropertyChanged(nameof(HasActiveDocument));
         OnPropertyChanged(nameof(ActiveDocumentPath));
