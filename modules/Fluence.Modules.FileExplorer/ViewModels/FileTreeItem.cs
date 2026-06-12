@@ -1,15 +1,22 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Fluence.Modules.FileExplorer.ViewModels;
 
 public sealed partial class FileTreeItem : ObservableObject
 {
-    private static readonly FileTreeItem LoadingPlaceholder = new("Loading...", string.Empty, false);
+    private static readonly FileTreeItem LoadingPlaceholder = new(
+        "Loading...",
+        string.Empty,
+        false,
+        static _ => throw new InvalidOperationException(),
+        static _ => throw new InvalidOperationException());
 
-    private Action<FileTreeItem>? _onFileActivated;
+    private readonly Func<string, FileTreeItem> _createFileItem;
+    private readonly Func<string, FileTreeItem> _createDirectoryItem;
 
     [ObservableProperty]
     private bool _isExpanded;
@@ -17,11 +24,18 @@ public sealed partial class FileTreeItem : ObservableObject
     [ObservableProperty]
     private bool _isActive;
 
-    private FileTreeItem(string name, string path, bool isDirectory)
+    public FileTreeItem(
+        string name,
+        string path,
+        bool isDirectory,
+        Func<string, FileTreeItem> createFileItem,
+        Func<string, FileTreeItem> createDirectoryItem)
     {
         Name = name;
         Path = path;
         IsDirectory = isDirectory;
+        _createFileItem = createFileItem;
+        _createDirectoryItem = createDirectoryItem;
         Children = [];
     }
 
@@ -29,21 +43,35 @@ public sealed partial class FileTreeItem : ObservableObject
     public string Path { get; }
     public bool IsDirectory { get; }
     public ObservableCollection<FileTreeItem> Children { get; }
+    public ICommand? OpenCommand { get; set; }
+    public ICommand? CopyCommand { get; set; }
+    public ICommand? PasteCommand { get; set; }
+    public ICommand? DeleteCommand { get; set; }
+    public ICommand? LoadSolutionCommand { get; set; }
 
-    public static FileTreeItem CreateFile(string path, Action<FileTreeItem> onFileActivated)
+    public bool HasOpenCommand => OpenCommand is not null;
+    public bool HasCopyCommand => CopyCommand is not null;
+    public bool HasPasteCommand => PasteCommand is not null;
+    public bool HasDeleteCommand => DeleteCommand is not null;
+    public bool HasLoadSolutionCommand => LoadSolutionCommand is not null;
+    public bool HasContextMenu => HasOpenCommand || HasCopyCommand || HasPasteCommand || HasDeleteCommand || HasLoadSolutionCommand;
+    public bool IsSolutionFile => string.Equals(System.IO.Path.GetExtension(Path), ".sln", StringComparison.OrdinalIgnoreCase) ||
+                                  string.Equals(System.IO.Path.GetExtension(Path), ".slnx", StringComparison.OrdinalIgnoreCase);
+
+    public static FileTreeItem CreateFile(
+        string path,
+        Func<string, FileTreeItem> createFileItem,
+        Func<string, FileTreeItem> createDirectoryItem)
     {
-        return new FileTreeItem(System.IO.Path.GetFileName(path), path, false)
-        {
-            _onFileActivated = onFileActivated
-        };
+        return new FileTreeItem(System.IO.Path.GetFileName(path), path, false, createFileItem, createDirectoryItem);
     }
 
-    public static FileTreeItem CreateDirectory(string path, Action<FileTreeItem> onFileActivated)
+    public static FileTreeItem CreateDirectory(
+        string path,
+        Func<string, FileTreeItem> createFileItem,
+        Func<string, FileTreeItem> createDirectoryItem)
     {
-        var item = new FileTreeItem(System.IO.Path.GetFileName(path), path, true)
-        {
-            _onFileActivated = onFileActivated
-        };
+        var item = new FileTreeItem(System.IO.Path.GetFileName(path), path, true, createFileItem, createDirectoryItem);
         item.Children.Add(LoadingPlaceholder);
         return item;
     }
@@ -64,10 +92,10 @@ public sealed partial class FileTreeItem : ObservableObject
         try
         {
             foreach (var dir in Directory.GetDirectories(Path))
-                Children.Add(CreateDirectory(dir, _onFileActivated!));
+                Children.Add(_createDirectoryItem(dir));
 
             foreach (var file in Directory.GetFiles(Path))
-                Children.Add(CreateFile(file, _onFileActivated!));
+                Children.Add(_createFileItem(file));
         }
         catch (UnauthorizedAccessException) { }
         catch (IOException) { }
@@ -75,7 +103,6 @@ public sealed partial class FileTreeItem : ObservableObject
 
     public void Activate()
     {
-        if (!IsDirectory)
-            _onFileActivated?.Invoke(this);
+        OpenCommand?.Execute(null);
     }
 }

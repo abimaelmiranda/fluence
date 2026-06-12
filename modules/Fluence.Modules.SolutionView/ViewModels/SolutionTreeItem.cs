@@ -21,6 +21,12 @@ public sealed partial class SolutionTreeItem : ObservableObject
         string name,
         string? path,
         Action<SolutionTreeItem>? activate,
+        ICommand? openCommand = null,
+        ICommand? copyCommand = null,
+        ICommand? pasteCommand = null,
+        ICommand? deleteCommand = null,
+        ICommand? loadSolutionCommand = null,
+        ICommand? closeSolutionCommand = null,
         ICommand? buildCommand = null,
         ICommand? restoreCommand = null,
         ICommand? cleanCommand = null,
@@ -37,6 +43,12 @@ public sealed partial class SolutionTreeItem : ObservableObject
         Name = name;
         Path = path;
         _activate = activate;
+        OpenCommand = openCommand;
+        CopyCommand = copyCommand;
+        PasteCommand = pasteCommand;
+        DeleteCommand = deleteCommand;
+        LoadSolutionCommand = loadSolutionCommand;
+        CloseSolutionCommand = closeSolutionCommand;
         BuildCommand = buildCommand;
         RestoreCommand = restoreCommand;
         CleanCommand = cleanCommand;
@@ -57,6 +69,12 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public string? ReferencedProjectPath { get; }
     public bool IsResolved { get; }
     public ObservableCollection<SolutionTreeItem> Children { get; } = [];
+    public ICommand? OpenCommand { get; set; }
+    public ICommand? CopyCommand { get; set; }
+    public ICommand? PasteCommand { get; set; }
+    public ICommand? DeleteCommand { get; set; }
+    public ICommand? LoadSolutionCommand { get; set; }
+    public ICommand? CloseSolutionCommand { get; set; }
     public ICommand? BuildCommand { get; }
     public ICommand? RestoreCommand { get; }
     public ICommand? CleanCommand { get; }
@@ -70,6 +88,27 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public bool IsProject => Kind == SolutionTreeNodeKind.Project;
     public bool IsSolution => Kind == SolutionTreeNodeKind.Solution;
     public bool IsProjectReference => Kind == SolutionTreeNodeKind.ProjectReference;
+    public bool HasOpenCommand => OpenCommand is not null;
+    public bool HasCopyCommand => CopyCommand is not null;
+    public bool HasPasteCommand => PasteCommand is not null;
+    public bool HasDeleteCommand => DeleteCommand is not null;
+    public bool HasLoadSolutionCommand => LoadSolutionCommand is not null;
+    public bool HasCloseSolutionCommand => CloseSolutionCommand is not null;
+    public bool HasContextMenu => HasOpenCommand ||
+                                  HasCopyCommand ||
+                                  HasPasteCommand ||
+                                  HasDeleteCommand ||
+                                  HasLoadSolutionCommand ||
+                                  HasCloseSolutionCommand ||
+                                  HasAdvancedCommands;
+    public bool HasAdvancedCommands => HasBuildCommand ||
+                                       HasRestoreCommand ||
+                                       HasCleanCommand ||
+                                       HasRunCommand ||
+                                       HasTestCommand ||
+                                       HasSetStartupProjectCommand ||
+                                       HasAddProjectReferenceCommand ||
+                                       HasRemoveProjectReferenceCommand;
     public bool HasBuildCommand => BuildCommand is not null;
     public bool HasRestoreCommand => RestoreCommand is not null;
     public bool HasCleanCommand => CleanCommand is not null;

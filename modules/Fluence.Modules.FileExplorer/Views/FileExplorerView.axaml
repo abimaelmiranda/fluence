@@ -18,6 +18,36 @@
                 <Setter Property="Padding" Value="0"/>
                 <Setter Property="Margin" Value="0"/>
                 <Setter Property="FontSize" Value="{StaticResource FluenceFontSizeSmall}"/>
+                <Setter Property="ContextMenu">
+                    <Setter.Value>
+                        <ContextMenu x:CompileBindings="False"
+                                             IsVisible="{Binding HasContextMenu}">
+                            <MenuItem Header="Open"
+                                      Command="{Binding OpenCommand}"
+                                      IsVisible="{Binding HasOpenCommand}"/>
+                            <MenuItem Header="Load Solution"
+                                      Command="{Binding LoadSolutionCommand}"
+                                      IsVisible="{Binding HasLoadSolutionCommand}"/>
+                            <MenuItem Header="Copy"
+                                      Command="{Binding CopyCommand}"
+                                      IsVisible="{Binding HasCopyCommand}"/>
+                            <MenuItem Header="Paste"
+                                      Command="{Binding PasteCommand}"
+                                      IsVisible="{Binding HasPasteCommand}"/>
+                            <MenuItem Header="Delete"
+                                      Command="{Binding DeleteCommand}"
+                                      IsVisible="{Binding HasDeleteCommand}"/>
+                        </ContextMenu>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style Selector="ContextMenu">
+                <Setter Property="FontFamily" Value="{StaticResource FluenceFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FluenceFontSizeSmall}"/>
+            </Style>
+            <Style Selector="ContextMenu MenuItem">
+                <Setter Property="MinHeight" Value="24"/>
+                <Setter Property="Padding" Value="10,2"/>
             </Style>
         </TreeView.Styles>
         <TreeView.ItemTemplate>
