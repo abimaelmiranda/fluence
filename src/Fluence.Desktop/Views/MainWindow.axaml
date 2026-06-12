@@ -1,0 +1,176 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Fluence.Desktop.ViewModels"
+        xmlns:views="using:Fluence.Desktop.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="760"
+        x:Class="Fluence.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Fluence IDE"
+        MinWidth="920"
+        MinHeight="620"
+        Background="{StaticResource FluenceBrushShell}">
+
+    <Design.DataContext>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="*,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <Border Grid.Column="0"
+                    Background="{StaticResource FluenceBrushShell}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="0,0,1,0">
+                <ContentControl Content="{Binding Welcome}"
+                                IsVisible="{Binding IsWelcomeVisible}"/>
+            </Border>
+
+            <Border Grid.Column="0"
+                    Background="{StaticResource FluenceBrushShell}"
+                    IsVisible="{Binding IsWorkspaceVisible}">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0"
+                            Height="38"
+                            Background="{StaticResource FluenceBrushSurface}"
+                            BorderBrush="{StaticResource FluenceBrushBorder}"
+                            BorderThickness="0,0,0,1"
+                            IsVisible="{Binding HasActiveDocument}">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding OpenDocuments}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DocumentTabViewModel">
+                                        <Border MinWidth="160"
+                                                MaxWidth="260"
+                                                Height="38"
+                                                Padding="6,0,8,0"
+                                                Background="{StaticResource FluenceBrushShell}"
+                                                BorderBrush="{StaticResource FluenceBrushBorder}"
+                                                BorderThickness="0,0,1,0">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                                <Button Grid.Column="0"
+                                                        Command="{Binding ActivateCommand}"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Padding="8,0"
+                                                        HorizontalAlignment="Stretch"
+                                                        HorizontalContentAlignment="Stretch"
+                                                        ToolTip.Tip="{Binding Path}">
+                                                    <TextBlock Text="{Binding DisplayTitle}"
+                                                               FontFamily="{StaticResource FluenceFontFamily}"
+                                                               FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                               Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center"/>
+                                                </Button>
+                                                <Button Grid.Column="1"
+                                                        Content="X"
+                                                        Command="{Binding CloseCommand}"
+                                                        Width="24"
+                                                        Height="24"
+                                                        Padding="0"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                        FontFamily="{StaticResource FluenceFontFamily}"
+                                                        FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                        ToolTip.Tip="Close tab"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <ContentControl
+                                        Content="{Binding Editor}"
+                                        IsVisible="{Binding HasActiveDocument}"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"/>
+                        <TextBlock
+                                   Text="{Binding EditorPlaceholder}"
+                                   IsVisible="{Binding HasNoActiveDocument}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeTitle}"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Width="300"
+                    Background="{StaticResource FluenceBrushSurface}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="1,0,0,0"
+                    IsVisible="{Binding IsSidebarVisible}">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0"
+                            Padding="12,8"
+                            BorderBrush="{StaticResource FluenceBrushBorder}"
+                            BorderThickness="0,0,0,1">
+                        <TextBlock Text="{Binding SidebarPlaceholder}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1"
+                                  IsVisible="{Binding IsFolderMode}"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto">
+                        <views:FileExplorerView DataContext="{Binding FileExplorer}"/>
+                    </ScrollViewer>
+
+                    <ScrollViewer Grid.Row="1"
+                                  IsVisible="{Binding IsSolutionMode}"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto">
+                        <views:SolutionView DataContext="{Binding Solution}"/>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Background="{StaticResource FluenceBrushSurfaceElevated}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="0,1,0,0">
+            <StackPanel>
+                <Button Command="{Binding ToggleTerminalCommand}"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch">
+                    <Grid Height="36" ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="Terminal"
+                                   Margin="16,0"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeBody}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Button>
+                <Border Height="160"
+                        IsVisible="{Binding IsTerminalExpanded}">
+                    <views:TerminalView DataContext="{Binding Terminal}"/>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Grid>
+
+</Window>
