@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Fluence.Core.Infrastructure;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Workspace;
-using XTerm.Events;
 using XTerm.Options;
 using XTerminal = global::XTerm.Terminal;
 
@@ -35,7 +34,12 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
 
         _terminalService.DataReceived += OnDataReceived;
         _terminalService.Cleared += OnCleared;
-        _xterm.DataReceived += OnXTermDataReceived;
+        // NOTE: _xterm.DataReceived (terminal → PTY feedback) is intentionally NOT wired here.
+        // XTerm.NET fires DataReceived during _xterm.Write() to answer device-attribute queries
+        // embedded in the shell's startup output. Feeding those responses back to the PTY stdin
+        // before zsh's zle is ready causes "can't open input file" errors. Basic interactive use
+        // and Claude Code work without this bridge; re-enable with proper startup gating if
+        // cursor-position queries become necessary for specific TUI apps.
     }
 
     public async Task StartShellAsync(string? workingDirectory = null)
@@ -71,10 +75,9 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
         _xterm.Clear();
     }
 
-    private async void OnXTermDataReceived(object? sender, TerminalEvents.DataEventArgs e)
+    public void WriteError(string message)
     {
-        if (!string.IsNullOrEmpty(e.Data))
-            await _terminalService.SendInputAsync(e.Data);
+        _xterm.Write($"\x1b[31m{message}\x1b[0m");
     }
 
     private string? GetWorkingDirectory()
@@ -90,7 +93,6 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
     {
         _terminalService.DataReceived -= OnDataReceived;
         _terminalService.Cleared -= OnCleared;
-        _xterm.DataReceived -= OnXTermDataReceived;
         _xterm.Dispose();
     }
 }
