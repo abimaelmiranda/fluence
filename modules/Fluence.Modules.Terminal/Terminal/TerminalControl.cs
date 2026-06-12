@@ -31,6 +31,10 @@ public sealed class TerminalControl : Avalonia.Controls.Control
     private bool _metricsValid;
     private int _lastCols;
     private int _lastRows;
+    private Typeface _typefaceNormal;
+    private Typeface _typefaceBold;
+    private Typeface _typefaceItalic;
+    private Typeface _typefaceBoldItalic;
 
     public Func<string, Task>? TerminalTextInput { get; set; }
     public Action<int, int>? Resized { get; set; }
@@ -153,36 +157,56 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         ctx.FillRectangle(new SolidColorBrush(Color.Parse("#1A1D23")), new Rect(Bounds.Size));
 
         var buffer = terminal.Buffer;
-        var viewportY = buffer.ViewportY;
-        var typeface = new Typeface(FontFamily);
         var fontSize = FontSize;
 
-        int visibleRows = Math.Min(terminal.Rows, Math.Max(0, buffer.Length - viewportY));
-        for (int row = 0; row < visibleRows; row++)
+        // Use buffer.YDisp (scroll offset) and buffer.Lines[] per XTerm.NET README.
+        // Do NOT guard with buffer.Length — it may be 0 for a fresh terminal, causing
+        // the loop to never run even after the shell has written content.
+        for (int row = 0; row < terminal.Rows; row++)
         {
-            var line = buffer.GetLine(viewportY + row);
+            var line = buffer.Lines[buffer.YDisp + row];
             if (line is null)
                 continue;
 
             for (int col = 0; col < terminal.Cols; col++)
             {
-                var cell = col < line.Length ? line[col] : BufferCell.Space;
-                if (cell.IsEmpty() || cell.IsSpace())
-                    continue;
+                var cell = line[col];
+                if (cell.Width == 0) continue; // wide-char continuation cell
 
                 var attrs = cell.Attributes;
                 var fg = ResolveFgColor(attrs);
                 var bg = ResolveBgColor(attrs);
+
+                // Inverse video: swap fg/bg. Use opaque defaults when transparent.
+                if (attrs.IsInverse())
+                {
+                    var invFg = bg.A == 0 ? Color.Parse("#1A1D23") : bg;
+                    var invBg = fg == DefaultFg ? Color.Parse("#F2F5F8") : fg;
+                    fg = invFg;
+                    bg = invBg;
+                }
+
                 var content = cell.Content;
 
                 double x = col * _charWidth;
                 double y = row * _charHeight;
 
                 if (bg.A > 0)
-                    ctx.FillRectangle(new SolidColorBrush(bg), new Rect(x, y, _charWidth * cell.Width, _charHeight));
+                    ctx.FillRectangle(new SolidColorBrush(bg),
+                        new Rect(x, y, _charWidth * Math.Max(1, cell.Width), _charHeight));
 
                 if (!string.IsNullOrEmpty(content) && content != " ")
                 {
+                    bool bold   = attrs.IsBold();
+                    bool italic = attrs.IsItalic();
+                    var typeface = (bold, italic) switch
+                    {
+                        (true,  true)  => _typefaceBoldItalic,
+                        (true,  false) => _typefaceBold,
+                        (false, true)  => _typefaceItalic,
+                        _              => _typefaceNormal,
+                    };
+
                     var ft = new FormattedText(
                         content,
                         System.Globalization.CultureInfo.InvariantCulture,
@@ -192,14 +216,23 @@ public sealed class TerminalControl : Avalonia.Controls.Control
                         new SolidColorBrush(fg));
                     ctx.DrawText(ft, new Point(x, y));
                 }
+
+                if (attrs.IsUnderline())
+                {
+                    double uy = y + _charHeight - 2;
+                    ctx.DrawLine(
+                        new Pen(new SolidColorBrush(fg), 1),
+                        new Point(x, uy),
+                        new Point(x + _charWidth * Math.Max(1, cell.Width), uy));
+                }
             }
         }
 
-        // cursor
+        // Cursor — buffer.Y is viewport-relative per XTerm.NET README (not buffer.Y - YDisp)
         if (terminal.CursorVisible)
         {
             int cx = buffer.X;
-            int cy = buffer.Y - viewportY;
+            int cy = buffer.Y;
             if (cx >= 0 && cx < terminal.Cols && cy >= 0 && cy < terminal.Rows)
             {
                 double px = cx * _charWidth;
@@ -208,17 +241,26 @@ public sealed class TerminalControl : Avalonia.Controls.Control
                     new SolidColorBrush(Color.FromArgb(200, 242, 245, 248)),
                     new Rect(px, py, _charWidth, _charHeight));
 
-                var cursorLine = buffer.GetLine(viewportY + cy);
+                var cursorLine = buffer.Lines[buffer.YDisp + cy];
                 if (cursorLine is not null && cx < cursorLine.Length)
                 {
-                    var cursorCell = cursorLine[cx];
-                    if (!cursorCell.IsSpace() && !string.IsNullOrEmpty(cursorCell.Content))
+                    var cc = cursorLine[cx];
+                    if (!string.IsNullOrEmpty(cc.Content) && cc.Content != " ")
                     {
+                        bool ccBold   = cc.Attributes.IsBold();
+                        bool ccItalic = cc.Attributes.IsItalic();
+                        var ccTypeface = (ccBold, ccItalic) switch
+                        {
+                            (true,  true)  => _typefaceBoldItalic,
+                            (true,  false) => _typefaceBold,
+                            (false, true)  => _typefaceItalic,
+                            _              => _typefaceNormal,
+                        };
                         var ft = new FormattedText(
-                            cursorCell.Content,
+                            cc.Content,
                             System.Globalization.CultureInfo.InvariantCulture,
                             FlowDirection.LeftToRight,
-                            new Typeface(FontFamily),
+                            ccTypeface,
                             fontSize,
                             new SolidColorBrush(Color.Parse("#1A1D23")));
                         ctx.DrawText(ft, new Point(px, py));
@@ -298,7 +340,7 @@ public sealed class TerminalControl : Avalonia.Controls.Control
     private void OnTerminalUpdated(object? sender, EventArgs e) => RequestRedraw();
     private void OnTerminalBufferChanged(object? sender, TerminalEvents.BufferChangedEventArgs e) => RequestRedraw();
 
-    private void RequestRedraw()
+    public void RequestRedraw()
     {
         Avalonia.Threading.Dispatcher.UIThread.Post(InvalidateVisual, Avalonia.Threading.DispatcherPriority.Render);
     }
@@ -307,11 +349,16 @@ public sealed class TerminalControl : Avalonia.Controls.Control
     {
         if (_metricsValid) return;
 
+        _typefaceNormal   = new Typeface(FontFamily, FontStyle.Normal, FontWeight.Normal);
+        _typefaceBold     = new Typeface(FontFamily, FontStyle.Normal, FontWeight.Bold);
+        _typefaceItalic   = new Typeface(FontFamily, FontStyle.Italic, FontWeight.Normal);
+        _typefaceBoldItalic = new Typeface(FontFamily, FontStyle.Italic, FontWeight.Bold);
+
         var ft = new FormattedText(
             "M",
             System.Globalization.CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
-            new Typeface(FontFamily),
+            _typefaceNormal,
             FontSize,
             Brushes.White);
 

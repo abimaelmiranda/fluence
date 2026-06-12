@@ -62,7 +62,11 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         var bytes = Encoding.UTF8.GetBytes(text);
         await Task.Run(() =>
         {
-            try { _session.Input.Write(bytes, 0, bytes.Length); }
+            try
+            {
+                _session.Input.Write(bytes, 0, bytes.Length);
+                _session.Input.Flush();
+            }
             catch (IOException) { }
         }, cancellationToken).ConfigureAwait(false);
     }

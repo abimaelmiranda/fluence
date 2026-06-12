@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fluence.Core.Infrastructure;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Workspace;
+using XTerm.Events;
 using XTerm.Options;
 using XTerminal = global::XTerm.Terminal;
 
@@ -17,6 +18,8 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
     private readonly XTerminal _xterm;
 
     public XTerminal XTerminal => _xterm;
+
+    public event EventHandler? BufferRefreshed;
 
     public TerminalViewModel(ITerminalService terminalService, IWorkspaceContext workspace)
     {
@@ -34,17 +37,26 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
 
         _terminalService.DataReceived += OnDataReceived;
         _terminalService.Cleared += OnCleared;
-        // NOTE: _xterm.DataReceived (terminal → PTY feedback) is intentionally NOT wired here.
-        // XTerm.NET fires DataReceived during _xterm.Write() to answer device-attribute queries
-        // embedded in the shell's startup output. Feeding those responses back to the PTY stdin
-        // before zsh's zle is ready causes "can't open input file" errors. Basic interactive use
-        // and Claude Code work without this bridge; re-enable with proper startup gating if
-        // cursor-position queries become necessary for specific TUI apps.
     }
 
     public async Task StartShellAsync(string? workingDirectory = null)
     {
         await _terminalService.StartShellAsync(workingDirectory, _xterm.Cols, _xterm.Rows);
+        _ = StartXtermBridgeAsync();
+    }
+
+    private async Task StartXtermBridgeAsync()
+    {
+        // Delay before wiring DataReceived so zsh's readline (zle) has time to initialize.
+        // Without the delay, XTerm.NET response bytes (e.g. ESC[?1;2c) arrive at PTY stdin
+        // before zle is ready and get interpreted as user input, corrupting zsh's startup.
+        await Task.Delay(500);
+        _xterm.DataReceived += OnXtermDataReceived;
+    }
+
+    private void OnXtermDataReceived(object? sender, TerminalEvents.DataEventArgs e)
+    {
+        _ = _terminalService.SendInputAsync(e.Data);
     }
 
     public async Task SendInputAsync(string text)
@@ -68,6 +80,7 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
     {
         var text = Encoding.UTF8.GetString(e.Data);
         _xterm.Write(text);
+        BufferRefreshed?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnCleared(object? sender, EventArgs e)
@@ -93,6 +106,7 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
     {
         _terminalService.DataReceived -= OnDataReceived;
         _terminalService.Cleared -= OnCleared;
+        _xterm.DataReceived -= OnXtermDataReceived;
         _xterm.Dispose();
     }
 }
