@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls;
@@ -9,6 +11,18 @@ namespace Fluence.Modules.Editor.Views;
 
 public partial class EditorView : UserControl
 {
+    private static readonly Dictionary<string, string> LanguageScopeByExtension = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".cs"] = "source.cs",
+        [".csproj"] = "text.xml",
+        [".props"] = "text.xml",
+        [".targets"] = "text.xml",
+        [".slnx"] = "text.xml",
+        [".xml"] = "text.xml",
+        [".axaml"] = "text.xml",
+        [".xaml"] = "text.xml",
+    };
+
     private bool _isUpdatingEditorText;
     private EditorViewModel? _viewModel;
     private RegistryOptions? _registryOptions;
@@ -49,7 +63,11 @@ public partial class EditorView : UserControl
         if (string.IsNullOrEmpty(extension))
             return null;
 
-        var language = _registryOptions.GetLanguageByExtension(extension);
+        if (LanguageScopeByExtension.TryGetValue(extension, out var explicitScope))
+            return explicitScope;
+
+        var language = _registryOptions.GetLanguageByExtension(extension) ??
+                       _registryOptions.GetLanguageByExtension(extension.TrimStart('.'));
 
         return language is null ? null : _registryOptions.GetScopeByLanguageId(language.Id);
     }
@@ -90,6 +108,7 @@ public partial class EditorView : UserControl
         if (e.PropertyName == nameof(EditorViewModel.ActiveText))
         {
             SetEditorText(_viewModel.ActiveText);
+            ApplyGrammarForPath(_viewModel.ActiveDocumentPath);
         }
         else if (e.PropertyName == nameof(EditorViewModel.ActiveDocumentPath))
         {
