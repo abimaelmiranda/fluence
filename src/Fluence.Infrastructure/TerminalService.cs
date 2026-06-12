@@ -48,7 +48,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         _session = _ptyHost.CreateShellSession(dir, columns, rows);
         _session.Exited += OnSessionExited;
 
-        _ = ReadLoopAsync(_session, ct);
+        StartReadLoop(_session, ct);
         return Task.CompletedTask;
     }
 
@@ -111,31 +111,35 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         Cleared?.Invoke(this, EventArgs.Empty);
     }
 
-    private async Task ReadLoopAsync(IPtySession session, CancellationToken cancellationToken)
+    private void StartReadLoop(IPtySession session, CancellationToken ct)
+    {
+        var t = new System.Threading.Thread(() => ReadThreadProc(session, ct))
+        {
+            IsBackground = true,
+            Name = "pty-read-loop",
+        };
+        t.Start();
+    }
+
+    private void ReadThreadProc(IPtySession session, CancellationToken ct)
     {
         var buf = new byte[4096];
         try
         {
-            while (!cancellationToken.IsCancellationRequested && !session.HasExited)
+            while (!ct.IsCancellationRequested && !session.HasExited)
             {
                 int n;
-                try
-                {
-                    n = await Task.Run(() => session.Output.Read(buf, 0, buf.Length), cancellationToken)
-                                  .ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) { break; }
+                try { n = session.Output.Read(buf, 0, buf.Length); }
                 catch (IOException) { break; }
 
-                if (n <= 0)
-                    break;
+                if (n <= 0) break;
 
                 var chunk = new byte[n];
                 Buffer.BlockCopy(buf, 0, chunk, 0, n);
                 DataReceived?.Invoke(this, new TerminalDataEventArgs(chunk));
             }
         }
-        catch (Exception) when (cancellationToken.IsCancellationRequested) { }
+        catch when (ct.IsCancellationRequested) { }
     }
 
     private void OnSessionExited(object? sender, EventArgs e)
