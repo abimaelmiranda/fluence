@@ -36,6 +36,9 @@ internal static class Bootstrapper
         services.AddSingleton<IWorkspaceDialogService, AvaloniaWorkspaceDialogService>();
         services.AddSingleton<AvaloniaUserNotificationService>();
         services.AddSingleton<IUserNotificationService>(provider => provider.GetRequiredService<AvaloniaUserNotificationService>());
+        services.AddSingleton<IFileClipboardService, FileClipboardService>();
+        services.AddSingleton<IFileOperationDialogService, AvaloniaFileOperationDialogService>();
+        services.AddSingleton<IFileService, FileService>();
         services.AddSingleton<IProcessHost, ProcessHost>();
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)

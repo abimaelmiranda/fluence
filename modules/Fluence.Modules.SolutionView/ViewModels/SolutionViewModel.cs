@@ -24,6 +24,9 @@ public sealed partial class SolutionViewModel : ViewModelBase
     private readonly IProjectReferenceService _projectReferences;
     private readonly IProjectReferenceDialogService _referenceDialogs;
     private readonly IUserNotificationService _notifications;
+    private readonly IFileClipboardService _clipboard;
+    private readonly IFileOperationDialogService _fileDialogs;
+    private readonly IFileService _fileService;
     private readonly IShellEventBus _eventBus;
     private CancellationTokenSource? _loadCts;
     private string? _loadedSolutionPath;
@@ -44,6 +47,9 @@ public sealed partial class SolutionViewModel : ViewModelBase
         IProjectReferenceService projectReferences,
         IProjectReferenceDialogService referenceDialogs,
         IUserNotificationService notifications,
+        IFileClipboardService clipboard,
+        IFileOperationDialogService fileDialogs,
+        IFileService fileService,
         IShellEventBus eventBus)
     {
         _workspace = workspace;
@@ -54,6 +60,9 @@ public sealed partial class SolutionViewModel : ViewModelBase
         _projectReferences = projectReferences;
         _referenceDialogs = referenceDialogs;
         _notifications = notifications;
+        _clipboard = clipboard;
+        _fileDialogs = fileDialogs;
+        _fileService = fileService;
         _eventBus = eventBus;
         _workspace.Changed += OnWorkspaceChanged;
         RefreshForWorkspace();
@@ -133,6 +142,12 @@ public sealed partial class SolutionViewModel : ViewModelBase
             node.Name,
             node.Path,
             ActivateItem,
+            CreateOpenCommand(node),
+            CreateCopyCommand(node),
+            CreatePasteCommand(node),
+            CreateDeleteCommand(node),
+            CreateLoadSolutionCommand(node),
+            CreateCloseSolutionCommand(node),
             CreateBuildCommand(node),
             CreateRestoreCommand(node),
             CreateCleanCommand(node),
@@ -154,6 +169,44 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
         return item;
     }
+
+    private ICommand? CreateOpenCommand(SolutionTreeNode node) => node.Kind switch
+    {
+        SolutionTreeNodeKind.File when node.Path is not null => new RelayCommand(() => OpenPath(node.Path)),
+        SolutionTreeNodeKind.Project when node.Path is not null => new RelayCommand(() => OpenPath(node.Path)),
+        _ => null,
+    };
+
+    private ICommand? CreateCopyCommand(SolutionTreeNode node) => node.Kind switch
+    {
+        SolutionTreeNodeKind.File when node.Path is not null => new RelayCommand(() => _clipboard.Copy(node.Path)),
+        SolutionTreeNodeKind.Project when node.Path is not null => new RelayCommand(() => _clipboard.Copy(node.Path)),
+        _ => null,
+    };
+
+    private ICommand? CreatePasteCommand(SolutionTreeNode node) => node.Kind switch
+    {
+        SolutionTreeNodeKind.Solution when node.Path is not null => new AsyncRelayCommand(() => PasteAsync(Path.GetDirectoryName(node.Path) ?? node.Path)),
+        SolutionTreeNodeKind.Project when node.Path is not null => new AsyncRelayCommand(() => PasteAsync(Path.GetDirectoryName(node.Path) ?? node.Path)),
+        _ => null,
+    };
+
+    private ICommand? CreateDeleteCommand(SolutionTreeNode node) => node.Kind switch
+    {
+        SolutionTreeNodeKind.File when node.Path is not null => new AsyncRelayCommand(() => DeleteAsync(node.Path, isDirectory: false)),
+        SolutionTreeNodeKind.Project when node.Path is not null => new AsyncRelayCommand(() => DeleteAsync(node.Path, isDirectory: false)),
+        _ => null,
+    };
+
+    private ICommand? CreateLoadSolutionCommand(SolutionTreeNode node) =>
+        node.Kind == SolutionTreeNodeKind.File && node.Path is not null && IsSolutionPath(node.Path)
+            ? new RelayCommand(() => _eventBus.Publish(new OpenSolutionRequestedEvent(node.Path)))
+            : null;
+
+    private ICommand? CreateCloseSolutionCommand(SolutionTreeNode node) =>
+        node.Kind == SolutionTreeNodeKind.Solution && node.Path is not null
+            ? new RelayCommand(() => CloseSolution(node.Path))
+            : null;
 
     private ICommand? CreateBuildCommand(SolutionTreeNode node) => node.Kind switch
     {
@@ -210,18 +263,73 @@ public sealed partial class SolutionViewModel : ViewModelBase
             execute();
         });
 
-    private async void ActivateItem(SolutionTreeItem item)
+    private void ActivateItem(SolutionTreeItem item)
     {
-        if (!item.IsFile || string.IsNullOrWhiteSpace(item.Path))
-            return;
-
         try
         {
-            _eventBus.Publish(new OpenFileRequestedEvent(item.Path));
-            await Task.CompletedTask;
+            item.OpenCommand?.Execute(null);
         }
-        catch (Exception ex) when (OpenFileFailureNotification.TryShow(_notifications, item.Path, ex)) { }
+        catch (Exception ex) when (!string.IsNullOrWhiteSpace(item.Path) &&
+                                   OpenFileFailureNotification.TryShow(_notifications, item.Path, ex))
+        {
+        }
     }
+
+    private void OpenPath(string path)
+    {
+        try
+        {
+            _eventBus.Publish(new OpenFileRequestedEvent(path));
+        }
+        catch (Exception ex) when (OpenFileFailureNotification.TryShow(_notifications, path, ex))
+        {
+        }
+    }
+
+    private async Task PasteAsync(string destinationDirectory)
+    {
+        try
+        {
+            await _clipboard.PasteAsync(destinationDirectory);
+            await ReloadCurrentSolutionAsync();
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to paste", ex.Message);
+        }
+    }
+
+    private async Task DeleteAsync(string path, bool isDirectory)
+    {
+        try
+        {
+            var confirmed = await _fileDialogs.ConfirmDeleteAsync(path, isDirectory);
+            if (!confirmed)
+                return;
+
+            _fileService.Delete(path, isDirectory);
+            await ReloadCurrentSolutionAsync();
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to delete", ex.Message);
+        }
+    }
+
+    private void CloseSolution(string solutionPath)
+    {
+        var folder = Path.GetDirectoryName(solutionPath);
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return;
+        }
+
+        _eventBus.Publish(new OpenFolderRequestedEvent(folder));
+    }
+
+    private static bool IsSolutionPath(string path) =>
+        string.Equals(Path.GetExtension(path), ".sln", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Path.GetExtension(path), ".slnx", StringComparison.OrdinalIgnoreCase);
 
     private async Task AddProjectReferenceAsync(string projectPath, CancellationToken cancellationToken)
     {
