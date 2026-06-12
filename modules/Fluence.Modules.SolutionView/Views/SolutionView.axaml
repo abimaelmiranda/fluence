@@ -30,10 +30,13 @@
                   ItemsSource="{Binding RootItems}"
                   Background="Transparent"
                   BorderThickness="0"
-                  Padding="0,4">
+                  Padding="0,2">
             <TreeView.Styles>
                 <Style Selector="TreeViewItem">
-                    <Setter Property="Padding" Value="2,1,2,1"/>
+                    <Setter Property="MinHeight" Value="20"/>
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="FontSize" Value="{StaticResource FluenceFontSizeSmall}"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu x:CompileBindings="False">
@@ -69,12 +72,38 @@
             <TreeView.ItemTemplate>
                 <TreeDataTemplate x:DataType="vm:SolutionTreeItem"
                                   ItemsSource="{Binding Children}">
-                    <TextBlock Text="{Binding DisplayName}"
-                               FontFamily="{StaticResource FluenceFontFamily}"
-                               FontSize="{StaticResource FluenceFontSizeSmall}"
-                               Foreground="{Binding IsActive, Converter={x:Static conv:BoolToForegroundConverter.ActiveFile}}"
-                               TextTrimming="CharacterEllipsis"
-                               Padding="2,0"/>
+                    <Grid Height="20"
+                          ColumnDefinitions="18,*"
+                          ColumnSpacing="4"
+                          Margin="-8,0,0,0"
+                          VerticalAlignment="Center">
+                        <Path Grid.Column="0"
+                              Width="13"
+                              Height="13"
+                              IsVisible="{Binding ., Converter={x:Static conv:SolutionTreeItemVectorIconVisibilityConverter.Instance}}"
+                              Data="{Binding ., Converter={x:Static conv:SolutionTreeItemIconConverter.Instance}}"
+                              Fill="{Binding ., Converter={x:Static conv:SolutionTreeItemIconBrushConverter.Instance}}"
+                              Stretch="Uniform"
+                              VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="0"
+                                   Width="18"
+                                   Text="{Binding ., Converter={x:Static conv:SolutionTreeItemTextIconConverter.Instance}}"
+                                   IsVisible="{Binding ., Converter={x:Static conv:SolutionTreeItemTextIconVisibilityConverter.Instance}}"
+                                   FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                                   FontSize="8"
+                                   FontWeight="Bold"
+                                   Foreground="{Binding ., Converter={x:Static conv:SolutionTreeItemIconBrushConverter.Instance}}"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding DisplayName}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                   Foreground="{Binding IsActive, Converter={x:Static conv:BoolToForegroundConverter.ActiveFile}}"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center"
+                                   Padding="0"/>
+                    </Grid>
                 </TreeDataTemplate>
             </TreeView.ItemTemplate>
         </TreeView>
