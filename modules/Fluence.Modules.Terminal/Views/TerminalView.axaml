@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.Terminal.ViewModels"
+             xmlns:conv="using:Fluence.Modules.Terminal.Converters"
+             x:Class="Fluence.Modules.Terminal.Views.TerminalView"
+             x:DataType="vm:TerminalViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch"
+             Background="#1A1D23">
+
+    <Grid RowDefinitions="*,Auto">
+        <ScrollViewer Grid.Row="0"
+                      x:Name="TerminalScrollViewer"
+                      Padding="12,8"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Lines}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TerminalLineViewModel">
+                        <TextBlock Text="{Binding Text}"
+                                   FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                   FontSize="13"
+                                   LineHeight="18"
+                                   TextWrapping="NoWrap"
+                                   Foreground="{Binding IsError, Converter={x:Static conv:BoolToForegroundConverter.TerminalError}}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Border Grid.Row="1"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="0,1,0,0"
+                Padding="8,6">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0"
+                           Text=">"
+                           FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                           FontSize="13"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1"
+                         x:Name="CommandInput"
+                         Text="{Binding CurrentCommand}"
+                         FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                         FontSize="13"
+                         MinHeight="30"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         Foreground="{StaticResource FluenceBrushTextPrimary}"
+                         PlaceholderText="Command"/>
+                <Button Grid.Column="2"
+                        Command="{Binding StopCommand}"
+                        Content="Stop"
+                        MinWidth="56"
+                        Height="30"
+                        Padding="10,0"
+                        IsVisible="{Binding IsBusy}"/>
+            </Grid>
+        </Border>
+    </Grid>
+
+</UserControl>

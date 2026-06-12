@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Fluence.Application.DotnetCli;
-using Fluence.Application.Workspace;
-using Fluence.Core.Commands;
 using Fluence.Core.Infrastructure;
 using Fluence.Core.Modules;
+using Fluence.Core.Ports;
 using Fluence.Core.Workspace;
 using Fluence.Desktop.Services;
 using Fluence.Desktop.ViewModels;
+using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
 using Fluence.Infrastructure.Pty;
 using Fluence.Modules.DotnetCli;
@@ -26,43 +25,24 @@ internal static class Bootstrapper
     {
         var services = new ServiceCollection();
 
+        var viewRegistry = new ViewRegistry();
+        viewRegistry.Register<WelcomeViewModel, WelcomeView>();
+        services.AddSingleton<IViewRegistry>(viewRegistry);
+        services.AddSingleton<IShellEventBus, ShellEventBus>();
+        services.AddSingleton<ShellRegionHost>();
+        services.AddSingleton<IShellRegionHost>(provider => provider.GetRequiredService<ShellRegionHost>());
         services.AddSingleton<IWorkspaceContext, WorkspaceContext>();
         services.AddSingleton<IModuleHost, ModuleHost>();
         services.AddSingleton<IWorkspaceDialogService, AvaloniaWorkspaceDialogService>();
-        services.AddSingleton<IProjectReferenceDialogService, AvaloniaProjectReferenceDialogService>();
         services.AddSingleton<AvaloniaUserNotificationService>();
         services.AddSingleton<IUserNotificationService>(provider => provider.GetRequiredService<AvaloniaUserNotificationService>());
-        services.AddSingleton<ITextFileService, TextFileService>();
-        services.AddSingleton<ISolutionWorkspaceLoader, BuildalyzerSolutionWorkspaceLoader>();
-        services.AddSingleton<IProjectReferenceService, ProjectReferenceService>();
         services.AddSingleton<IProcessHost, ProcessHost>();
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new MacOsPtyHost()
                 : new WindowsPtyHost());
         services.AddSingleton<ITerminalService, TerminalService>();
-        services.AddSingleton<ICommandHandler<OpenFileWorkspaceCommand>, OpenFileWorkspaceCommandHandler>();
-        services.AddSingleton<ICommandHandler<OpenFolderWorkspaceCommand>, OpenFolderWorkspaceCommandHandler>();
-        services.AddSingleton<ICommandHandler<OpenSolutionWorkspaceCommand>, OpenSolutionWorkspaceCommandHandler>();
-        services.AddSingleton<ICommandHandler<SaveActiveDocumentCommand>, SaveActiveDocumentCommandHandler>();
-        services.AddSingleton<ICommandHandler<AddProjectReferencesCommand>, AddProjectReferencesCommandHandler>();
-        services.AddSingleton<ICommandHandler<RemoveProjectReferenceCommand>, RemoveProjectReferenceCommandHandler>();
-        services.AddSingleton<ICommandHandler<SetStartupProjectCommand>, SetStartupProjectCommandHandler>();
-        services.AddSingleton<ICommandHandler<BuildWorkspaceCommand>, BuildWorkspaceCommandHandler>();
-        services.AddSingleton<ICommandHandler<RunProjectCommand>, RunProjectCommandHandler>();
-        services.AddSingleton<ICommandHandler<TestWorkspaceCommand>, TestWorkspaceCommandHandler>();
-        services.AddSingleton<ICommandHandler<RestoreWorkspaceCommand>, RestoreWorkspaceCommandHandler>();
-        services.AddSingleton<ICommandHandler<CleanWorkspaceCommand>, CleanWorkspaceCommandHandler>();
-        services.AddSingleton<ICommandHandler<BuildProjectCommand>, BuildProjectCommandHandler>();
-        services.AddSingleton<ICommandHandler<RunSpecificProjectCommand>, RunSpecificProjectCommandHandler>();
-        services.AddSingleton<ICommandHandler<TestProjectCommand>, TestProjectCommandHandler>();
-        services.AddSingleton<ICommandHandler<RestoreProjectCommand>, RestoreProjectCommandHandler>();
-        services.AddSingleton<ICommandHandler<CleanProjectCommand>, CleanProjectCommandHandler>();
         services.AddSingleton<WelcomeViewModel>();
-        services.AddSingleton<EditorViewModel>();
-        services.AddSingleton<FileExplorerViewModel>();
-        services.AddSingleton<SolutionViewModel>();
-        services.AddSingleton<TerminalViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 
         var modules = new IIdeModule[]
@@ -77,6 +57,7 @@ internal static class Bootstrapper
         foreach (var module in modules)
         {
             module.Register(services);
+            module.RegisterViews(viewRegistry);
         }
 
         services.AddSingleton<IReadOnlyList<IIdeModule>>(modules);

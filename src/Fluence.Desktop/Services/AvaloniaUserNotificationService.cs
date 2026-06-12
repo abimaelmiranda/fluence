@@ -2,6 +2,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
+using Fluence.Core.Ports;
 
 namespace Fluence.Desktop.Services;
 
