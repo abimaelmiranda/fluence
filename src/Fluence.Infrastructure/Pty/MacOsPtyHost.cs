@@ -26,8 +26,9 @@ public sealed class MacOsPtyHost : IPtyHost
 
     public IPtySession CreateShellSession(string workingDirectory, int columns = 80, int rows = 24)
     {
-        // Start an interactive shell. Login shells may run profile scripts that block IDE startup.
-        var argv = new[] { DefaultShell, "-i" };
+        // argv[0] must be the basename so the shell self-identifies correctly (e.g. "zsh", not "/bin/zsh")
+        var shellName = System.IO.Path.GetFileName(DefaultShell);
+        var argv = new[] { shellName, "-i" };
         var env = MacOsPtyInterop.BuildEnvironment();
         var (masterFd, pid) = MacOsPtyInterop.Spawn(DefaultShell, argv, workingDirectory, env, columns, rows);
         return new MacOsPtySession(masterFd, pid, columns, rows);

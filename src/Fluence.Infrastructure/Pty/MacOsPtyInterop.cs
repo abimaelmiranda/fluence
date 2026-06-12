@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -42,6 +43,9 @@ internal static class MacOsPtyInterop
 
     [DllImport(Libc, SetLastError = true)]
     private static extern int kill(int pid, int sig);
+
+    [DllImport(Libc, SetLastError = true)]
+    private static extern int chdir(string path);
 
     // TIOCSWINSZ on macOS/arm64 and x64
     private const ulong TiocsWinsz = 0x80087467;
@@ -92,9 +96,7 @@ internal static class MacOsPtyInterop
             close(slave);
 
             if (!string.IsNullOrEmpty(workingDirectory))
-            {
-                System.IO.Directory.SetCurrentDirectory(workingDirectory);
-            }
+                chdir(workingDirectory); // pure syscall — safe after fork()
 
             execve(executable, argv, env);
             Environment.Exit(127);

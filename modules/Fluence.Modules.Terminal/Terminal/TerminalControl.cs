@@ -157,7 +157,8 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         var typeface = new Typeface(FontFamily);
         var fontSize = FontSize;
 
-        for (int row = 0; row < terminal.Rows; row++)
+        int visibleRows = Math.Min(terminal.Rows, Math.Max(0, buffer.Length - viewportY));
+        for (int row = 0; row < visibleRows; row++)
         {
             var line = buffer.GetLine(viewportY + row);
             if (line is null)
