@@ -9,6 +9,9 @@ namespace Fluence.Infrastructure.Pty;
 
 public sealed class WindowsPtyHost : IPtyHost
 {
+    private static readonly string DefaultShell =
+        Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe";
+
     public IPtySession CreateSession(
         string executable,
         string arguments,
@@ -17,6 +20,18 @@ public sealed class WindowsPtyHost : IPtyHost
         int rows = 24)
     {
         return WindowsPtySession.Create(executable, arguments, workingDirectory, columns, rows);
+    }
+
+    public IPtySession CreateShellSession(string workingDirectory, int columns = 80, int rows = 24)
+    {
+        // Prefer PowerShell 7+ (pwsh); fall back to legacy cmd
+        var pwsh = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "PowerShell", "7", "pwsh.exe");
+        var (shell, args) = File.Exists(pwsh)
+            ? (pwsh, "-NoLogo")
+            : (DefaultShell, string.Empty);
+        return WindowsPtySession.Create(shell, args, workingDirectory, columns, rows);
     }
 }
 

@@ -1,8 +1,6 @@
-using System.Collections.Specialized;
-using Avalonia;
+using System;
+using System.IO;
 using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Threading;
 using Fluence.Modules.Terminal.ViewModels;
 
 namespace Fluence.Modules.Terminal.Views;
@@ -15,37 +13,24 @@ public partial class TerminalView : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
-        CommandInput.KeyDown += OnCommandInputKeyDown;
     }
 
-    private void OnDataContextChanged(object? sender, System.EventArgs e)
+    private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (_viewModel is not null)
-            _viewModel.Lines.CollectionChanged -= OnLinesChanged;
-
         _viewModel = DataContext as TerminalViewModel;
-
-        if (_viewModel is not null)
-            _viewModel.Lines.CollectionChanged += OnLinesChanged;
-    }
-
-    private void OnLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        Dispatcher.UIThread.Post(
-            () => TerminalScrollViewer.Offset = new Vector(
-                TerminalScrollViewer.Offset.X,
-                TerminalScrollViewer.Extent.Height),
-            DispatcherPriority.Background);
-    }
-
-    private void OnCommandInputKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Enter || _viewModel is null)
+        if (_viewModel is null)
             return;
 
-        e.Handled = true;
-        _viewModel.CurrentCommand = CommandInput.Text ?? string.Empty;
-        if (_viewModel.ExecuteCurrentCommandCommand.CanExecute(null))
-            _viewModel.ExecuteCurrentCommandCommand.Execute(null);
+        TerminalControl.TerminalTextInput = text => _ = _viewModel.SendInputAsync(text);
+        TerminalControl.Resized = (cols, rows) => _ = _viewModel.ResizeAsync(cols, rows);
+
+        _ = _viewModel.StartShellAsync(GetWorkingDirectory());
+        TerminalControl.RequestInitialResize();
+    }
+
+    private string? GetWorkingDirectory()
+    {
+        // Prefer workspace folder; fall back to home
+        return null; // TerminalViewModel.StartShellAsync resolves via IWorkspaceContext
     }
 }

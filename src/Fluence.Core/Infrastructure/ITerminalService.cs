@@ -6,7 +6,7 @@ namespace Fluence.Core.Infrastructure;
 
 public interface ITerminalService
 {
-    event EventHandler<TerminalLineEventArgs>? LineReceived;
+    event EventHandler<TerminalDataEventArgs>? DataReceived;
     event EventHandler? Cleared;
 
     bool IsBusy { get; }
