@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Fluence.Desktop.Views.CrashDialog"
+        Title="Fluence crashed"
+        Width="820"
+        Height="540"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource FluenceBrushShell}">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="24" RowSpacing="14">
+        <StackPanel Grid.Row="0" Spacing="6">
+            <TextBlock Text="Fluence crashed"
+                       FontFamily="{StaticResource FluenceFontFamily}"
+                       FontSize="{StaticResource FluenceFontSizeTitle}"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+            <TextBlock Text="A fatal error occurred. Review the stacktrace below, then quit the application."
+                       FontFamily="{StaticResource FluenceFontFamily}"
+                       FontSize="{StaticResource FluenceFontSizeBody}"
+                       Foreground="{StaticResource FluenceBrushTextSecondary}"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                Background="{StaticResource FluenceBrushSurface}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="1">
+            <TextBox x:Name="StackTraceTextBox"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="NoWrap"
+                     Padding="12"
+                     FontFamily="Consolas, Menlo, Monaco, monospace"
+                     FontSize="12"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     Foreground="{StaticResource FluenceBrushTextPrimary}"
+                     HorizontalAlignment="Stretch"
+                     VerticalAlignment="Stretch"
+                     HorizontalContentAlignment="Left"
+                     VerticalContentAlignment="Top"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+        </Border>
+
+        <Button Grid.Row="2"
+                Content="Quit"
+                Click="OnQuitClicked"
+                HorizontalAlignment="Right"
+                MinWidth="96"/>
+    </Grid>
+</Window>
