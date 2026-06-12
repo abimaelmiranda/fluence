@@ -3,18 +3,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Fluence.Application.Workspace;
-using Fluence.Core.Commands;
-using Fluence.Desktop.Services;
+using Fluence.Core.Modules;
+using Fluence.Core.Ports;
+using Fluence.Core.ViewModels;
 
 namespace Fluence.Desktop.ViewModels;
 
 public sealed partial class WelcomeViewModel(
     IWorkspaceDialogService dialogs,
     IUserNotificationService notifications,
-    ICommandHandler<OpenFileWorkspaceCommand> openFileHandler,
-    ICommandHandler<OpenFolderWorkspaceCommand> openFolderHandler,
-    ICommandHandler<OpenSolutionWorkspaceCommand> openSolutionHandler) : ViewModelBase
+    IShellEventBus eventBus) : ViewModelBase
 {
     [ObservableProperty]
     private string _status = "No workspace opened";
@@ -31,7 +29,7 @@ public sealed partial class WelcomeViewModel(
 
         try
         {
-            await openFileHandler.HandleAsync(new OpenFileWorkspaceCommand(path), cancellationToken);
+            eventBus.Publish(new OpenFileRequestedEvent(path));
             Status = path;
         }
         catch (Exception ex) when (OpenFileFailureNotification.TryShow(notifications, path, ex))
@@ -50,7 +48,7 @@ public sealed partial class WelcomeViewModel(
             return;
         }
 
-        await openFolderHandler.HandleAsync(new OpenFolderWorkspaceCommand(path), cancellationToken);
+        eventBus.Publish(new OpenFolderRequestedEvent(path));
         Status = path;
     }
 
@@ -64,7 +62,7 @@ public sealed partial class WelcomeViewModel(
             return;
         }
 
-        await openSolutionHandler.HandleAsync(new OpenSolutionWorkspaceCommand(path), cancellationToken);
+        eventBus.Publish(new OpenSolutionRequestedEvent(path));
         Status = path;
     }
 }

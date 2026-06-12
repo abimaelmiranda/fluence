@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.SolutionView.ViewModels"
+             xmlns:conv="using:Fluence.Modules.SolutionView.Converters"
+             x:Class="Fluence.Modules.SolutionView.Views.SolutionView"
+             x:DataType="vm:SolutionViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+
+    <Grid RowDefinitions="Auto,*">
+        <TextBlock Grid.Row="0"
+                   Text="Loading solution..."
+                   IsVisible="{Binding IsLoading}"
+                   Margin="10,8"
+                   FontFamily="{StaticResource FluenceFontFamily}"
+                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                   Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+
+        <TextBlock Grid.Row="0"
+                   Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding HasError}"
+                   Margin="10,8"
+                   FontFamily="{StaticResource FluenceFontFamily}"
+                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                   TextWrapping="Wrap"/>
+
+        <TreeView x:Name="SolutionTree"
+                  Grid.Row="1"
+                  ItemsSource="{Binding RootItems}"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Padding="0,4">
+            <TreeView.Styles>
+                <Style Selector="TreeViewItem">
+                    <Setter Property="Padding" Value="2,1,2,1"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu x:CompileBindings="False">
+                                <MenuItem Header="Build"
+                                          Command="{Binding BuildCommand}"
+                                          IsVisible="{Binding HasBuildCommand}"/>
+                                <MenuItem Header="Restore"
+                                          Command="{Binding RestoreCommand}"
+                                          IsVisible="{Binding HasRestoreCommand}"/>
+                                <MenuItem Header="Clean"
+                                          Command="{Binding CleanCommand}"
+                                          IsVisible="{Binding HasCleanCommand}"/>
+                                <MenuItem Header="Run"
+                                          Command="{Binding RunCommand}"
+                                          IsVisible="{Binding HasRunCommand}"/>
+                                <MenuItem Header="Test"
+                                          Command="{Binding TestCommand}"
+                                          IsVisible="{Binding HasTestCommand}"/>
+                                <MenuItem Header="Set as Startup Project"
+                                          Command="{Binding SetStartupProjectCommand}"
+                                          IsVisible="{Binding HasSetStartupProjectCommand}"/>
+                                <MenuItem Header="Add Project Reference"
+                                          Command="{Binding AddProjectReferenceCommand}"
+                                          IsVisible="{Binding HasAddProjectReferenceCommand}"/>
+                                <MenuItem Header="Remove"
+                                          Command="{Binding RemoveProjectReferenceCommand}"
+                                          IsVisible="{Binding HasRemoveProjectReferenceCommand}"/>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate x:DataType="vm:SolutionTreeItem"
+                                  ItemsSource="{Binding Children}">
+                    <TextBlock Text="{Binding DisplayName}"
+                               FontFamily="{StaticResource FluenceFontFamily}"
+                               FontSize="{StaticResource FluenceFontSizeSmall}"
+                               Foreground="{Binding IsActive, Converter={x:Static conv:BoolToForegroundConverter.ActiveFile}}"
+                               TextTrimming="CharacterEllipsis"
+                               Padding="2,0"/>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </Grid>
+
+</UserControl>

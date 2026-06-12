@@ -90,13 +90,11 @@
                     </Border>
 
                     <Grid Grid.Row="1">
-                        <ContentControl
-                                        Content="{Binding Editor}"
+                        <ContentControl Content="{Binding MainEditorContent}"
                                         IsVisible="{Binding HasActiveDocument}"
                                         HorizontalAlignment="Stretch"
                                         VerticalAlignment="Stretch"/>
-                        <TextBlock
-                                   Text="{Binding EditorPlaceholder}"
+                        <TextBlock Text="{Binding EditorPlaceholder}"
                                    IsVisible="{Binding HasNoActiveDocument}"
                                    FontFamily="{StaticResource FluenceFontFamily}"
                                    FontSize="{StaticResource FluenceFontSizeTitle}"
@@ -118,7 +116,7 @@
                             Padding="12,8"
                             BorderBrush="{StaticResource FluenceBrushBorder}"
                             BorderThickness="0,0,0,1">
-                        <TextBlock Text="{Binding SidebarPlaceholder}"
+                        <TextBlock Text="{Binding SidebarTitle}"
                                    FontFamily="{StaticResource FluenceFontFamily}"
                                    FontSize="{StaticResource FluenceFontSizeSmall}"
                                    FontWeight="SemiBold"
@@ -127,17 +125,9 @@
                     </Border>
 
                     <ScrollViewer Grid.Row="1"
-                                  IsVisible="{Binding IsFolderMode}"
                                   HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Auto">
-                        <views:FileExplorerView DataContext="{Binding FileExplorer}"/>
-                    </ScrollViewer>
-
-                    <ScrollViewer Grid.Row="1"
-                                  IsVisible="{Binding IsSolutionMode}"
-                                  HorizontalScrollBarVisibility="Auto"
-                                  VerticalScrollBarVisibility="Auto">
-                        <views:SolutionView DataContext="{Binding Solution}"/>
+                        <ContentControl Content="{Binding ActiveSidebarContent}"/>
                     </ScrollViewer>
                 </Grid>
             </Border>
@@ -156,7 +146,7 @@
                         HorizontalContentAlignment="Stretch">
                     <Grid Height="36" ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0"
-                                   Text="Terminal"
+                                   Text="{Binding BottomBarTitle}"
                                    Margin="16,0"
                                    FontFamily="{StaticResource FluenceFontFamily}"
                                    FontSize="{StaticResource FluenceFontSizeBody}"
@@ -167,7 +157,7 @@
                 </Button>
                 <Border Height="160"
                         IsVisible="{Binding IsTerminalExpanded}">
-                    <views:TerminalView DataContext="{Binding Terminal}"/>
+                    <ContentControl Content="{Binding TerminalContent}"/>
                 </Border>
             </StackPanel>
         </Border>

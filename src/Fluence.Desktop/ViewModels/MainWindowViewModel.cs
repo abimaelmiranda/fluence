@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,24 +7,20 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Fluence.Application.DotnetCli;
-using Fluence.Application.Workspace;
-using Fluence.Core.Commands;
+using Fluence.Core.Exceptions;
+using Fluence.Core.Modules;
+using Fluence.Core.Ports;
+using Fluence.Core.ViewModels;
 using Fluence.Core.Workspace;
-using Fluence.Desktop.Services;
 
 namespace Fluence.Desktop.ViewModels;
 
 public sealed partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IWorkspaceContext _workspace;
-    private readonly ICommandHandler<SaveActiveDocumentCommand> _saveActiveDocumentHandler;
-    private readonly ICommandHandler<BuildWorkspaceCommand> _buildHandler;
-    private readonly ICommandHandler<RunProjectCommand> _runHandler;
-    private readonly ICommandHandler<TestWorkspaceCommand> _testHandler;
-    private readonly ICommandHandler<RestoreWorkspaceCommand> _restoreHandler;
-    private readonly ICommandHandler<CleanWorkspaceCommand> _cleanHandler;
     private readonly IUserNotificationService _notifications;
+    private readonly IShellEventBus _eventBus;
+    private readonly IShellRegionHost _regions;
 
     [ObservableProperty]
     private WorkspaceMode _workspaceMode;
@@ -35,51 +31,39 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(
         IWorkspaceContext workspace,
         WelcomeViewModel welcome,
-        EditorViewModel editor,
-        FileExplorerViewModel fileExplorer,
-        SolutionViewModel solution,
-        TerminalViewModel terminal,
-        ICommandHandler<SaveActiveDocumentCommand> saveActiveDocumentHandler,
-        ICommandHandler<BuildWorkspaceCommand> buildHandler,
-        ICommandHandler<RunProjectCommand> runHandler,
-        ICommandHandler<TestWorkspaceCommand> testHandler,
-        ICommandHandler<RestoreWorkspaceCommand> restoreHandler,
-        ICommandHandler<CleanWorkspaceCommand> cleanHandler,
-        IUserNotificationService notifications)
+        IUserNotificationService notifications,
+        IShellEventBus eventBus,
+        IShellRegionHost regions)
     {
         _workspace = workspace;
-        _saveActiveDocumentHandler = saveActiveDocumentHandler;
-        _buildHandler = buildHandler;
-        _runHandler = runHandler;
-        _testHandler = testHandler;
-        _restoreHandler = restoreHandler;
-        _cleanHandler = cleanHandler;
         _notifications = notifications;
+        _eventBus = eventBus;
+        _regions = regions;
         Welcome = welcome;
-        Editor = editor;
-        FileExplorer = fileExplorer;
-        Solution = solution;
-        Terminal = terminal;
         _workspaceMode = workspace.Current.Mode;
         _workspace.Changed += OnWorkspaceChanged;
-        Solution.TerminalExpandRequested += OnTerminalExpandRequested;
+        _regions.Changed += OnShellRegionsChanged;
+        _regions.RegionExpanded += OnShellRegionExpanded;
+        _eventBus.Subscribe<ExpandPanelEvent>(OnExpandPanelRequested);
     }
 
     public WelcomeViewModel Welcome { get; }
 
-    public EditorViewModel Editor { get; }
+    public object? ActiveSidebarContent => _regions.SidebarContent?.ViewModel;
 
-    public FileExplorerViewModel FileExplorer { get; }
+    public object? MainEditorContent => _regions.MainContent?.ViewModel;
 
-    public SolutionViewModel Solution { get; }
+    public object? TerminalContent => _regions.BottomBarContent?.ViewModel;
 
-    public TerminalViewModel Terminal { get; }
+    public string SidebarTitle => _regions.SidebarContent?.Title ?? SidebarPlaceholder;
+
+    public string BottomBarTitle => _regions.BottomBarContent?.Title ?? "Terminal";
 
     public bool IsWelcomeVisible => WorkspaceMode == WorkspaceMode.Empty;
 
     public bool IsWorkspaceVisible => WorkspaceMode != WorkspaceMode.Empty;
 
-    public bool IsSidebarVisible => WorkspaceMode is WorkspaceMode.Folder or WorkspaceMode.Solution;
+    public bool IsSidebarVisible => _regions.SidebarContent is not null;
 
     public bool IsFolderMode => WorkspaceMode == WorkspaceMode.Folder;
 
@@ -149,6 +133,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsSidebarVisible));
         OnPropertyChanged(nameof(IsFolderMode));
         OnPropertyChanged(nameof(IsSolutionMode));
+        OnPropertyChanged(nameof(ActiveSidebarContent));
         BuildCommand.NotifyCanExecuteChanged();
         RunCommand.NotifyCanExecuteChanged();
         TestCommand.NotifyCanExecuteChanged();
@@ -166,9 +151,26 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SidebarDetail));
     }
 
-    private void OnTerminalExpandRequested(object? sender, EventArgs e)
+    private void OnExpandPanelRequested(ExpandPanelEvent e)
     {
-        IsTerminalExpanded = true;
+        if (e.PanelId == "Terminal")
+            IsTerminalExpanded = true;
+    }
+
+    private void OnShellRegionExpanded(object? sender, ShellRegionExpandedEventArgs e)
+    {
+        if (e.Region == ShellRegion.BottomBar)
+            IsTerminalExpanded = true;
+    }
+
+    private void OnShellRegionsChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(ActiveSidebarContent));
+        OnPropertyChanged(nameof(MainEditorContent));
+        OnPropertyChanged(nameof(TerminalContent));
+        OnPropertyChanged(nameof(SidebarTitle));
+        OnPropertyChanged(nameof(BottomBarTitle));
+        OnPropertyChanged(nameof(IsSidebarVisible));
     }
 
     [RelayCommand]
@@ -210,7 +212,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OpenFileFailureNotification.TryShow(
             _notifications,
             "sample.png",
-            new UnsupportedTextFileException("sample.png"));
+            new SimulatedUnsupportedFileException("This file does not appear to be a text file."));
     }
 
     [RelayCommand]
@@ -234,42 +236,48 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveActiveDocumentAsync(CancellationToken cancellationToken)
     {
-        await _saveActiveDocumentHandler.HandleAsync(new SaveActiveDocumentCommand(), cancellationToken);
+        _eventBus.Publish(new SaveActiveDocumentRequestedEvent());
+        await Task.CompletedTask;
     }
 
     [RelayCommand(CanExecute = nameof(HasWorkspace))]
     private async Task BuildAsync(CancellationToken cancellationToken)
     {
         IsTerminalExpanded = true;
-        await _buildHandler.HandleAsync(new BuildWorkspaceCommand(), cancellationToken);
+        _eventBus.Publish(new BuildWorkspaceRequestedEvent());
+        await Task.CompletedTask;
     }
 
     [RelayCommand(CanExecute = nameof(HasWorkspace))]
     private async Task RunAsync(CancellationToken cancellationToken)
     {
         IsTerminalExpanded = true;
-        await _runHandler.HandleAsync(new RunProjectCommand(), cancellationToken);
+        _eventBus.Publish(new RunProjectRequestedEvent());
+        await Task.CompletedTask;
     }
 
     [RelayCommand(CanExecute = nameof(HasWorkspace))]
     private async Task TestAsync(CancellationToken cancellationToken)
     {
         IsTerminalExpanded = true;
-        await _testHandler.HandleAsync(new TestWorkspaceCommand(), cancellationToken);
+        _eventBus.Publish(new TestWorkspaceRequestedEvent());
+        await Task.CompletedTask;
     }
 
     [RelayCommand(CanExecute = nameof(HasWorkspace))]
     private async Task RestoreAsync(CancellationToken cancellationToken)
     {
         IsTerminalExpanded = true;
-        await _restoreHandler.HandleAsync(new RestoreWorkspaceCommand(), cancellationToken);
+        _eventBus.Publish(new RestoreWorkspaceRequestedEvent());
+        await Task.CompletedTask;
     }
 
     [RelayCommand(CanExecute = nameof(HasWorkspace))]
     private async Task CleanAsync(CancellationToken cancellationToken)
     {
         IsTerminalExpanded = true;
-        await _cleanHandler.HandleAsync(new CleanWorkspaceCommand(), cancellationToken);
+        _eventBus.Publish(new CleanWorkspaceRequestedEvent());
+        await Task.CompletedTask;
     }
 
     private bool HasWorkspace() => WorkspaceMode != WorkspaceMode.Empty;
@@ -279,20 +287,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         var activeDocument = _workspace.Current.TabSession.ActiveDocument;
         if (activeDocument is null)
-        {
             return;
-        }
 
         CloseDocument(activeDocument.Path);
     }
 
-    private void ActivateDocument(string path)
-    {
-        _workspace.ActivateDocument(path);
-    }
+    private void ActivateDocument(string path) => _workspace.ActivateDocument(path);
 
-    private void CloseDocument(string path)
+    private void CloseDocument(string path) => _workspace.CloseDocument(path);
+
+    private sealed class SimulatedUnsupportedFileException(string reason) : FluenceExceptionBase(reason)
     {
-        _workspace.CloseDocument(path);
+        public override string UserMessage { get; } = reason;
     }
 }

@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fluence.Core\Fluence.Core.csproj" />
-    <ProjectReference Include="..\..\src\Fluence.Application\Fluence.Application.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,16 +1,14 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Fluence.Core/Fluence.Core.csproj" />
+    <Project Path="src/Fluence.Desktop/Fluence.Desktop.csproj" />
+    <Project Path="src/Fluence.Infrastructure/Fluence.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/modules/">
     <Project Path="modules/Fluence.Modules.DotnetCli/Fluence.Modules.DotnetCli.csproj" />
     <Project Path="modules/Fluence.Modules.Editor/Fluence.Modules.Editor.csproj" />
     <Project Path="modules/Fluence.Modules.FileExplorer/Fluence.Modules.FileExplorer.csproj" />
     <Project Path="modules/Fluence.Modules.SolutionView/Fluence.Modules.SolutionView.csproj" />
     <Project Path="modules/Fluence.Modules.Terminal/Fluence.Modules.Terminal.csproj" />
-  </Folder>
-  <Folder Name="/src/">
-    <Project Path="src/Fluence.Application/Fluence.Application.csproj" />
-    <Project Path="src/Fluence.Core/Fluence.Core.csproj" />
-    <Project Path="src/Fluence.Desktop/Fluence.Desktop.csproj" />
-    <Project Path="src/Fluence.Domain/Fluence.Domain.csproj" />
-    <Project Path="src/Fluence.Infrastructure/Fluence.Infrastructure.csproj" />
   </Folder>
 </Solution>

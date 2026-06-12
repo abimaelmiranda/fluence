@@ -20,6 +20,7 @@
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
+artifacts/
 x64/
 build/
 bld/
