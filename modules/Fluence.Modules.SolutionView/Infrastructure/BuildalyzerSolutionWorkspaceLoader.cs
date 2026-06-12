@@ -395,13 +395,26 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
 
     private static bool IsVisibleFile(string path)
     {
-        return File.Exists(path) && !IsHiddenPath(path);
+        return File.Exists(path) && !IsHiddenPath(path) && !HasHiddenAttributes(path);
     }
 
     private static bool IsHiddenPath(string path)
     {
         return path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                   .Any(segment => HiddenPathSegments.Contains(segment));
+                   .Any(segment => HiddenPathSegments.Contains(segment) ||
+                                   (segment.Length > 1 && segment.StartsWith(".", StringComparison.Ordinal)));
+    }
+
+    private static bool HasHiddenAttributes(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.Hidden) == FileAttributes.Hidden;
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     private sealed record ProjectLoadResult(
