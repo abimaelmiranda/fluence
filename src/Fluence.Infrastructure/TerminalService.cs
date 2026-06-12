@@ -175,7 +175,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         if (_session is not null)
         {
             _session.Exited -= OnSessionExited;
-            await Task.Run(() => _session.Dispose()).ConfigureAwait(false);
+            await Task.Run(() => _session.Dispose());
             _session = null;
         }
     }

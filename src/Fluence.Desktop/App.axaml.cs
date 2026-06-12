@@ -52,14 +52,16 @@ public partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
+    private async void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
         Dispatcher.UIThread.UnhandledException -= OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException -= OnAppDomainUnhandledException;
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
 
-        // TerminalService implements only IAsyncDisposable; call DisposeAsync to avoid InvalidOperationException.
-        (_serviceProvider as System.IAsyncDisposable)?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        if(_serviceProvider is null)
+            return;
+
+        await _serviceProvider.DisposeAsync();
         _serviceProvider = null;
     }
 
