@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +16,15 @@ namespace Fluence.Modules.SolutionView;
 
 public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoader
 {
+    private const int CacheFormatVersion = 1;
+    private const string CacheDirectoryName = ".fluence";
+    private const string CacheFilePrefix = "solution-structure";
+
+    private static readonly JsonSerializerOptions CacheJsonOptions = new()
+    {
+        WriteIndented = true,
+    };
+
     private static readonly string[] SupportedItemTypes =
     [
         "Compile",
@@ -53,6 +65,12 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         }
 
         var solutionInfo = SolutionFileInfo.Parse(solutionPath);
+        var fingerprint = CreateCacheFingerprint(solutionPath, solutionInfo, cancellationToken);
+        if (TryLoadFromCache(solutionPath, fingerprint, out var cachedSnapshot))
+        {
+            return cachedSnapshot;
+        }
+
         var projects = LoadProjectsWithBuildalyzer(solutionPath, solutionInfo, cancellationToken);
         if (projects.Count == 0)
         {
@@ -73,7 +91,199 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             parent.Children.Add(project.Node);
         }
 
-        return new SolutionWorkspaceSnapshot(solutionPath, rootBuilder.ToImmutable());
+        var snapshot = new SolutionWorkspaceSnapshot(solutionPath, rootBuilder.ToImmutable());
+        SaveToCache(solutionPath, fingerprint, snapshot);
+        return snapshot;
+    }
+
+    private static bool TryLoadFromCache(
+        string solutionPath,
+        SolutionCacheFingerprint fingerprint,
+        out SolutionWorkspaceSnapshot snapshot)
+    {
+        snapshot = null!;
+
+        try
+        {
+            var cachePath = GetCacheFilePath(solutionPath);
+            if (!File.Exists(cachePath))
+            {
+                return false;
+            }
+
+            using var stream = File.OpenRead(cachePath);
+            var cache = JsonSerializer.Deserialize<SolutionStructureCache>(stream, CacheJsonOptions);
+            if (cache is null ||
+                cache.FormatVersion != CacheFormatVersion ||
+                cache.Fingerprint is null ||
+                cache.Root is null ||
+                !string.Equals(cache.SolutionPath, solutionPath, StringComparison.OrdinalIgnoreCase) ||
+                !HasSameFingerprint(fingerprint, cache.Fingerprint))
+            {
+                return false;
+            }
+
+            snapshot = new SolutionWorkspaceSnapshot(solutionPath, cache.Root);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void SaveToCache(
+        string solutionPath,
+        SolutionCacheFingerprint fingerprint,
+        SolutionWorkspaceSnapshot snapshot)
+    {
+        try
+        {
+            var cacheDirectory = GetCacheDirectoryPath(solutionPath);
+            Directory.CreateDirectory(cacheDirectory);
+
+            var cache = new SolutionStructureCache(
+                CacheFormatVersion,
+                solutionPath,
+                DateTimeOffset.UtcNow,
+                fingerprint,
+                snapshot.Root);
+
+            var cachePath = GetCacheFilePath(solutionPath);
+            var temporaryPath = $"{cachePath}.tmp";
+            using (var stream = File.Create(temporaryPath))
+            {
+                JsonSerializer.Serialize(stream, cache, CacheJsonOptions);
+            }
+
+            File.Move(temporaryPath, cachePath, overwrite: true);
+        }
+        catch
+        {
+        }
+    }
+
+    private static string GetCacheDirectoryPath(string solutionPath)
+    {
+        var solutionDirectory = Path.GetDirectoryName(solutionPath) ?? Directory.GetCurrentDirectory();
+        return Path.Combine(solutionDirectory, CacheDirectoryName);
+    }
+
+    private static string GetCacheFilePath(string solutionPath)
+    {
+        var solutionName = Path.GetFileNameWithoutExtension(solutionPath);
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(solutionPath))))
+            .ToLowerInvariant()[..12];
+        return Path.Combine(GetCacheDirectoryPath(solutionPath), $"{CacheFilePrefix}-{solutionName}-{hash}.json");
+    }
+
+    private static SolutionCacheFingerprint CreateCacheFingerprint(
+        string solutionPath,
+        SolutionFileInfo solutionInfo,
+        CancellationToken cancellationToken)
+    {
+        var files = solutionInfo.ProjectPaths
+            .Append(Path.GetFullPath(solutionPath))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Select(CreateCacheFileFingerprint)
+            .ToArray();
+
+        var visibleProjectFiles = solutionInfo.ProjectPaths
+            .SelectMany(path => GetVisibleProjectFilePaths(path, cancellationToken))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new SolutionCacheFingerprint(files, visibleProjectFiles);
+    }
+
+    private static SolutionCacheFileFingerprint CreateCacheFileFingerprint(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return new SolutionCacheFileFingerprint(Path.GetFullPath(path), null, null);
+        }
+
+        var info = new FileInfo(path);
+        return new SolutionCacheFileFingerprint(
+            Path.GetFullPath(path),
+            info.LastWriteTimeUtc.Ticks,
+            info.Length);
+    }
+
+    private static IEnumerable<string> GetVisibleProjectFilePaths(string projectPath, CancellationToken cancellationToken)
+    {
+        var projectDirectory = Path.GetDirectoryName(projectPath);
+        if (string.IsNullOrWhiteSpace(projectDirectory) || !Directory.Exists(projectDirectory))
+        {
+            return [];
+        }
+
+        try
+        {
+            return Directory.EnumerateFiles(projectDirectory, "*", SearchOption.AllDirectories)
+                .Where(path =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return IsVisibleProjectCacheFile(path);
+                })
+                .Select(Path.GetFullPath)
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private static bool IsVisibleProjectCacheFile(string path)
+    {
+        return !IsHiddenPath(path) && !HasHiddenAttributes(path);
+    }
+
+    private static bool HasSameFingerprint(
+        SolutionCacheFingerprint current,
+        SolutionCacheFingerprint cached)
+    {
+        if (current.Files.Count != cached.Files.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < current.Files.Count; index++)
+        {
+            var currentFile = current.Files[index];
+            var cachedFile = cached.Files[index];
+            if (!string.Equals(currentFile.Path, cachedFile.Path, StringComparison.OrdinalIgnoreCase) ||
+                currentFile.LastWriteTimeUtcTicks != cachedFile.LastWriteTimeUtcTicks ||
+                currentFile.Length != cachedFile.Length)
+            {
+                return false;
+            }
+        }
+
+        return HasSamePaths(current.VisibleProjectFiles, cached.VisibleProjectFiles);
+    }
+
+    private static bool HasSamePaths(
+        IReadOnlyList<string> current,
+        IReadOnlyList<string> cached)
+    {
+        if (current.Count != cached.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < current.Count; index++)
+        {
+            if (!string.Equals(current[index], cached[index], StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static List<ProjectLoadResult> LoadProjectsWithBuildalyzer(
@@ -425,6 +635,22 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
     private sealed record ProjectReferenceInfo(string Include);
 
     private sealed record PackageReferenceInfo(string Id, string? Version);
+
+    private sealed record SolutionStructureCache(
+        int FormatVersion,
+        string SolutionPath,
+        DateTimeOffset CreatedAtUtc,
+        SolutionCacheFingerprint Fingerprint,
+        SolutionTreeNode Root);
+
+    private sealed record SolutionCacheFingerprint(
+        IReadOnlyList<SolutionCacheFileFingerprint> Files,
+        IReadOnlyList<string> VisibleProjectFiles);
+
+    private sealed record SolutionCacheFileFingerprint(
+        string Path,
+        long? LastWriteTimeUtcTicks,
+        long? Length);
 
     private sealed class MutableNode(
         SolutionTreeNodeKind kind,
