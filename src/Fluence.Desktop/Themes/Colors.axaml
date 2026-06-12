@@ -1,0 +1,20 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="FluenceColorShell">#111418</Color>
+    <Color x:Key="FluenceColorSurface">#171B20</Color>
+    <Color x:Key="FluenceColorSurfaceElevated">#20262D</Color>
+    <Color x:Key="FluenceColorBorder">#303842</Color>
+    <Color x:Key="FluenceColorTextPrimary">#F2F5F8</Color>
+    <Color x:Key="FluenceColorTextSecondary">#AAB4BF</Color>
+    <Color x:Key="FluenceColorAccent">#4FA3FF</Color>
+    <Color x:Key="FluenceColorError">#FF6B6B</Color>
+
+    <SolidColorBrush x:Key="FluenceBrushShell" Color="{StaticResource FluenceColorShell}"/>
+    <SolidColorBrush x:Key="FluenceBrushSurface" Color="{StaticResource FluenceColorSurface}"/>
+    <SolidColorBrush x:Key="FluenceBrushSurfaceElevated" Color="{StaticResource FluenceColorSurfaceElevated}"/>
+    <SolidColorBrush x:Key="FluenceBrushBorder" Color="{StaticResource FluenceColorBorder}"/>
+    <SolidColorBrush x:Key="FluenceBrushTextPrimary" Color="{StaticResource FluenceColorTextPrimary}"/>
+    <SolidColorBrush x:Key="FluenceBrushTextSecondary" Color="{StaticResource FluenceColorTextSecondary}"/>
+    <SolidColorBrush x:Key="FluenceBrushAccent" Color="{StaticResource FluenceColorAccent}"/>
+    <SolidColorBrush x:Key="FluenceBrushError" Color="{StaticResource FluenceColorError}"/>
+</ResourceDictionary>
