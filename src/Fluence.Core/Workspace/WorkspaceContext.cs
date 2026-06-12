@@ -20,6 +20,12 @@ public sealed class WorkspaceContext : IWorkspaceContext
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public void OpenToolTab(string id, string displayName, object contentViewModel)
+    {
+        Current.OpenToolTab(id, displayName, contentViewModel);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     public void OpenFolder(string path)
     {
         Current.OpenFolder(path);

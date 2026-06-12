@@ -33,6 +33,7 @@
     <ProjectReference Include="..\Fluence.Core\Fluence.Core.csproj" />
     <ProjectReference Include="..\Fluence.Infrastructure\Fluence.Infrastructure.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.FileExplorer\Fluence.Modules.FileExplorer.csproj" />
+    <ProjectReference Include="..\..\modules\Fluence.Modules.NuGetExplorer\Fluence.Modules.NuGetExplorer.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.SolutionView\Fluence.Modules.SolutionView.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.Editor\Fluence.Modules.Editor.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.Terminal\Fluence.Modules.Terminal.csproj" />

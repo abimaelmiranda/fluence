@@ -22,6 +22,10 @@ public sealed record OpenFolderRequestedEvent(string Path) : IShellEvent;
 
 public sealed record OpenSolutionRequestedEvent(string Path) : IShellEvent;
 
+public sealed record ManageNuGetPackagesRequestedEvent(string SolutionPath) : IShellEvent;
+
+public sealed record RefreshSolutionViewRequestedEvent : IShellEvent;
+
 public sealed record SaveActiveDocumentRequestedEvent : IShellEvent;
 
 public sealed record BuildWorkspaceRequestedEvent : IShellEvent;

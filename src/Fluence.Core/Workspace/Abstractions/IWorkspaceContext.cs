@@ -12,6 +12,8 @@ public interface IWorkspaceContext
 
     void OpenFile(string path, string content);
 
+    void OpenToolTab(string id, string displayName, object contentViewModel);
+
     void OpenFolder(string path);
 
     void OpenSolution(string path);

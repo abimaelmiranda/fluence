@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Buildalyzer;
+using Buildalyzer.IO;
 
 namespace Fluence.Modules.SolutionView;
 
@@ -296,7 +297,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         {
             manager = solutionInfo.ProjectPaths.Count > 0
                 ? new AnalyzerManager()
-                : new AnalyzerManager(solutionPath);
+                : new AnalyzerManager(IOPath.Empty.Combine(solutionPath));
         }
         catch (Exception ex)
         {
@@ -459,7 +460,11 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
                 continue;
             }
 
-            projects.Add((projectPath, manager.GetProject(projectPath)));
+            var analyzer = manager.GetProject(IOPath.Empty.Combine(projectPath));
+            if (analyzer is not null)
+            {
+                projects.Add((projectPath, analyzer));
+            }
         }
 
         return projects;

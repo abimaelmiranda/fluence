@@ -51,7 +51,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     public object? ActiveSidebarContent => _regions.SidebarContent?.ViewModel;
 
-    public object? MainEditorContent => _regions.MainContent?.ViewModel;
+    public object? MainEditorContent => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.Tool
+        ? _workspace.Current.TabSession.ActiveDocument.ContentViewModel
+        : _regions.MainContent?.ViewModel;
 
     public object? TerminalContent => _regions.BottomBarContent?.ViewModel;
 
@@ -79,6 +81,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             document.DisplayName,
             string.Equals(document.Path, ActiveDocumentPath, StringComparison.Ordinal),
             document.IsDirty,
+            document.Kind == OpenDocumentKind.Tool,
             ActivateDocument,
             CloseDocument))
         .ToArray();
@@ -134,6 +137,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsFolderMode));
         OnPropertyChanged(nameof(IsSolutionMode));
         OnPropertyChanged(nameof(ActiveSidebarContent));
+        OnPropertyChanged(nameof(MainEditorContent));
         BuildCommand.NotifyCanExecuteChanged();
         RunCommand.NotifyCanExecuteChanged();
         TestCommand.NotifyCanExecuteChanged();
