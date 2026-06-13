@@ -16,7 +16,9 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
 
     private readonly IPtyHost _ptyHost;
     private readonly object _sessionsGate = new();
+    private readonly object _cleanupGate = new();
     private readonly List<TerminalSession> _sessions = [];
+    private readonly HashSet<Task> _cleanupTasks = [];
     private bool _disposed;
 
     public TerminalService(IPtyHost ptyHost)
@@ -98,7 +100,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
             }
 
             terminalSession.BeginClose();
-            _ = DisposeSessionAsync(terminalSession);
+            TrackCleanup(DisposeSessionAsync(terminalSession));
             SessionsChanged?.Invoke(this, EventArgs.Empty);
         }
         catch
@@ -130,7 +132,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
     private void OnSessionTerminalEnded(object? sender, EventArgs e)
     {
         if (sender is TerminalSession session)
-            _ = CloseSessionAsync(session);
+            TrackCleanup(CloseSessionAsync(session));
     }
 
     public async Task ExecuteAsync(
@@ -171,7 +173,14 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
             session.BeginClose();
         }
 
-        await Task.WhenAll(sessions.Select(session => session.DisposeAsync().AsTask())).ConfigureAwait(false);
+        var disposeTasks = sessions.Select(session => session.DisposeAsync().AsTask()).ToArray();
+        await Task.WhenAll(disposeTasks).ConfigureAwait(false);
+
+        Task[] cleanupTasks;
+        lock (_cleanupGate)
+            cleanupTasks = _cleanupTasks.ToArray();
+
+        await Task.WhenAll(cleanupTasks).ConfigureAwait(false);
     }
 
     private static async Task DisposeSessionAsync(TerminalSession session)
@@ -186,18 +195,38 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         }
     }
 
+    private void TrackCleanup(Task cleanupTask)
+    {
+        lock (_cleanupGate)
+            _cleanupTasks.Add(cleanupTask);
+
+        cleanupTask.ContinueWith(
+            completedTask =>
+            {
+                _ = completedTask.Exception;
+                lock (_cleanupGate)
+                    _cleanupTasks.Remove(completedTask);
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
     private sealed class TerminalSession : ITerminalSession
     {
         private readonly IPtyHost _ptyHost;
         private readonly object _stateGate = new();
         private readonly object _pendingGate = new();
+        private readonly object _sessionCleanupGate = new();
         private readonly Queue<PendingCommand> _pendingCommands = [];
+        private readonly HashSet<Task> _sessionCleanupTasks = [];
         private readonly SemaphoreSlim _startGate = new(1, 1);
         private readonly SemaphoreSlim _writeGate = new(1, 1);
         private readonly CancellationTokenSource _closeCts = new();
         private int _disposeStarted;
         private IPtySession? _ptySession;
         private CancellationTokenSource? _readCts;
+        private Thread? _readThread;
         private string? _shellWorkingDirectory;
         private TerminalSessionState _state = TerminalSessionState.Created;
         private TerminalProcessState _processState = TerminalProcessState.Uninitialized;
@@ -291,6 +320,8 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
                     columns,
                     rows,
                     cancellationToken).ConfigureAwait(false);
+                if (ptySession is null)
+                    return;
 
                 ptySession.Exited += OnSessionExited;
 
@@ -312,7 +343,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
                 if (disposeCreatedPty)
                 {
                     ptySession.Exited -= OnSessionExited;
-                    _ = DisposePtySessionAsync(ptySession);
+                    await DisposePtySessionAsync(ptySession).ConfigureAwait(false);
                     return;
                 }
 
@@ -466,6 +497,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
                 IsBackground = true,
                 Name = "pty-read-loop",
             };
+            _readThread = t;
             t.Start();
         }
 
@@ -530,24 +562,31 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
             return "'" + path.Replace("'", "'\\''") + "'";
         }
 
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             if (Interlocked.Exchange(ref _disposeStarted, 1) == 1)
-                return ValueTask.CompletedTask;
+                return;
 
             MarkClosing();
             TryCancelReadLoop();
 
-            var ptySession = DetachPtySession();
-            ClearPendingCommands();
+            var startGateHeld = false;
+            var writeGateHeld = false;
 
             try
             {
-                _readCts?.Dispose();
-                _readCts = null;
+                await _startGate.WaitAsync().ConfigureAwait(false);
+                startGateHeld = true;
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                writeGateHeld = true;
+
+                var ptySession = DetachPtySession();
+                ClearPendingCommands();
 
                 if (ptySession is not null)
-                    _ = GracefulDisposeAsync(ptySession);
+                    await GracefulDisposeAsync(ptySession).ConfigureAwait(false);
+
+                await Task.WhenAll(SnapshotSessionCleanups()).ConfigureAwait(false);
 
                 State = TerminalSessionState.Closed;
             }
@@ -555,8 +594,19 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
             {
                 State = TerminalSessionState.Closed;
             }
-
-            return ValueTask.CompletedTask;
+            finally
+            {
+                JoinReadThread();
+                _readCts?.Dispose();
+                _readCts = null;
+                if (writeGateHeld)
+                    _writeGate.Release();
+                if (startGateHeld)
+                    _startGate.Release();
+                _closeCts.Dispose();
+                _startGate.Dispose();
+                _writeGate.Dispose();
+            }
         }
 
         private bool MarkClosing()
@@ -594,7 +644,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
             TerminalEnded?.Invoke(this, EventArgs.Empty);
         }
 
-        private async Task<IPtySession> CreatePtySessionAsync(
+        private async Task<IPtySession?> CreatePtySessionAsync(
             string workingDirectory,
             int columns,
             int rows,
@@ -606,24 +656,52 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
 
             try
             {
-                var delayTask = Task.Delay(StartupTimeout, linkedCts.Token);
-                var completedTask = await Task.WhenAny(createTask, delayTask).ConfigureAwait(false);
+                var delayTask = Task.Delay(StartupTimeout);
+                var cancellationTask = WaitForCancellationAsync(linkedCts.Token);
+                var completedTask = await Task.WhenAny(createTask, delayTask, cancellationTask).ConfigureAwait(false);
                 if (completedTask == createTask)
                     return await createTask.ConfigureAwait(false);
 
-                if (linkedCts.IsCancellationRequested)
-                    throw new OperationCanceledException(linkedCts.Token);
+                if (completedTask == cancellationTask)
+                {
+                    if (!createTask.IsCompleted)
+                    {
+                        TrackSessionCleanup(DisposeLatePtySessionAsync(createTask));
+                        lateDisposeScheduled = true;
+                    }
 
-                _ = DisposeLatePtySessionAsync(createTask);
+                    return null;
+                }
+
+                TrackSessionCleanup(DisposeLatePtySessionAsync(createTask));
                 lateDisposeScheduled = true;
                 throw new TimeoutException("terminal shell startup timed out");
             }
             catch
             {
                 if (!lateDisposeScheduled && !createTask.IsCompleted)
-                    _ = DisposeLatePtySessionAsync(createTask);
+                    TrackSessionCleanup(DisposeLatePtySessionAsync(createTask));
                 throw;
             }
+        }
+
+        private static Task WaitForCancellationAsync(CancellationToken cancellationToken)
+        {
+            if (!cancellationToken.CanBeCanceled)
+                return Task.Delay(Timeout.InfiniteTimeSpan);
+            if (cancellationToken.IsCancellationRequested)
+                return Task.CompletedTask;
+
+            return WaitForCancellationCoreAsync(cancellationToken);
+        }
+
+        private static async Task WaitForCancellationCoreAsync(CancellationToken cancellationToken)
+        {
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var registration = cancellationToken.Register(
+                static state => ((TaskCompletionSource)state!).TrySetResult(),
+                tcs);
+            await tcs.Task.ConfigureAwait(false);
         }
 
         private static async Task DisposeLatePtySessionAsync(Task<IPtySession> createTask)
@@ -639,6 +717,29 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
             }
         }
 
+        private void TrackSessionCleanup(Task cleanupTask)
+        {
+            lock (_sessionCleanupGate)
+                _sessionCleanupTasks.Add(cleanupTask);
+
+            cleanupTask.ContinueWith(
+                completedTask =>
+                {
+                    _ = completedTask.Exception;
+                    lock (_sessionCleanupGate)
+                        _sessionCleanupTasks.Remove(completedTask);
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
+
+        private Task[] SnapshotSessionCleanups()
+        {
+            lock (_sessionCleanupGate)
+                return _sessionCleanupTasks.ToArray();
+        }
+
         private IPtySession? DetachPtySession()
         {
             var ptySession = Interlocked.Exchange(ref _ptySession, null);
@@ -652,6 +753,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         }
 
         private const int GracefulShutdownMs = 250;
+        private const int ReadThreadJoinMs = 250;
 
         private static async Task GracefulDisposeAsync(IPtySession ptySession)
         {
@@ -674,6 +776,15 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         {
             try { _readCts?.Cancel(); }
             catch (ObjectDisposedException) { }
+        }
+
+        private void JoinReadThread()
+        {
+            var readThread = _readThread;
+            if (readThread is null || Thread.CurrentThread == readThread)
+                return;
+
+            try { readThread.Join(ReadThreadJoinMs); } catch { }
         }
 
         private void ClearPendingCommands()

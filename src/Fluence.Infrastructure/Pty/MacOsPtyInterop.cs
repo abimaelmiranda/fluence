@@ -85,6 +85,9 @@ internal static class MacOsPtyInterop
     private const ulong TiocsWinsz = 0x80087467;
     private const int Sigterm = 15;
     private const int O_RDWR  = 2;
+    private const int EINTR = 4;
+    private const int ECHILD = 10;
+    private const int ESRCH = 3;
 
     // posix_spawn flags (macOS spawn.h)
     private const short POSIX_SPAWN_SETSIGDEF       = 0x0004;  // reset signals to SIG_DFL
@@ -122,16 +125,8 @@ internal static class MacOsPtyInterop
             ? Encoding.ASCII.GetString(nameBuffer, 0, nullIdx)
             : throw new InvalidOperationException("openpty returned empty slave path");
 
-        // Use GCHandle-pinned managed byte arrays instead of Marshal.AllocHGlobal with hardcoded
-        // sizes. posix_spawnattr_t and posix_spawn_file_actions_t are opaque macOS structs, so the
-        // buffers stay deliberately oversized and pinned for the duration of this call.
-        const int BufferSize = 4096;
-        var fileActionsBytes  = new byte[BufferSize];
-        var spawnAttrBytes    = new byte[BufferSize];
-        var fileActionsHandle = GCHandle.Alloc(fileActionsBytes, GCHandleType.Pinned);
-        var spawnAttrHandle   = GCHandle.Alloc(spawnAttrBytes,   GCHandleType.Pinned);
-        var fileActions       = fileActionsHandle.AddrOfPinnedObject();
-        var spawnAttr         = spawnAttrHandle.AddrOfPinnedObject();
+        using var fileActions = new PosixSpawnFileActions();
+        using var spawnAttr = new PosixSpawnAttributes();
         using var nativeExecutable = new NativeUtf8String(executable);
         using var nativeSlavePath = new NativeUtf8String(slavePath);
         using var nativeWorkingDirectory = string.IsNullOrEmpty(workingDirectory)
@@ -140,34 +135,26 @@ internal static class MacOsPtyInterop
         using var nativeArgv = new NativeStringArray(argv);
         using var nativeEnv = new NativeStringArray(env);
 
-        bool fileActionsInited = false;
-        bool spawnAttrInited   = false;
-
         try
         {
-            int rc = posix_spawn_file_actions_init(fileActions);
-            if (rc != 0) throw new InvalidOperationException($"posix_spawn_file_actions_init failed: errno={rc}");
-            fileActionsInited = true;
-
-            rc = posix_spawnattr_init(spawnAttr);
-            if (rc != 0) throw new InvalidOperationException($"posix_spawnattr_init failed: errno={rc}");
-            spawnAttrInited = true;
+            fileActions.Initialize();
+            spawnAttr.Initialize();
 
             // stdin: open slave by path — as session leader (POSIX_SPAWN_SETSID), opening a terminal
             // device without O_NOCTTY automatically sets it as the controlling terminal.
-            rc = posix_spawn_file_actions_addopen(fileActions, 0, nativeSlavePath.Pointer, O_RDWR, 0);
+            int rc = posix_spawn_file_actions_addopen(fileActions.Pointer, 0, nativeSlavePath.Pointer, O_RDWR, 0);
             if (rc != 0) throw new InvalidOperationException($"posix_spawn_file_actions_addopen failed: errno={rc}");
 
-            rc = posix_spawn_file_actions_adddup2(fileActions, 0, 1);  // stdout = FD 0
+            rc = posix_spawn_file_actions_adddup2(fileActions.Pointer, 0, 1);  // stdout = FD 0
             if (rc != 0) throw new InvalidOperationException($"posix_spawn_file_actions_adddup2 stdout failed: errno={rc}");
 
-            rc = posix_spawn_file_actions_adddup2(fileActions, 0, 2);  // stderr = FD 0
+            rc = posix_spawn_file_actions_adddup2(fileActions.Pointer, 0, 2);  // stderr = FD 0
             if (rc != 0) throw new InvalidOperationException($"posix_spawn_file_actions_adddup2 stderr failed: errno={rc}");
 
             // Working directory via macOS-extension file action (macOS 10.15+)
             if (nativeWorkingDirectory is not null)
             {
-                rc = posix_spawn_file_actions_addchdir_np(fileActions, nativeWorkingDirectory.Pointer);
+                rc = posix_spawn_file_actions_addchdir_np(fileActions.Pointer, nativeWorkingDirectory.Pointer);
                 if (rc != 0) throw new InvalidOperationException($"posix_spawn_file_actions_addchdir_np failed: errno={rc}");
             }
 
@@ -176,15 +163,15 @@ internal static class MacOsPtyInterop
                                   POSIX_SPAWN_SETSIGDEF |        // reset signal handlers to SIG_DFL
                                   POSIX_SPAWN_SETSIGMASK |       // set signal mask to empty
                                   POSIX_SPAWN_CLOEXEC_DEFAULT);  // close all inherited FDs at exec
-            rc = posix_spawnattr_setflags(spawnAttr, flags);
+            rc = posix_spawnattr_setflags(spawnAttr.Pointer, flags);
             if (rc != 0) throw new InvalidOperationException($"posix_spawnattr_setflags failed: errno={rc}");
 
             uint allSignals = uint.MaxValue;  // all signals → SIG_DFL
-            rc = posix_spawnattr_setsigdefault(spawnAttr, ref allSignals);
+            rc = posix_spawnattr_setsigdefault(spawnAttr.Pointer, ref allSignals);
             if (rc != 0) throw new InvalidOperationException($"posix_spawnattr_setsigdefault failed: errno={rc}");
 
             uint noSignals = 0u;              // unblock all signals in child
-            rc = posix_spawnattr_setsigmask(spawnAttr, ref noSignals);
+            rc = posix_spawnattr_setsigmask(spawnAttr.Pointer, ref noSignals);
             if (rc != 0) throw new InvalidOperationException($"posix_spawnattr_setsigmask failed: errno={rc}");
 
             // Retry on EAGAIN (errno=11): kernel temporarily can't spawn due to resource pressure.
@@ -197,8 +184,8 @@ internal static class MacOsPtyInterop
                 rc = posix_spawn(
                     out spawnedPid,
                     nativeExecutable.Pointer,
-                    fileActions,
-                    spawnAttr,
+                    fileActions.Pointer,
+                    spawnAttr.Pointer,
                     nativeArgv.Pointer,
                     nativeEnv.Pointer);
                 if (rc == 0) break;
@@ -208,48 +195,57 @@ internal static class MacOsPtyInterop
                 Thread.Sleep(25 << attempt);  // 25ms, then 50ms
             }
 
-            close(slave);  // parent holds only master end
+            CloseFdChecked(slave);  // parent holds only master end
             return (master, spawnedPid);
         }
         catch
         {
-            try { close(slave); } catch { }
-            try { close(master); } catch { }
+            CloseFdNoThrow(slave);
+            CloseFdNoThrow(master);
             throw;
         }
-        finally
-        {
-            if (fileActionsInited) posix_spawn_file_actions_destroy(fileActions);
-            if (spawnAttrInited)   posix_spawnattr_destroy(spawnAttr);
-            fileActionsHandle.Free();
-            spawnAttrHandle.Free();
-        }
     }
 
-    public static void SetWinSize(int masterFd, int columns, int rows)
+    public static bool SetWinSize(int masterFd, int columns, int rows)
     {
         var ws = new WinSize { ws_col = (ushort)columns, ws_row = (ushort)rows };
-        ioctl(masterFd, TiocsWinsz, ref ws);
+        return ioctl(masterFd, TiocsWinsz, ref ws) == 0;
     }
 
-    public static void WaitPid(int pid)
+    public static bool WaitPid(int pid)
     {
-        waitpid(pid, out _, 0);
+        while (true)
+        {
+            var result = waitpid(pid, out _, 0);
+            if (result == pid)
+                return true;
+
+            if (result != -1)
+                continue;
+
+            var errno = Marshal.GetLastPInvokeError();
+            if (errno == EINTR)
+                continue;
+            if (errno == ECHILD)
+                return false;
+
+            throw new InvalidOperationException($"waitpid failed: errno={errno} pid={pid}");
+        }
     }
 
     public static void Kill(int pid)
     {
-        kill(pid, Sigterm);
+        KillChecked(pid);
     }
 
     public static void KillProcessGroup(int pid)
     {
-        kill(-pid, Sigterm);
+        KillChecked(-pid);
     }
 
     public static void CloseFd(int fd)
     {
-        close(fd);
+        CloseFdChecked(fd);
     }
 
     public static string[] BuildEnvironment()
@@ -268,6 +264,103 @@ internal static class MacOsPtyInterop
             env.Add("TERM=xterm-256color");
 
         return env.ToArray();
+    }
+
+    private static void KillChecked(int pid)
+    {
+        if (kill(pid, Sigterm) == 0)
+            return;
+
+        var errno = Marshal.GetLastPInvokeError();
+        if (errno == ESRCH)
+            return;
+
+        throw new InvalidOperationException($"kill failed: errno={errno} pid={pid}");
+    }
+
+    private static void CloseFdChecked(int fd)
+    {
+        if (close(fd) == 0)
+            return;
+
+        var errno = Marshal.GetLastPInvokeError();
+        if (errno == EINTR)
+            return;
+
+        throw new InvalidOperationException($"close failed: errno={errno} fd={fd}");
+    }
+
+    private static void CloseFdNoThrow(int fd)
+    {
+        try { CloseFdChecked(fd); } catch { }
+    }
+
+    private sealed class PosixSpawnFileActions : IDisposable
+    {
+        private bool _initialized;
+
+        public PosixSpawnFileActions()
+        {
+            Pointer = Marshal.AllocHGlobal(IntPtr.Size);
+            Marshal.WriteIntPtr(Pointer, IntPtr.Zero);
+        }
+
+        public nint Pointer { get; private set; }
+
+        public void Initialize()
+        {
+            var rc = posix_spawn_file_actions_init(Pointer);
+            if (rc != 0)
+                throw new InvalidOperationException($"posix_spawn_file_actions_init failed: errno={rc}");
+
+            _initialized = true;
+        }
+
+        public void Dispose()
+        {
+            if (Pointer == IntPtr.Zero)
+                return;
+
+            if (_initialized)
+                posix_spawn_file_actions_destroy(Pointer);
+
+            Marshal.FreeHGlobal(Pointer);
+            Pointer = IntPtr.Zero;
+        }
+    }
+
+    private sealed class PosixSpawnAttributes : IDisposable
+    {
+        private bool _initialized;
+
+        public PosixSpawnAttributes()
+        {
+            Pointer = Marshal.AllocHGlobal(IntPtr.Size);
+            Marshal.WriteIntPtr(Pointer, IntPtr.Zero);
+        }
+
+        public nint Pointer { get; private set; }
+
+        public void Initialize()
+        {
+            var rc = posix_spawnattr_init(Pointer);
+            if (rc != 0)
+                throw new InvalidOperationException($"posix_spawnattr_init failed: errno={rc}");
+
+            _initialized = true;
+        }
+
+        public void Dispose()
+        {
+            if (Pointer == IntPtr.Zero)
+                return;
+
+            if (_initialized)
+                posix_spawnattr_destroy(Pointer);
+
+            Marshal.FreeHGlobal(Pointer);
+            Pointer = IntPtr.Zero;
+        }
     }
 
     private sealed class NativeUtf8String : IDisposable

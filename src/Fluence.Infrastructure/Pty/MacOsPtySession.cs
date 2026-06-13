@@ -8,11 +8,16 @@ namespace Fluence.Infrastructure.Pty;
 
 internal sealed class MacOsPtySession : IPtySession
 {
+    private static readonly TimeSpan WatcherJoinTimeout = TimeSpan.FromMilliseconds(250);
+
     private readonly int _masterFd;
     private readonly int _childPid;
     private readonly FileStream _reader;
     private readonly FileStream _writer;
+    private readonly Thread _watcherThread;
     private int _disposed;
+    private int _exitNotified;
+    private volatile bool _hasExited;
 
     public MacOsPtySession(int masterFd, int childPid, int columns, int rows)
     {
@@ -34,17 +39,16 @@ internal sealed class MacOsPtySession : IPtySession
         Input = _writer;
         Output = _reader;
 
-        var watcher = new Thread(WatchChildProc)
+        _watcherThread = new Thread(WatchChildProc)
         {
             IsBackground = true,
             Name = $"pty-watcher-{childPid}",
         };
-        watcher.Start();
+        _watcherThread.Start();
     }
 
     public Stream Input { get; }
     public Stream Output { get; }
-    private volatile bool _hasExited;
     public bool HasExited => _hasExited;
     public event EventHandler? Exited;
 
@@ -56,10 +60,20 @@ internal sealed class MacOsPtySession : IPtySession
 
     private void WatchChildProc()
     {
-        MacOsPtyInterop.WaitPid(_childPid);
-        _hasExited = true;
-        if (Volatile.Read(ref _disposed) == 0)
-            Exited?.Invoke(this, EventArgs.Empty);
+        try
+        {
+            MacOsPtyInterop.WaitPid(_childPid);
+        }
+        catch
+        {
+            // Exit observation is best-effort; disposal still closes the PTY fd.
+        }
+        finally
+        {
+            _hasExited = true;
+            if (Volatile.Read(ref _disposed) == 0)
+                NotifyExited();
+        }
     }
 
     public void Dispose()
@@ -74,5 +88,16 @@ internal sealed class MacOsPtySession : IPtySession
         try { _reader.Dispose(); } catch { }
         try { _writer.Dispose(); } catch { }
         try { MacOsPtyInterop.CloseFd(_masterFd); } catch { } // close real fd (ownsHandle: false on both streams)
+
+        if (Thread.CurrentThread != _watcherThread)
+        {
+            try { _watcherThread.Join(WatcherJoinTimeout); } catch { }
+        }
+    }
+
+    private void NotifyExited()
+    {
+        if (Interlocked.Exchange(ref _exitNotified, 1) == 0)
+            Exited?.Invoke(this, EventArgs.Empty);
     }
 }
