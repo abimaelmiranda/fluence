@@ -38,6 +38,8 @@ public sealed record RunProjectRequestedEvent : IShellEvent;
 
 public sealed record DebugProjectRequestedEvent : IShellEvent;
 
+public sealed record StopDebugRequestedEvent : IShellEvent;
+
 public sealed record TestWorkspaceRequestedEvent : IShellEvent;
 
 public sealed record BuildProjectRequestedEvent(string ProjectPath) : IShellEvent;

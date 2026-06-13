@@ -2,5 +2,7 @@ namespace Fluence.Core.Workspace;
 
 public interface IProjectExecutionTargetResolver
 {
-    ProjectExecutionTarget? ResolveProjectTarget();
+    Task<ProjectExecutionTarget?> ResolveProjectTargetAsync(
+        ExecutionMode mode,
+        CancellationToken cancellationToken = default);
 }

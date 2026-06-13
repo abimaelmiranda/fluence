@@ -1,17 +1,29 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Fluence.Core.Workspace;
 
 namespace Fluence.Modules.DotnetCli;
 
 public sealed class DotnetProjectExecutionTargetResolver(
     IWorkspaceContext workspace,
-    IProjectAssociationService projectAssociations)
+    IProjectAssociationService projectAssociations,
+    ILaunchSettingsService launchSettingsService,
+    ILaunchSettingsCoordinator launchSettings)
     : IProjectExecutionTargetResolver
 {
-    public ProjectExecutionTarget? ResolveProjectTarget()
+    public async Task<ProjectExecutionTarget?> ResolveProjectTargetAsync(
+        ExecutionMode mode,
+        CancellationToken cancellationToken = default)
     {
+        var configuredTarget = await ResolveConfiguredProjectAsync(mode, cancellationToken);
+        if (configuredTarget is not null)
+            return configuredTarget;
+        if (mode == ExecutionMode.Debug)
+            return null;
+
         var activeDocument = workspace.Current.TabSession.ActiveDocument;
         var activeFilePath = activeDocument?.Kind == OpenDocumentKind.TextDocument
             ? activeDocument.Path
@@ -21,12 +33,42 @@ public sealed class DotnetProjectExecutionTargetResolver(
         if (activeProject.ProjectPath is not null && DotnetProjectRunCapability.CanRun(activeProject.ProjectPath))
             return new ProjectExecutionTarget(activeProject.ProjectPath, activeProject.Kind);
 
-        var startupProjectPath = workspace.Current.Mode == WorkspaceMode.Solution
+        var startupProjectPath = workspace.Current.Mode is WorkspaceMode.Solution or WorkspaceMode.Debugging
             ? workspace.Current.StartupProjectPath
             : null;
         return DotnetProjectRunCapability.CanRun(startupProjectPath)
             ? new ProjectExecutionTarget(startupProjectPath!, ProjectExecutionTargetKind.StartupProject)
             : null;
+    }
+
+    private async Task<ProjectExecutionTarget?> ResolveConfiguredProjectAsync(
+        ExecutionMode mode,
+        CancellationToken cancellationToken)
+    {
+        var settings = mode == ExecutionMode.Debug
+            ? await launchSettings.EnsureAsync(cancellationToken)
+            : await launchSettings.LoadExistingAsync(cancellationToken);
+        if (settings is null || string.IsNullOrWhiteSpace(settings.StartupProject))
+            return null;
+
+        var workspaceRoot = ResolveWorkspaceRoot();
+        if (string.IsNullOrWhiteSpace(workspaceRoot))
+            return null;
+
+        var projectPath = Path.IsPathRooted(settings.StartupProject)
+            ? settings.StartupProject
+            : Path.GetFullPath(Path.Combine(workspaceRoot, settings.StartupProject));
+
+        if (!DotnetProjectRunCapability.CanRun(projectPath))
+            return null;
+
+        workspace.SetStartupProject(projectPath);
+        return new ProjectExecutionTarget(projectPath, ProjectExecutionTargetKind.LaunchSettings, settings.DefaultConfiguration);
+    }
+
+    private string? ResolveWorkspaceRoot()
+    {
+        return launchSettingsService.GetWorkspaceRoot(workspace.Current);
     }
 
     private ProjectResolution ResolveActiveProject(string? activeFilePath)

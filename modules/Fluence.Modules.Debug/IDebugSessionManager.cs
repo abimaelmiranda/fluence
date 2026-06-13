@@ -6,5 +6,7 @@ public interface IDebugSessionManager
 {
     DebugSession? CurrentSession { get; }
 
-    void Prepare(ProjectExecutionTarget target);
+    void Start(ProjectExecutionTarget target, ExecutionMode mode);
+
+    void Stop();
 }

@@ -3,30 +3,32 @@ using System.Threading.Tasks;
 using Fluence.Core.Commands;
 using Fluence.Core.Ports;
 using Fluence.Core.Workspace;
+using Fluence.Core.Modules;
 
 namespace Fluence.Modules.Debug;
 
 public sealed class DebugProjectCommandHandler(
     IProjectExecutionTargetResolver projectTargets,
     IDebugSessionManager sessions,
-    IUserNotificationService notifications)
+    IUserNotificationService notifications,
+    IShellRegionHost shellRegions)
     : ICommandHandler<DebugProjectCommand>
 {
-    public Task HandleAsync(DebugProjectCommand command, CancellationToken cancellationToken = default)
+    public async Task HandleAsync(DebugProjectCommand command, CancellationToken cancellationToken = default)
     {
-        var target = projectTargets.ResolveProjectTarget();
+        var target = await projectTargets.ResolveProjectTargetAsync(ExecutionMode.Debug, cancellationToken);
         if (target is null)
         {
             notifications.ShowWarning(
                 "Debug",
                 "No debuggable project was found for the active document.");
-            return Task.CompletedTask;
+            return;
         }
 
-        sessions.Prepare(target);
+        sessions.Start(target, ExecutionMode.Debug);
+        shellRegions.Expand(ShellRegion.BottomBar);
         notifications.ShowWarning(
             "Debug",
             "Debug target resolved. The debug adapter is not implemented yet.");
-        return Task.CompletedTask;
     }
 }

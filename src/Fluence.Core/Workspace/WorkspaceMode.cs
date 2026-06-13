@@ -5,5 +5,6 @@ public enum WorkspaceMode
     Empty,
     FileOnly,
     Folder,
-    Solution
+    Solution,
+    Debugging,
 }

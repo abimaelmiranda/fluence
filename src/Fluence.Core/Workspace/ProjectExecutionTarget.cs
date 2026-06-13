@@ -2,4 +2,5 @@ namespace Fluence.Core.Workspace;
 
 public sealed record ProjectExecutionTarget(
     string ProjectPath,
-    ProjectExecutionTargetKind Kind);
+    ProjectExecutionTargetKind Kind,
+    LaunchConfiguration? Configuration = null);

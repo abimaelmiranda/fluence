@@ -17,12 +17,20 @@ public sealed class Workspace
 
     public string? StartupProjectPath { get; private set; }
 
+    public WorkspaceMode? ModeBeforeDebugging { get; private set; }
+
     public TabSession TabSession { get; private set; } = TabSession.Empty;
 
     public IReadOnlyDictionary<string, ModuleState> ModuleStates => _moduleStates;
 
     public void SetMode(WorkspaceMode mode)
     {
+        if (mode == WorkspaceMode.Debugging && Mode != WorkspaceMode.Debugging)
+            ModeBeforeDebugging = Mode;
+
+        if (Mode == WorkspaceMode.Debugging && mode != WorkspaceMode.Debugging)
+            ModeBeforeDebugging = null;
+
         Mode = mode;
     }
 
@@ -36,6 +44,7 @@ public sealed class Workspace
             Mode = WorkspaceMode.FileOnly;
             CurrentFolderPath = null;
             CurrentSolutionPath = null;
+            ModeBeforeDebugging = null;
         }
 
         TabSession = TabSession.AddOrActivate(document);
@@ -76,6 +85,7 @@ public sealed class Workspace
         CurrentFilePath = null;
         CurrentFolderPath = path;
         CurrentSolutionPath = null;
+        ModeBeforeDebugging = null;
         TabSession = TabSession.Empty;
     }
 
@@ -88,6 +98,7 @@ public sealed class Workspace
         CurrentFolderPath = null;
         CurrentSolutionPath = path;
         StartupProjectPath = null;
+        ModeBeforeDebugging = null;
         TabSession = TabSession.Empty;
     }
 

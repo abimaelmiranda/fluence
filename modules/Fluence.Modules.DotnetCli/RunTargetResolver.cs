@@ -1,4 +1,7 @@
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Fluence.Core.Workspace;
 
 namespace Fluence.Modules.DotnetCli;
@@ -7,16 +10,16 @@ public sealed class RunTargetResolver(
     IWorkspaceContext workspace,
     IProjectExecutionTargetResolver projectTargets)
 {
-    internal RunTarget? Resolve()
+    internal async Task<RunTarget?> ResolveAsync(CancellationToken cancellationToken = default)
     {
         var activeDocument = workspace.Current.TabSession.ActiveDocument;
         var activeFilePath = activeDocument?.Kind == OpenDocumentKind.TextDocument
             ? activeDocument.Path
             : null;
 
-        var projectTarget = projectTargets.ResolveProjectTarget();
+        var projectTarget = await projectTargets.ResolveProjectTargetAsync(ExecutionMode.Release, cancellationToken);
         if (projectTarget is not null)
-            return CreateProjectTarget(projectTarget.ProjectPath, MapKind(projectTarget.Kind));
+            return CreateProjectTarget(projectTarget);
 
         if (DotnetPathHelpers.IsRunnableFile(activeFilePath))
             return CreateFileTarget(activeFilePath!);
@@ -24,16 +27,22 @@ public sealed class RunTargetResolver(
         return null;
     }
 
-    private static RunTarget CreateProjectTarget(string projectPath, RunTargetKind kind)
+    private static RunTarget CreateProjectTarget(ProjectExecutionTarget target)
     {
-        var workingDirectory = Path.GetDirectoryName(projectPath) ?? Directory.GetCurrentDirectory();
-        return new RunTarget($"dotnet run --project \"{projectPath}\"", workingDirectory, kind);
+        var workingDirectory = Path.GetDirectoryName(target.ProjectPath) ?? Directory.GetCurrentDirectory();
+        var args = target.Configuration?.Args is { Count: > 0 } configurationArgs
+            ? " -- " + string.Join(" ", configurationArgs.Select(QuoteArgument))
+            : string.Empty;
+        return new RunTarget(
+            $"dotnet run --project {QuoteArgument(target.ProjectPath)}{args}",
+            workingDirectory,
+            MapKind(target.Kind));
     }
 
     private static RunTarget CreateFileTarget(string filePath)
     {
         var workingDirectory = Path.GetDirectoryName(filePath) ?? Directory.GetCurrentDirectory();
-        return new RunTarget($"dotnet run --file \"{filePath}\"", workingDirectory, RunTargetKind.File);
+        return new RunTarget($"dotnet run --file {QuoteArgument(filePath)}", workingDirectory, RunTargetKind.File);
     }
 
     private static RunTargetKind MapKind(ProjectExecutionTargetKind kind) =>
@@ -42,6 +51,12 @@ public sealed class RunTargetResolver(
             ProjectExecutionTargetKind.ActiveFileProject => RunTargetKind.AssociatedProject,
             ProjectExecutionTargetKind.NearestProject => RunTargetKind.NearestProject,
             ProjectExecutionTargetKind.StartupProject => RunTargetKind.StartupProject,
+            ProjectExecutionTargetKind.LaunchSettings => RunTargetKind.StartupProject,
             _ => RunTargetKind.AssociatedProject,
         };
+
+    private static string QuoteArgument(string value)
+    {
+        return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+    }
 }

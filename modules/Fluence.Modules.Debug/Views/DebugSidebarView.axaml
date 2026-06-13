@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.Debug.ViewModels"
+             x:Class="Fluence.Modules.Debug.Views.DebugSidebarView"
+             x:DataType="vm:DebugSidebarViewModel"
+             Background="Transparent">
+
+    <StackPanel Spacing="10"
+                Margin="10">
+        <Border Padding="10"
+                Background="{StaticResource FluenceBrushShell}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="1"
+                CornerRadius="6">
+            <StackPanel Spacing="4">
+                <TextBlock Text="{Binding SessionTitle}"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                <TextBlock Text="{Binding StartupProject}"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Architecture}"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Padding="10"
+                Background="{StaticResource FluenceBrushShell}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="1"
+                CornerRadius="6">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Variables"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                <TextBlock Text="No variables"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Padding="10"
+                Background="{StaticResource FluenceBrushShell}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="1"
+                CornerRadius="6">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Call Stack"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                <TextBlock Text="No frames"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Padding="10"
+                Background="{StaticResource FluenceBrushShell}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="1"
+                CornerRadius="6">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Breakpoints"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                <TextBlock Text="No breakpoints"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
