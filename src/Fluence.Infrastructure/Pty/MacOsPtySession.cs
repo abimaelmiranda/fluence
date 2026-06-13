@@ -12,7 +12,7 @@ internal sealed class MacOsPtySession : IPtySession
     private readonly int _childPid;
     private readonly FileStream _reader;
     private readonly FileStream _writer;
-    private bool _disposed;
+    private int _disposed;
 
     public MacOsPtySession(int masterFd, int childPid, int columns, int rows)
     {
@@ -44,32 +44,35 @@ internal sealed class MacOsPtySession : IPtySession
 
     public Stream Input { get; }
     public Stream Output { get; }
-    public bool HasExited { get; private set; }
+    private volatile bool _hasExited;
+    public bool HasExited => _hasExited;
     public event EventHandler? Exited;
 
     public void Resize(int columns, int rows)
     {
-        if (!_disposed)
+        if (Volatile.Read(ref _disposed) == 0)
             MacOsPtyInterop.SetWinSize(_masterFd, columns, rows);
     }
 
     private void WatchChildProc()
     {
         MacOsPtyInterop.WaitPid(_childPid);
-        HasExited = true;
-        if (!_disposed)
+        _hasExited = true;
+        if (Volatile.Read(ref _disposed) == 0)
             Exited?.Invoke(this, EventArgs.Empty);
     }
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-        HasExited = true;
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
 
+        _hasExited = true;
+
+        try { MacOsPtyInterop.KillProcessGroup(_childPid); } catch { }
         try { MacOsPtyInterop.Kill(_childPid); } catch { }
         try { _reader.Dispose(); } catch { }
         try { _writer.Dispose(); } catch { }
-        MacOsPtyInterop.CloseFd(_masterFd); // close real fd (ownsHandle: false on both streams)
+        try { MacOsPtyInterop.CloseFd(_masterFd); } catch { } // close real fd (ownsHandle: false on both streams)
     }
 }

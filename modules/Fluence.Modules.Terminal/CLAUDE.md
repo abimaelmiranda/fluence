@@ -9,7 +9,7 @@
 | Arquivo | Responsabilidade | Risco |
 |---|---|---|
 | `Terminal/TerminalControl.cs` | Renderização Avalonia do buffer XTerm.NET | Mudanças no loop de render ou na leitura do buffer quebram toda a exibição |
-| `ViewModels/TerminalViewModel.cs` | Bridge PTY ↔ XTerm.NET | Timing do `DataReceived` bridge é frágil; wiring errado corrompe stdin do zsh |
+| `ViewModels/TerminalSessionViewModel.cs` | Bridge PTY ↔ XTerm.NET por sessão | Timing do `DataReceived` bridge é frágil; wiring errado corrompe stdin do zsh |
 | `Views/TerminalView.axaml.cs` | Startup do shell e resize inicial | Ordem de inicialização importa: resize deve preceder o start do shell |
 
 A infraestrutura PTY está em `src/Fluence.Infrastructure/Pty/` e `src/Fluence.Infrastructure/TerminalService.cs`.

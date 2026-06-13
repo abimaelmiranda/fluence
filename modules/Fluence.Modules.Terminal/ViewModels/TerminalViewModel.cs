@@ -1,12 +1,12 @@
 using System;
-using System.IO;
-using System.Text;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Infrastructure;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Workspace;
-using XTerm.Events;
-using XTerm.Options;
 using XTerminal = global::XTerm.Terminal;
 
 namespace Fluence.Modules.Terminal.ViewModels;
@@ -15,98 +15,141 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
 {
     private readonly ITerminalService _terminalService;
     private readonly IWorkspaceContext _workspace;
-    private readonly XTerminal _xterm;
-
-    public XTerminal XTerminal => _xterm;
-
-    public event EventHandler? BufferRefreshed;
+    private TerminalSessionViewModel? _activeSession;
 
     public TerminalViewModel(ITerminalService terminalService, IWorkspaceContext workspace)
     {
         _terminalService = terminalService;
         _workspace = workspace;
+        _terminalService.SessionsChanged += OnSessionsChanged;
 
-        _xterm = new XTerminal(new TerminalOptions
+        SyncSessions();
+    }
+
+    public ObservableCollection<TerminalSessionViewModel> Sessions { get; } = [];
+
+    public TerminalSessionViewModel? ActiveSession
+    {
+        get => _activeSession;
+        private set
         {
-            Cols = 80,
-            Rows = 24,
-            Scrollback = 5000,
-            TermName = "xterm-256color",
-            ConvertEol = false,
-        });
-
-        _terminalService.DataReceived += OnDataReceived;
-        _terminalService.Cleared += OnCleared;
+            if (SetProperty(ref _activeSession, value))
+            {
+                OnPropertyChanged(nameof(HasActiveSession));
+                OnPropertyChanged(nameof(CanCloseTerminal));
+                OnPropertyChanged(nameof(IsEmpty));
+                OnPropertyChanged(nameof(ActiveTerminal));
+            }
+        }
     }
 
-    public async Task StartShellAsync(string? workingDirectory = null)
+    public bool HasActiveSession => ActiveSession is not null;
+
+    public bool CanCloseTerminal => ActiveSession is not null;
+
+    public bool IsEmpty => ActiveSession is null;
+
+    public XTerminal? ActiveTerminal => ActiveSession?.XTerminal;
+
+    public bool CanCreateTerminal => _terminalService.CanCreateSession;
+
+    public int MaxSessions => _terminalService.MaxSessions;
+
+    [RelayCommand(CanExecute = nameof(CanCreateTerminal))]
+    private void CreateTerminal()
     {
-        await _terminalService.StartShellAsync(workingDirectory, _xterm.Cols, _xterm.Rows);
-        _ = StartXtermBridgeAsync();
+        if (!_terminalService.CanCreateSession)
+            return;
+
+        _terminalService.CreateSession();
     }
 
-    private async Task StartXtermBridgeAsync()
+    [RelayCommand(CanExecute = nameof(CanCloseTerminal))]
+    private async Task CloseTerminalAsync()
     {
-        // Delay before wiring DataReceived so zsh's readline (zle) has time to initialize.
-        // Without the delay, XTerm.NET response bytes (e.g. ESC[?1;2c) arrive at PTY stdin
-        // before zle is ready and get interpreted as user input, corrupting zsh's startup.
-        await Task.Delay(500);
-        _xterm.DataReceived += OnXtermDataReceived;
+        var session = ActiveSession?.Session;
+        if (session is null)
+            return;
+
+        try
+        {
+            await _terminalService.CloseSessionAsync(session);
+        }
+        catch
+        {
+            // Terminal close is intentionally fail-safe; teardown continues best-effort in the service.
+        }
+
+        SyncSessions();
     }
 
-    private void OnXtermDataReceived(object? sender, TerminalEvents.DataEventArgs e)
-    {
-        _ = _terminalService.SendInputAsync(e.Data);
-    }
-
-    public async Task SendInputAsync(string text)
-    {
-        await _terminalService.SendInputAsync(text);
-    }
-
-    public async Task ResizeAsync(int cols, int rows)
-    {
-        _xterm.Resize(cols, rows);
-        await _terminalService.ResizeAsync(cols, rows);
-    }
-
-    // Invoked by DotnetCliModule and others — keeps compatibility
     public async Task ExecuteAsync(string command)
     {
-        await _terminalService.ExecuteAsync(command, GetWorkingDirectory());
+        if (ActiveSession is null)
+            _terminalService.CreateSession();
+
+        if (ActiveSession is not null)
+            await ActiveSession.ExecuteAsync(command);
     }
 
-    private void OnDataReceived(object? sender, TerminalDataEventArgs e)
+    private void ActivateSession(TerminalSessionViewModel session)
     {
-        var text = Encoding.UTF8.GetString(e.Data);
-        _xterm.Write(text);
-        BufferRefreshed?.Invoke(this, EventArgs.Empty);
+        _terminalService.SetActiveSession(session.Session);
     }
 
-    private void OnCleared(object? sender, EventArgs e)
+    private void OnSessionsChanged(object? sender, EventArgs e)
     {
-        _xterm.Clear();
+        Dispatcher.UIThread.Post(SyncSessions);
     }
 
-    public void WriteError(string message)
+    private void SyncSessions()
     {
-        _xterm.Write($"\x1b[31m{message}\x1b[0m");
-    }
+        var serviceSessions = _terminalService.Sessions;
 
-    private string? GetWorkingDirectory()
-    {
-        if (!string.IsNullOrWhiteSpace(_workspace.Current.CurrentFolderPath))
-            return _workspace.Current.CurrentFolderPath;
+        // Remove ViewModels for sessions that no longer exist. Do this BEFORE adding
+        // new ones so the collection is clean when we resolve the active session below.
+        foreach (var viewModel in Sessions.ToArray())
+        {
+            if (!serviceSessions.Contains(viewModel.Session))
+            {
+                Sessions.Remove(viewModel);
+                viewModel.Dispose();
+            }
+        }
 
-        var solutionPath = _workspace.Current.CurrentSolutionPath;
-        return string.IsNullOrWhiteSpace(solutionPath) ? null : Path.GetDirectoryName(solutionPath);
+        // Add ViewModels for sessions that don't have one yet.
+        foreach (var session in serviceSessions)
+        {
+            if (Sessions.Any(viewModel => ReferenceEquals(viewModel.Session, session)))
+                continue;
+
+            Sessions.Add(new TerminalSessionViewModel(session, _workspace, ActivateSession));
+        }
+
+        for (var i = 0; i < Sessions.Count; i++)
+            Sessions[i].Title = $"Terminal {i + 1}";
+
+        // Resolve active session only after all VMs exist. Setting ActiveSession before
+        // the new VM is added would produce a null assignment that clears the terminal.
+        var active = Sessions.FirstOrDefault(viewModel => ReferenceEquals(viewModel.Session, _terminalService.ActiveSession));
+        foreach (var session in Sessions)
+            session.IsActive = ReferenceEquals(session, active);
+
+        ActiveSession = active;
+        OnPropertyChanged(nameof(CanCreateTerminal));
+        OnPropertyChanged(nameof(CanCloseTerminal));
+        OnPropertyChanged(nameof(MaxSessions));
+        CreateTerminalCommand.NotifyCanExecuteChanged();
+        CloseTerminalCommand.NotifyCanExecuteChanged();
     }
 
     public void Dispose()
     {
-        _terminalService.DataReceived -= OnDataReceived;
-        _terminalService.Cleared -= OnCleared;
-        _xterm.DataReceived -= OnXtermDataReceived;
-        _xterm.Dispose();
+        _terminalService.SessionsChanged -= OnSessionsChanged;
+
+        foreach (var session in Sessions)
+            session.Dispose();
+
+        Sessions.Clear();
     }
 }

@@ -84,6 +84,9 @@ public sealed class TerminalControl : Avalonia.Controls.Control
             }
 
             _metricsValid = false;
+            _lastCols = 0;
+            _lastRows = 0;
+            InvalidateArrange();
             InvalidateVisual();
         }
 
@@ -127,8 +130,7 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         EnsureMetrics();
         if (_charWidth > 0 && _charHeight > 0 && Bounds.Width > 0 && Bounds.Height > 0)
         {
-            int cols = Math.Max(1, (int)(Bounds.Width / _charWidth));
-            int rows = Math.Max(1, (int)(Bounds.Height / _charHeight));
+            var (cols, rows) = GetCurrentGridSize();
             _lastCols = cols;
             _lastRows = rows;
             Resized?.Invoke(cols, rows);
@@ -141,20 +143,38 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         }
     }
 
+    public (int Columns, int Rows) GetCurrentGridSize()
+    {
+        EnsureMetrics();
+
+        if (_charWidth <= 0 || _charHeight <= 0 || Bounds.Width <= 0 || Bounds.Height <= 0)
+            return (80, 24);
+
+        return (
+            Math.Max(1, (int)(Bounds.Width / _charWidth)),
+            Math.Max(1, (int)(Bounds.Height / _charHeight)));
+    }
+
     public override void Render(DrawingContext ctx)
     {
-        var terminal = Terminal;
-        if (terminal is null)
+        try
+        {
+            RenderTerminal(ctx);
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException or ArgumentOutOfRangeException or IndexOutOfRangeException)
         {
             ctx.FillRectangle(new SolidColorBrush(Color.Parse("#1A1D23")), new Rect(Bounds.Size));
-            return;
         }
+    }
 
+    private void RenderTerminal(DrawingContext ctx)
+    {
+        var terminal = Terminal;
         EnsureMetrics();
-        if (_charWidth <= 0 || _charHeight <= 0)
-            return;
-
         ctx.FillRectangle(new SolidColorBrush(Color.Parse("#1A1D23")), new Rect(Bounds.Size));
+
+        if (terminal is null || _charWidth <= 0 || _charHeight <= 0)
+            return;
 
         var buffer = terminal.Buffer;
         var fontSize = FontSize;
@@ -342,7 +362,10 @@ public sealed class TerminalControl : Avalonia.Controls.Control
 
     public void RequestRedraw()
     {
-        Avalonia.Threading.Dispatcher.UIThread.Post(InvalidateVisual, Avalonia.Threading.DispatcherPriority.Render);
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            InvalidateVisual();
+        else
+            Avalonia.Threading.Dispatcher.UIThread.Post(InvalidateVisual, Avalonia.Threading.DispatcherPriority.Render);
     }
 
     private void EnsureMetrics()

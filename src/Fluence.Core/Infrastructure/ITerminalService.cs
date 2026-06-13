@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,25 +7,23 @@ namespace Fluence.Core.Infrastructure;
 
 public interface ITerminalService
 {
-    event EventHandler<TerminalDataEventArgs>? DataReceived;
-    event EventHandler? Cleared;
+    event EventHandler? SessionsChanged;
 
+    int MaxSessions { get; }
     bool IsBusy { get; }
     bool HasActiveSession { get; }
-    IPtySession? ActiveSession { get; }
+    bool CanCreateSession { get; }
+    IReadOnlyList<ITerminalSession> Sessions { get; }
+    ITerminalSession? ActiveSession { get; }
 
-    Task StartShellAsync(string? workingDirectory = null, int columns = 80, int rows = 24, CancellationToken cancellationToken = default);
+    ITerminalSession CreateSession();
 
-    Task SendInputAsync(string text, CancellationToken cancellationToken = default);
+    Task CloseSessionAsync(ITerminalSession session);
 
-    Task ResizeAsync(int columns, int rows);
+    void SetActiveSession(ITerminalSession session);
 
     Task ExecuteAsync(
         string command,
         string? workingDirectory = null,
         CancellationToken cancellationToken = default);
-
-    Task CancelAsync();
-
-    void Clear();
 }
