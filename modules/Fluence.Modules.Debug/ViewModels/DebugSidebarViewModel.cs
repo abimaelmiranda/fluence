@@ -5,13 +5,14 @@ using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Debug;
 using Fluence.Core.Modules;
 using Fluence.Core.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.Debug.ViewModels;
 
 public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
 {
     private readonly IDebugStateService _debugState;
-    private readonly IDebugService _debugService;
+    private readonly IServiceProvider _services;
     private readonly IShellEventBus _events;
 
     [ObservableProperty]
@@ -29,10 +30,10 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _canControlExecution;
 
-    public DebugSidebarViewModel(IDebugStateService debugState, IDebugService debugService, IShellEventBus events)
+    public DebugSidebarViewModel(IDebugStateService debugState, IServiceProvider services, IShellEventBus events)
     {
         _debugState = debugState;
-        _debugService = debugService;
+        _services = services;
         _events = events;
         _debugState.Changed += OnDebugStateChanged;
         RefreshState();
@@ -95,7 +96,8 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         Status = snapshot.Status.ToString();
         CanControlExecution = snapshot.IsStopped && snapshot.ActiveThreadId is not null;
 
-        Replace(Variables, snapshot.Variables.Select(v => new DebugVariableNode(v, _debugService.GetChildVariablesAsync)).ToArray());
+        var debugService = _services.GetRequiredService<IDebugService>();
+        Replace(Variables, snapshot.Variables.Select(v => new DebugVariableNode(v, debugService.GetChildVariablesAsync)).ToArray());
         Replace(StackFrames, snapshot.StackFrames.Select(FormatStackFrame).ToArray());
         Replace(Breakpoints, snapshot.Breakpoints.Select(FormatBreakpoint).ToArray());
     }
