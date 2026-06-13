@@ -38,6 +38,7 @@
     <ProjectReference Include="..\..\modules\Fluence.Modules.Editor\Fluence.Modules.Editor.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.Terminal\Fluence.Modules.Terminal.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.DotnetCli\Fluence.Modules.DotnetCli.csproj" />
+    <ProjectReference Include="..\..\modules\Fluence.Modules.Debug\Fluence.Modules.Debug.csproj" />
   </ItemGroup>
 
 </Project>

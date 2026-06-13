@@ -10,6 +10,7 @@ using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
 using Fluence.Infrastructure.Pty;
+using Fluence.Modules.Debug;
 using Fluence.Modules.DotnetCli;
 using Fluence.Modules.Editor;
 using Fluence.Modules.FileExplorer;
@@ -57,6 +58,7 @@ internal static class Bootstrapper
             new NuGetExplorerModule(),
             new TerminalModule(),
             new DotnetCliModule(),
+            new DebugModule(),
         };
 
         foreach (var module in modules)

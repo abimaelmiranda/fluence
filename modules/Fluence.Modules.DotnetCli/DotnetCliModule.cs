@@ -12,6 +12,7 @@ public sealed class DotnetCliModule : IIdeModule
 
     public void Register(IServiceCollection services)
     {
+        services.AddSingleton<IProjectExecutionTargetResolver, DotnetProjectExecutionTargetResolver>();
         services.AddSingleton<RunTargetResolver>();
         services.AddSingleton<ICommandHandler<BuildWorkspaceCommand>, BuildWorkspaceCommandHandler>();
         services.AddSingleton<ICommandHandler<RunProjectCommand>, RunProjectCommandHandler>();
