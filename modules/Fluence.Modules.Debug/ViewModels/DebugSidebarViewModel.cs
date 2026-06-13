@@ -96,8 +96,19 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         Status = snapshot.Status.ToString();
         CanControlExecution = snapshot.IsStopped && snapshot.ActiveThreadId is not null;
 
-        var debugService = _services.GetRequiredService<IDebugService>();
-        Replace(Variables, snapshot.Variables.Select(v => new DebugVariableNode(v, debugService.GetChildVariablesAsync)).ToArray());
+        // Resolve IDebugService lazily — only when variables exist.
+        // At startup the snapshot is empty, so this never runs during singleton construction,
+        // avoiding the cycle: DebugSidebarViewModel → IDebugService → DebugSessionManager → DebugSidebarViewModel.
+        if (snapshot.Variables.Count > 0)
+        {
+            var debugService = _services.GetRequiredService<IDebugService>();
+            Replace(Variables, snapshot.Variables.Select(v => new DebugVariableNode(v, debugService.GetChildVariablesAsync)).ToArray());
+        }
+        else
+        {
+            Variables.Clear();
+        }
+
         Replace(StackFrames, snapshot.StackFrames.Select(FormatStackFrame).ToArray());
         Replace(Breakpoints, snapshot.Breakpoints.Select(FormatBreakpoint).ToArray());
     }
