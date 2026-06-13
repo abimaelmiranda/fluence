@@ -125,7 +125,7 @@
                     </Border>
 
                     <ScrollViewer Grid.Row="1"
-                                  HorizontalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto">
                         <ContentControl Content="{Binding ActiveSidebarContent}"/>
                     </ScrollViewer>
