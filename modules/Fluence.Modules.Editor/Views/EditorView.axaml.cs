@@ -38,6 +38,7 @@ public partial class EditorView : UserControl
     private TextMate.Installation? _textMateInstallation;
     private readonly DebugLineRenderer _debugLineRenderer = new();
     private CancellationTokenSource? _hoverCts;
+    private CancellationTokenSource? _popupCloseCts;
     private bool _mouseInPopup;
 
     public EditorView()
@@ -51,8 +52,8 @@ public partial class EditorView : UserControl
         Editor.TextArea.TextView.BackgroundRenderers.Add(_debugLineRenderer);
         Editor.TextArea.TextView.PointerHover += OnPointerHover;
         Editor.TextArea.TextView.PointerHoverStopped += OnPointerHoverStopped;
-        HoverPopupBorder.PointerEntered += (_, _) => _mouseInPopup = true;
-        HoverPopupBorder.PointerExited += (_, _) => { _mouseInPopup = false; HoverPopup.IsOpen = false; };
+        HoverPopupBorder.PointerEntered += (_, _) => { _mouseInPopup = true; _popupCloseCts?.Cancel(); };
+        HoverPopupBorder.PointerExited += (_, _) => { _mouseInPopup = false; ClosePopupDelayed(); };
         InitializeTextMate();
     }
 
@@ -242,8 +243,20 @@ public partial class EditorView : UserControl
     private void OnPointerHoverStopped(object? sender, PointerEventArgs e)
     {
         _hoverCts?.Cancel();
-        if (!_mouseInPopup)
-            HoverPopup.IsOpen = false;
+        ClosePopupDelayed();
+    }
+
+    private void ClosePopupDelayed()
+    {
+        _popupCloseCts?.Cancel();
+        _popupCloseCts?.Dispose();
+        _popupCloseCts = new CancellationTokenSource();
+        var token = _popupCloseCts.Token;
+        _ = System.Threading.Tasks.Task.Delay(350, token).ContinueWith(_ =>
+        {
+            if (!token.IsCancellationRequested)
+                Dispatcher.UIThread.Post(() => { if (!_mouseInPopup) HoverPopup.IsOpen = false; });
+        }, System.Threading.Tasks.TaskScheduler.Default);
     }
 
     private static string ExtractWordAt(TextDocument document, int offset)
