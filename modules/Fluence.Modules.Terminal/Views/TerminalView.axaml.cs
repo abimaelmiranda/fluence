@@ -118,7 +118,8 @@ public partial class TerminalView : UserControl
         try
         {
             await Dispatcher.UIThread.InvokeAsync(TerminalControl.InvalidateArrange, DispatcherPriority.Loaded);
-            await Task.Delay(16, cancellationToken); // one frame — enough for layout to complete
+            if (!await DelayOrCancelledAsync(16, cancellationToken))
+                return;
 
             if (!_isAttached ||
                 !ReferenceEquals(_activeSession, session) ||
@@ -129,7 +130,8 @@ public partial class TerminalView : UserControl
 
             for (var attempt = 0; attempt < 80; attempt++)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                if (cancellationToken.IsCancellationRequested)
+                    return;
 
                 if (!_isAttached ||
                     !ReferenceEquals(_activeSession, session) ||
@@ -161,7 +163,8 @@ public partial class TerminalView : UserControl
                     return;
                 }
 
-                await Task.Delay(25, cancellationToken);
+                if (!await DelayOrCancelledAsync(25, cancellationToken))
+                    return;
             }
 
             if (ReferenceEquals(_activeSession, session) &&
@@ -236,7 +239,9 @@ public partial class TerminalView : UserControl
     {
         try
         {
-            await Task.Delay(75, cancellationToken);
+            if (!await DelayOrCancelledAsync(75, cancellationToken))
+                return;
+
             await ResizeActiveSessionAsync(session, version, cols, rows);
             if (ReferenceEquals(_activeSession, session) && version == _activeSessionVersion)
                 TerminalControl.RequestRedraw();
@@ -277,5 +282,25 @@ public partial class TerminalView : UserControl
         if (cts is null) return;
         try { cts.Cancel(); } catch (ObjectDisposedException) { }
         cts.Dispose();
+    }
+
+    private static async Task<bool> DelayOrCancelledAsync(int millisecondsDelay, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return false;
+
+        if (!cancellationToken.CanBeCanceled)
+        {
+            await Task.Delay(millisecondsDelay);
+            return true;
+        }
+
+        var cancellationCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var registration = cancellationToken.Register(
+            static state => ((TaskCompletionSource)state!).TrySetResult(),
+            cancellationCompletion);
+        var delayTask = Task.Delay(millisecondsDelay);
+        return await Task.WhenAny(delayTask, cancellationCompletion.Task) == delayTask &&
+            !cancellationToken.IsCancellationRequested;
     }
 }

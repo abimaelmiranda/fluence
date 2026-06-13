@@ -104,8 +104,8 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
         // Delay before wiring DataReceived so zsh's readline (zle) has time to initialize.
         // Without the delay, XTerm.NET response bytes (e.g. ESC[?1;2c) arrive at PTY stdin
         // before zle is ready and get interpreted as user input, corrupting zsh's startup.
-        try { await Task.Delay(1000, cancellationToken); }
-        catch (OperationCanceledException) { return; }
+        if (!await DelayOrCancelledAsync(1000, cancellationToken))
+            return;
 
         // Retry for up to 3 extra seconds if the session isn't ready yet. Without this,
         // a slow shell startup causes CanAcceptInput to be false here and the bridge is
@@ -114,8 +114,8 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
         {
             if (_disposed || cancellationToken.IsCancellationRequested) return;
             if (_session.CanAcceptInput) break;
-            try { await Task.Delay(500, cancellationToken); }
-            catch (OperationCanceledException) { return; }
+            if (!await DelayOrCancelledAsync(500, cancellationToken))
+                return;
         }
 
         if (_disposed || cancellationToken.IsCancellationRequested || !_session.CanAcceptInput)
@@ -129,6 +129,26 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
                 catch (ObjectDisposedException) { }
             }
         });
+    }
+
+    private static async Task<bool> DelayOrCancelledAsync(int millisecondsDelay, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return false;
+
+        if (!cancellationToken.CanBeCanceled)
+        {
+            await Task.Delay(millisecondsDelay);
+            return true;
+        }
+
+        var cancellationCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var registration = cancellationToken.Register(
+            static state => ((TaskCompletionSource)state!).TrySetResult(),
+            cancellationCompletion);
+        var delayTask = Task.Delay(millisecondsDelay);
+        return await Task.WhenAny(delayTask, cancellationCompletion.Task) == delayTask &&
+            !cancellationToken.IsCancellationRequested;
     }
 
     private void OnXtermDataReceived(object? sender, TerminalEvents.DataEventArgs e)
