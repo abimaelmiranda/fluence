@@ -12,6 +12,7 @@ public sealed class DotnetCliModule : IIdeModule
 
     public void Register(IServiceCollection services)
     {
+        services.AddSingleton<RunTargetResolver>();
         services.AddSingleton<ICommandHandler<BuildWorkspaceCommand>, BuildWorkspaceCommandHandler>();
         services.AddSingleton<ICommandHandler<RunProjectCommand>, RunProjectCommandHandler>();
         services.AddSingleton<ICommandHandler<TestWorkspaceCommand>, TestWorkspaceCommandHandler>();
@@ -27,7 +28,7 @@ public sealed class DotnetCliModule : IIdeModule
     public void Initialize(IModuleHost host)
     {
         host.Events.Subscribe<BuildWorkspaceRequestedEvent>(_event => { _ = HandleAsync<BuildWorkspaceCommand>(host, new BuildWorkspaceCommand()); });
-        host.Events.Subscribe<RunProjectRequestedEvent>(_event => { _ = HandleAsync<RunProjectCommand>(host, new RunProjectCommand()); });
+        host.Events.Subscribe<RunProjectRequestedEvent>(_event => { _ = RunAsync(host); });
         host.Events.Subscribe<TestWorkspaceRequestedEvent>(_event => { _ = HandleAsync<TestWorkspaceCommand>(host, new TestWorkspaceCommand()); });
         host.Events.Subscribe<RestoreWorkspaceRequestedEvent>(_event => { _ = HandleAsync<RestoreWorkspaceCommand>(host, new RestoreWorkspaceCommand()); });
         host.Events.Subscribe<CleanWorkspaceRequestedEvent>(_event => { _ = HandleAsync<CleanWorkspaceCommand>(host, new CleanWorkspaceCommand()); });
@@ -44,5 +45,11 @@ public sealed class DotnetCliModule : IIdeModule
         host.ShellRegions.Expand(ShellRegion.BottomBar);
         var handler = host.Services.GetRequiredService<ICommandHandler<TCommand>>();
         await handler.HandleAsync(command);
+    }
+
+    private static async Task RunAsync(IModuleHost host)
+    {
+        var handler = host.Services.GetRequiredService<ICommandHandler<RunProjectCommand>>();
+        await handler.HandleAsync(new RunProjectCommand());
     }
 }

@@ -14,6 +14,8 @@ public sealed class SolutionViewModule : IIdeModule
 
     public void Register(IServiceCollection services)
     {
+        services.AddSingleton<SolutionProjectAssociationService>();
+        services.AddSingleton<IProjectAssociationService>(provider => provider.GetRequiredService<SolutionProjectAssociationService>());
         services.AddSingleton<SolutionViewModel>();
         services.AddSingleton<ISolutionWorkspaceLoader, BuildalyzerSolutionWorkspaceLoader>();
         services.AddSingleton<IProjectReferenceService, ProjectReferenceService>();

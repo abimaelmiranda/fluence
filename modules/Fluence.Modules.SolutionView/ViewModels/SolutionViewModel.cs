@@ -28,6 +28,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
     private readonly IFileOperationDialogService _fileDialogs;
     private readonly IFileService _fileService;
     private readonly IShellEventBus _eventBus;
+    private readonly SolutionProjectAssociationService _projectAssociations;
     private CancellationTokenSource? _loadCts;
     private string? _loadedSolutionPath;
     private SolutionWorkspaceSnapshot? _loadedSnapshot;
@@ -50,7 +51,8 @@ public sealed partial class SolutionViewModel : ViewModelBase
         IFileClipboardService clipboard,
         IFileOperationDialogService fileDialogs,
         IFileService fileService,
-        IShellEventBus eventBus)
+        IShellEventBus eventBus,
+        SolutionProjectAssociationService projectAssociations)
     {
         _workspace = workspace;
         _solutionLoader = solutionLoader;
@@ -64,6 +66,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
         _fileDialogs = fileDialogs;
         _fileService = fileService;
         _eventBus = eventBus;
+        _projectAssociations = projectAssociations;
         _workspace.Changed += OnWorkspaceChanged;
         RefreshForWorkspace();
     }
@@ -88,6 +91,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
         {
             _loadedSolutionPath = null;
             _loadedSnapshot = null;
+            _projectAssociations.Clear();
             RootItems.Clear();
             ErrorMessage = null;
             return;
@@ -109,11 +113,13 @@ public sealed partial class SolutionViewModel : ViewModelBase
         IsLoading = true;
         ErrorMessage = null;
         RootItems.Clear();
+        _projectAssociations.Clear(solutionPath);
 
         try
         {
             var snapshot = await _solutionLoader.LoadAsync(solutionPath, cancellationToken);
             _loadedSnapshot = snapshot;
+            _projectAssociations.Update(snapshot);
             RootItems.Add(CreateTreeItem(snapshot.Root));
             UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
             UpdateStartupProject(_workspace.Current.StartupProjectPath);

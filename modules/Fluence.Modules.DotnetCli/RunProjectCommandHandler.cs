@@ -2,24 +2,30 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Commands;
 using Fluence.Core.Infrastructure;
-using Fluence.Core.Workspace;
+using Fluence.Core.Modules;
+using Fluence.Core.Ports;
 
 namespace Fluence.Modules.DotnetCli;
 
-public sealed class RunProjectCommandHandler(IWorkspaceContext workspace, ITerminalService terminal)
-    : DotnetCommandHandlerBase(workspace, terminal), ICommandHandler<RunProjectCommand>
+public sealed class RunProjectCommandHandler(
+    ITerminalService terminal,
+    RunTargetResolver runTargets,
+    IUserNotificationService notifications,
+    IShellRegionHost shellRegions)
+    : ICommandHandler<RunProjectCommand>
 {
     public Task HandleAsync(RunProjectCommand command, CancellationToken cancellationToken = default)
     {
-        if (Workspace.Current.Mode == WorkspaceMode.Solution &&
-            !string.IsNullOrWhiteSpace(Workspace.Current.StartupProjectPath))
+        var target = runTargets.Resolve();
+        if (target is null)
         {
-            return Terminal.ExecuteAsync(
-                $"dotnet run --project \"{Workspace.Current.StartupProjectPath}\"",
-                System.IO.Path.GetDirectoryName(Workspace.Current.StartupProjectPath) ?? System.IO.Directory.GetCurrentDirectory(),
-                cancellationToken);
+            notifications.ShowWarning(
+                "Run",
+                "No executable project or C# file was found for the active document.");
+            return Task.CompletedTask;
         }
 
-        return RunDotnetAsync("run", cancellationToken);
+        shellRegions.Expand(ShellRegion.BottomBar);
+        return terminal.ExecuteAsync(target.Command, target.WorkingDirectory, cancellationToken);
     }
 }
