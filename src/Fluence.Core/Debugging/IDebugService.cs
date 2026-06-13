@@ -16,7 +16,7 @@ public interface IDebugService
 
     Task ToggleBreakpointAsync(string filePath, int line, CancellationToken cancellationToken = default);
 
-    Task<string?> EvaluateAsync(string expression, CancellationToken cancellationToken = default);
+    Task<DebugVariable?> EvaluateAsync(string expression, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<DebugVariable>> GetChildVariablesAsync(int variablesReference, CancellationToken cancellationToken = default);
 }

@@ -3,7 +3,6 @@
              xmlns:vm="using:Fluence.Modules.Debug.ViewModels"
              x:Class="Fluence.Modules.Debug.Views.DebugSidebarView"
              x:DataType="vm:DebugSidebarViewModel"
-             xmlns:vmn="using:Fluence.Modules.Debug.ViewModels"
              Background="Transparent">
 
     <StackPanel Spacing="10"
@@ -74,19 +73,7 @@
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                <TreeView ItemsSource="{Binding Variables}"
-                          Background="Transparent"
-                          BorderThickness="0">
-                    <TreeView.ItemTemplate>
-                        <TreeDataTemplate x:DataType="vmn:DebugVariableNode"
-                                          ItemsSource="{Binding Children}">
-                            <TextBlock Text="{Binding DisplayText}"
-                                       FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
-                                       FontSize="{StaticResource FluenceFontSizeSmall}"
-                                       Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                        </TreeDataTemplate>
-                    </TreeView.ItemTemplate>
-                </TreeView>
+                <ItemsControl ItemsSource="{Binding Variables}"/>
             </StackPanel>
         </Border>
 

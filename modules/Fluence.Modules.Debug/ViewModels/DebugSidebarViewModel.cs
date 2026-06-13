@@ -5,14 +5,12 @@ using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Debug;
 using Fluence.Core.Modules;
 using Fluence.Core.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.Debug.ViewModels;
 
 public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
 {
     private readonly IDebugStateService _debugState;
-    private readonly IServiceProvider _services;
     private readonly IShellEventBus _events;
 
     [ObservableProperty]
@@ -30,16 +28,15 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _canControlExecution;
 
-    public DebugSidebarViewModel(IDebugStateService debugState, IServiceProvider services, IShellEventBus events)
+    public DebugSidebarViewModel(IDebugStateService debugState, IShellEventBus events)
     {
         _debugState = debugState;
-        _services = services;
         _events = events;
         _debugState.Changed += OnDebugStateChanged;
         RefreshState();
     }
 
-    public ObservableCollection<DebugVariableNode> Variables { get; } = [];
+    public ObservableCollection<string> Variables { get; } = [];
 
     public ObservableCollection<string> StackFrames { get; } = [];
 
@@ -96,21 +93,16 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         Status = snapshot.Status.ToString();
         CanControlExecution = snapshot.IsStopped && snapshot.ActiveThreadId is not null;
 
-        // Resolve IDebugService lazily — only when variables exist.
-        // At startup the snapshot is empty, so this never runs during singleton construction,
-        // avoiding the cycle: DebugSidebarViewModel → IDebugService → DebugSessionManager → DebugSidebarViewModel.
-        if (snapshot.Variables.Count > 0)
-        {
-            var debugService = _services.GetRequiredService<IDebugService>();
-            Replace(Variables, snapshot.Variables.Select(v => new DebugVariableNode(v, debugService.GetChildVariablesAsync)).ToArray());
-        }
-        else
-        {
-            Variables.Clear();
-        }
+        Replace(Variables, snapshot.Variables.Select(FormatVariable).ToArray());
 
         Replace(StackFrames, snapshot.StackFrames.Select(FormatStackFrame).ToArray());
         Replace(Breakpoints, snapshot.Breakpoints.Select(FormatBreakpoint).ToArray());
+    }
+
+    private static string FormatVariable(DebugVariable variable)
+    {
+        var type = string.IsNullOrWhiteSpace(variable.Type) ? string.Empty : $" ({variable.Type})";
+        return $"{variable.Name} = {variable.Value}{type}";
     }
 
     private static string FormatStackFrame(DebugStackFrame frame)

@@ -29,7 +29,7 @@ public interface IDebugAdapterClient : IAsyncDisposable
 
     Task<IReadOnlyList<DebugVariable>> GetChildVariablesAsync(int variablesReference, CancellationToken cancellationToken = default);
 
-    Task<(string Result, string? Type)?> EvaluateAsync(string expression, int frameId, CancellationToken cancellationToken = default);
+    Task<DebugVariable?> EvaluateAsync(string expression, int frameId, CancellationToken cancellationToken = default);
 
     Task ContinueAsync(CancellationToken cancellationToken = default);
 

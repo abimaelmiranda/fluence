@@ -75,8 +75,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     public bool IsDebuggerStopped => _debugState.Snapshot.IsStopped;
 
-    public Task<string?> EvaluateHoverAsync(string expression, CancellationToken cancellationToken) =>
+    public Task<DebugVariable?> EvaluateHoverAsync(string expression, CancellationToken cancellationToken) =>
         _debugService.EvaluateAsync(expression, cancellationToken);
+
+    public Task<IReadOnlyList<DebugVariable>> GetChildVariablesAsync(int variablesReference, CancellationToken cancellationToken) =>
+        _debugService.GetChildVariablesAsync(variablesReference, cancellationToken);
 
     public void ToggleBreakpoint(int line)
     {

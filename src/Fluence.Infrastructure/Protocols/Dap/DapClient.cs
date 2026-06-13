@@ -285,7 +285,7 @@ internal sealed class DapClient : IDebugAdapterClient
         Type: variable["type"]?.GetValue<string>() ?? string.Empty,
         VariablesReference: variable["variablesReference"]?.GetValue<int>() ?? 0);
 
-    public async Task<(string Result, string? Type)?> EvaluateAsync(string expression, int frameId, CancellationToken cancellationToken = default)
+    public async Task<DebugVariable?> EvaluateAsync(string expression, int frameId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -300,8 +300,11 @@ internal sealed class DapClient : IDebugAdapterClient
             if (result is null)
                 return null;
 
-            var type = response?["type"]?.GetValue<string>();
-            return (result, string.IsNullOrWhiteSpace(type) ? null : type);
+            return new DebugVariable(
+                Name: expression,
+                Value: result,
+                Type: response?["type"]?.GetValue<string>() ?? string.Empty,
+                VariablesReference: response?["variablesReference"]?.GetValue<int>() ?? 0);
         }
         catch
         {

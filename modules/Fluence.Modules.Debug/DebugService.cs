@@ -150,7 +150,7 @@ public sealed class DebugService(
         }
     }
 
-    public async Task<string?> EvaluateAsync(string expression, CancellationToken cancellationToken = default)
+    public async Task<DebugVariable?> EvaluateAsync(string expression, CancellationToken cancellationToken = default)
     {
         var adapter = _adapter;
         if (adapter is null)
@@ -164,13 +164,7 @@ public sealed class DebugService(
 
         try
         {
-            var result = await adapter.EvaluateAsync(expression, frameId, cancellationToken).ConfigureAwait(false);
-            if (result is null)
-                return null;
-
-            return result.Value.Type is not null
-                ? $"{result.Value.Result} ({result.Value.Type})"
-                : result.Value.Result;
+            return await adapter.EvaluateAsync(expression, frameId, cancellationToken).ConfigureAwait(false);
         }
         catch
         {

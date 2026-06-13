@@ -19,15 +19,27 @@
                Placement="Pointer"
                IsLightDismissEnabled="False"
                VerticalOffset="20">
-            <Border Background="{StaticResource FluenceBrushSurfaceElevated}"
+            <Border x:Name="HoverPopupBorder"
+                    Background="{StaticResource FluenceBrushSurfaceElevated}"
                     BorderBrush="{StaticResource FluenceBrushBorder}"
                     BorderThickness="1"
-                    Padding="8,4"
-                    CornerRadius="4">
-                <TextBlock x:Name="HoverText"
-                           Foreground="{StaticResource FluenceBrushTextPrimary}"
-                           FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
-                           FontSize="12"/>
+                    Padding="4"
+                    CornerRadius="4"
+                    MaxHeight="300"
+                    MaxWidth="480">
+                <TreeView x:Name="HoverTree"
+                          Background="Transparent"
+                          BorderThickness="0">
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate x:DataType="vm:HoverVariableNode"
+                                          ItemsSource="{Binding Children}">
+                            <TextBlock Text="{Binding DisplayText}"
+                                       FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                                       FontSize="12"
+                                       Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
             </Border>
         </Popup>
     </Panel>
