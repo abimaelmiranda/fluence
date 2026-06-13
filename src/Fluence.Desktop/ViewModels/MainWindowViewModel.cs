@@ -77,6 +77,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     public bool IsSolutionMode => WorkspaceMode == WorkspaceMode.Solution;
 
+    public bool IsDebugging => WorkspaceMode == WorkspaceMode.Debugging;
+
     public bool HasActiveDocument => _workspace.Current.TabSession.ActiveDocument is not null;
 
     public bool HasNoActiveDocument => !HasActiveDocument;
@@ -101,6 +103,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         WorkspaceMode.FileOnly => ActiveDocumentName ?? "File Workspace",
         WorkspaceMode.Folder => Path.GetFileName(_workspace.Current.CurrentFolderPath) ?? "Folder Workspace",
         WorkspaceMode.Solution => Path.GetFileName(_workspace.Current.CurrentSolutionPath) ?? "Solution Workspace",
+        WorkspaceMode.Debugging => "Debugging",
         _ => "Fluence IDE",
     };
 
@@ -109,6 +112,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         WorkspaceMode.FileOnly => _workspace.Current.CurrentFilePath,
         WorkspaceMode.Folder => _workspace.Current.CurrentFolderPath,
         WorkspaceMode.Solution => _workspace.Current.CurrentSolutionPath,
+        WorkspaceMode.Debugging => _workspace.Current.StartupProjectPath,
         _ => null,
     };
 
@@ -117,6 +121,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         WorkspaceMode.FileOnly => "Open a text file to start editing",
         WorkspaceMode.Folder => "Open a file from the folder workspace",
         WorkspaceMode.Solution => "Open a file from the solution workspace",
+        WorkspaceMode.Debugging => "Debug session active",
         _ => "Editor",
     };
 
@@ -124,6 +129,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         WorkspaceMode.Folder => "File Explorer",
         WorkspaceMode.Solution => "Solution View",
+        WorkspaceMode.Debugging => "Debug",
         _ => "Sidebar",
     };
 
@@ -131,6 +137,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         WorkspaceMode.Folder => _workspace.Current.CurrentFolderPath ?? "No folder opened",
         WorkspaceMode.Solution => _workspace.Current.CurrentSolutionPath ?? "No solution opened",
+        WorkspaceMode.Debugging => _workspace.Current.StartupProjectPath ?? "Debug session",
         _ => string.Empty,
     };
 
@@ -142,10 +149,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsSidebarVisible));
         OnPropertyChanged(nameof(IsFolderMode));
         OnPropertyChanged(nameof(IsSolutionMode));
+        OnPropertyChanged(nameof(IsDebugging));
         OnPropertyChanged(nameof(ActiveSidebarContent));
         OnPropertyChanged(nameof(MainEditorContent));
         BuildCommand.NotifyCanExecuteChanged();
         RunCommand.NotifyCanExecuteChanged();
+        DebugCommand.NotifyCanExecuteChanged();
+        StopDebugCommand.NotifyCanExecuteChanged();
         TestCommand.NotifyCanExecuteChanged();
         RestoreCommand.NotifyCanExecuteChanged();
         CleanCommand.NotifyCanExecuteChanged();
@@ -269,6 +279,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         IsTerminalExpanded = true;
         _eventBus.Publish(new RunProjectRequestedEvent());
+        await Task.CompletedTask;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasWorkspace))]
+    private async Task DebugAsync(CancellationToken cancellationToken)
+    {
+        IsTerminalExpanded = true;
+        _eventBus.Publish(new DebugProjectRequestedEvent());
+        await Task.CompletedTask;
+    }
+
+    [RelayCommand(CanExecute = nameof(IsDebugging))]
+    private async Task StopDebugAsync(CancellationToken cancellationToken)
+    {
+        _eventBus.Publish(new StopDebugRequestedEvent());
         await Task.CompletedTask;
     }
 

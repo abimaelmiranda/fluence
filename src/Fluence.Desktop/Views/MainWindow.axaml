@@ -35,58 +35,93 @@
                             Background="{StaticResource FluenceBrushSurface}"
                             BorderBrush="{StaticResource FluenceBrushBorder}"
                             BorderThickness="0,0,0,1"
-                            IsVisible="{Binding HasActiveDocument}">
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Disabled">
-                            <ItemsControl ItemsSource="{Binding OpenDocuments}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:DocumentTabViewModel">
-                                        <Border MinWidth="160"
-                                                MaxWidth="260"
-                                                Height="38"
-                                                Padding="6,0,8,0"
-                                                Background="{StaticResource FluenceBrushShell}"
-                                                BorderBrush="{StaticResource FluenceBrushBorder}"
-                                                BorderThickness="0,0,1,0">
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                                                <Button Grid.Column="0"
-                                                        Command="{Binding ActivateCommand}"
-                                                        Background="Transparent"
-                                                        BorderThickness="0"
-                                                        Padding="8,0"
-                                                        HorizontalAlignment="Stretch"
-                                                        HorizontalContentAlignment="Stretch"
-                                                        ToolTip.Tip="{Binding Path}">
-                                                    <TextBlock Text="{Binding DisplayTitle}"
-                                                               FontFamily="{StaticResource FluenceFontFamily}"
-                                                               FontSize="{StaticResource FluenceFontSizeSmall}"
-                                                               Foreground="{StaticResource FluenceBrushTextPrimary}"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               VerticalAlignment="Center"/>
-                                                </Button>
-                                                <Button Grid.Column="1"
-                                                        Content="X"
-                                                        Command="{Binding CloseCommand}"
-                                                        Width="24"
-                                                        Height="24"
-                                                        Padding="0"
-                                                        Background="Transparent"
-                                                        BorderThickness="0"
-                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"
-                                                        FontFamily="{StaticResource FluenceFontFamily}"
-                                                        FontSize="{StaticResource FluenceFontSizeSmall}"
-                                                        ToolTip.Tip="Close tab"/>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                            IsVisible="{Binding IsWorkspaceVisible}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <ScrollViewer Grid.Column="0"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding OpenDocuments}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DocumentTabViewModel">
+                                            <Border MinWidth="160"
+                                                    MaxWidth="260"
+                                                    Height="38"
+                                                    Padding="6,0,8,0"
+                                                    Background="{StaticResource FluenceBrushShell}"
+                                                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                                                    BorderThickness="0,0,1,0">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                                    <Button Grid.Column="0"
+                                                            Command="{Binding ActivateCommand}"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Padding="8,0"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Stretch"
+                                                            ToolTip.Tip="{Binding Path}">
+                                                        <TextBlock Text="{Binding DisplayTitle}"
+                                                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Button>
+                                                    <Button Grid.Column="1"
+                                                            Content="X"
+                                                            Command="{Binding CloseCommand}"
+                                                            Width="24"
+                                                            Height="24"
+                                                            Padding="0"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                            FontFamily="{StaticResource FluenceFontFamily}"
+                                                            FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                            ToolTip.Tip="Close tab"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Margin="8,0"
+                                        Spacing="4"
+                                        VerticalAlignment="Center">
+                                <Button Content="Run"
+                                        Command="{Binding RunCommand}"
+                                        Height="26"
+                                        MinWidth="58"
+                                        Padding="10,0"
+                                        FontFamily="{StaticResource FluenceFontFamily}"
+                                        FontSize="{StaticResource FluenceFontSizeSmall}"
+                                        ToolTip.Tip="Run"/>
+                                <Button Content="Debug"
+                                        Command="{Binding DebugCommand}"
+                                        Height="26"
+                                        MinWidth="66"
+                                        Padding="10,0"
+                                        FontFamily="{StaticResource FluenceFontFamily}"
+                                        FontSize="{StaticResource FluenceFontSizeSmall}"
+                                        ToolTip.Tip="Debug"/>
+                                <Button Content="Stop"
+                                        Command="{Binding StopDebugCommand}"
+                                        IsVisible="{Binding IsDebugging}"
+                                        Height="26"
+                                        MinWidth="56"
+                                        Padding="10,0"
+                                        FontFamily="{StaticResource FluenceFontFamily}"
+                                        FontSize="{StaticResource FluenceFontSizeSmall}"
+                                        ToolTip.Tip="Stop debug"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
 
                     <Grid Grid.Row="1">

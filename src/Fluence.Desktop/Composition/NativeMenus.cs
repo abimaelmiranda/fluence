@@ -82,6 +82,16 @@ internal static class NativeMenus
                     },
                     new NativeMenuItem
                     {
+                        Header = "Debug",
+                        Command = mainWindow.DebugCommand,
+                    },
+                    new NativeMenuItem
+                    {
+                        Header = "Stop Debugging",
+                        Command = mainWindow.StopDebugCommand,
+                    },
+                    new NativeMenuItem
+                    {
                         Header = "Test",
                         Command = mainWindow.TestCommand,
                     },
