@@ -37,11 +37,11 @@ internal static class MacOsPtyInterop
     [DllImport(Libc)]
     private static extern int posix_spawn(
         out int pid,
-        string path,
+        nint path,
         nint fileActions,
         nint attr,
-        string[] argv,
-        string[] envp);
+        nint argv,
+        nint envp);
 
     [DllImport(Libc)]
     private static extern int posix_spawn_file_actions_init(nint fileActions);
@@ -51,7 +51,7 @@ internal static class MacOsPtyInterop
 
     [DllImport(Libc)]
     private static extern int posix_spawn_file_actions_addopen(
-        nint fileActions, int fd, string path, int flags, int mode);
+        nint fileActions, int fd, nint path, int flags, int mode);
 
     [DllImport(Libc)]
     private static extern int posix_spawn_file_actions_adddup2(
@@ -64,7 +64,7 @@ internal static class MacOsPtyInterop
     // macOS extension (10.15+): set working directory for child
     [DllImport(Libc)]
     private static extern int posix_spawn_file_actions_addchdir_np(
-        nint fileActions, string path);
+        nint fileActions, nint path);
 
     [DllImport(Libc)]
     private static extern int posix_spawnattr_init(nint attr);
@@ -123,10 +123,8 @@ internal static class MacOsPtyInterop
             : throw new InvalidOperationException("openpty returned empty slave path");
 
         // Use GCHandle-pinned managed byte arrays instead of Marshal.AllocHGlobal with hardcoded
-        // sizes.  AllocHGlobal(256/512) overflows if the macOS internal struct layout grows across
-        // OS versions, silently corrupting the heap and producing EFAULT on the next posix_spawn
-        // call.  4 KB each is orders-of-magnitude larger than any real posix_spawn struct; the GC
-        // zero-initialises the array and keeps it pinned for the duration of this call.
+        // sizes. posix_spawnattr_t and posix_spawn_file_actions_t are opaque macOS structs, so the
+        // buffers stay deliberately oversized and pinned for the duration of this call.
         const int BufferSize = 4096;
         var fileActionsBytes  = new byte[BufferSize];
         var spawnAttrBytes    = new byte[BufferSize];
@@ -134,6 +132,13 @@ internal static class MacOsPtyInterop
         var spawnAttrHandle   = GCHandle.Alloc(spawnAttrBytes,   GCHandleType.Pinned);
         var fileActions       = fileActionsHandle.AddrOfPinnedObject();
         var spawnAttr         = spawnAttrHandle.AddrOfPinnedObject();
+        using var nativeExecutable = new NativeUtf8String(executable);
+        using var nativeSlavePath = new NativeUtf8String(slavePath);
+        using var nativeWorkingDirectory = string.IsNullOrEmpty(workingDirectory)
+            ? null
+            : new NativeUtf8String(workingDirectory);
+        using var nativeArgv = new NativeStringArray(argv);
+        using var nativeEnv = new NativeStringArray(env);
 
         bool fileActionsInited = false;
         bool spawnAttrInited   = false;
@@ -150,13 +155,21 @@ internal static class MacOsPtyInterop
 
             // stdin: open slave by path — as session leader (POSIX_SPAWN_SETSID), opening a terminal
             // device without O_NOCTTY automatically sets it as the controlling terminal.
-            posix_spawn_file_actions_addopen(fileActions, 0, slavePath, O_RDWR, 0);
-            posix_spawn_file_actions_adddup2(fileActions, 0, 1);  // stdout = FD 0
-            posix_spawn_file_actions_adddup2(fileActions, 0, 2);  // stderr = FD 0
+            rc = posix_spawn_file_actions_addopen(fileActions, 0, nativeSlavePath.Pointer, O_RDWR, 0);
+            if (rc != 0) throw new InvalidOperationException($"posix_spawn_file_actions_addopen failed: errno={rc}");
+
+            rc = posix_spawn_file_actions_adddup2(fileActions, 0, 1);  // stdout = FD 0
+            if (rc != 0) throw new InvalidOperationException($"posix_spawn_file_actions_adddup2 stdout failed: errno={rc}");
+
+            rc = posix_spawn_file_actions_adddup2(fileActions, 0, 2);  // stderr = FD 0
+            if (rc != 0) throw new InvalidOperationException($"posix_spawn_file_actions_adddup2 stderr failed: errno={rc}");
 
             // Working directory via macOS-extension file action (macOS 10.15+)
-            if (!string.IsNullOrEmpty(workingDirectory))
-                posix_spawn_file_actions_addchdir_np(fileActions, workingDirectory);
+            if (nativeWorkingDirectory is not null)
+            {
+                rc = posix_spawn_file_actions_addchdir_np(fileActions, nativeWorkingDirectory.Pointer);
+                if (rc != 0) throw new InvalidOperationException($"posix_spawn_file_actions_addchdir_np failed: errno={rc}");
+            }
 
             // Spawn attributes
             short flags = (short)(POSIX_SPAWN_SETSID |          // new session (no controlling terminal yet)
@@ -167,22 +180,27 @@ internal static class MacOsPtyInterop
             if (rc != 0) throw new InvalidOperationException($"posix_spawnattr_setflags failed: errno={rc}");
 
             uint allSignals = uint.MaxValue;  // all signals → SIG_DFL
-            posix_spawnattr_setsigdefault(spawnAttr, ref allSignals);
+            rc = posix_spawnattr_setsigdefault(spawnAttr, ref allSignals);
+            if (rc != 0) throw new InvalidOperationException($"posix_spawnattr_setsigdefault failed: errno={rc}");
 
             uint noSignals = 0u;              // unblock all signals in child
-            posix_spawnattr_setsigmask(spawnAttr, ref noSignals);
+            rc = posix_spawnattr_setsigmask(spawnAttr, ref noSignals);
+            if (rc != 0) throw new InvalidOperationException($"posix_spawnattr_setsigmask failed: errno={rc}");
 
             // Retry on EAGAIN (errno=11): kernel temporarily can't spawn due to resource pressure.
-            // TODO: rc=14 (EFAULT) observed intermittently on second session spawn. Root cause not
-            // fully confirmed — likely struct-layout overflow from hardcoded AllocHGlobal sizes in
-            // the previous implementation; GCHandle+4KB buffers should fix it, but needs validation
-            // across more macOS versions. If EFAULT persists, audit fileActions/spawnAttr struct
-            // sizes via `sizeof` in native code and match buffers exactly.
+            // argv/envp are passed as native null-terminated char** arrays. Passing managed
+            // string[] here can intermittently surface as EFAULT (errno=14) under churn.
             const int EAGAIN = 11;
             int spawnedPid;
             for (int attempt = 0; ; attempt++)
             {
-                rc = posix_spawn(out spawnedPid, executable, fileActions, spawnAttr, argv, env);
+                rc = posix_spawn(
+                    out spawnedPid,
+                    nativeExecutable.Pointer,
+                    fileActions,
+                    spawnAttr,
+                    nativeArgv.Pointer,
+                    nativeEnv.Pointer);
                 if (rc == 0) break;
                 if (rc != EAGAIN || attempt >= 2)
                     throw new InvalidOperationException(
@@ -250,5 +268,88 @@ internal static class MacOsPtyInterop
             env.Add("TERM=xterm-256color");
 
         return env.ToArray();
+    }
+
+    private sealed class NativeUtf8String : IDisposable
+    {
+        public NativeUtf8String(string value)
+        {
+            if (value.IndexOf('\0') >= 0)
+                throw new ArgumentException("Native strings cannot contain null characters.", nameof(value));
+
+            var bytes = Encoding.UTF8.GetBytes(value + '\0');
+            Pointer = Marshal.AllocHGlobal(bytes.Length);
+            Marshal.Copy(bytes, 0, Pointer, bytes.Length);
+        }
+
+        public nint Pointer { get; private set; }
+
+        public void Dispose()
+        {
+            if (Pointer != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(Pointer);
+                Pointer = IntPtr.Zero;
+            }
+        }
+    }
+
+    private sealed class NativeStringArray : IDisposable
+    {
+        private readonly nint[] _strings;
+
+        public NativeStringArray(IReadOnlyList<string> values)
+        {
+            _strings = new nint[values.Count];
+
+            try
+            {
+                Pointer = Marshal.AllocHGlobal((values.Count + 1) * IntPtr.Size);
+                for (var i = 0; i < values.Count; i++)
+                {
+                    _strings[i] = AllocateUtf8String(values[i]);
+                    Marshal.WriteIntPtr(Pointer, i * IntPtr.Size, _strings[i]);
+                }
+
+                Marshal.WriteIntPtr(Pointer, values.Count * IntPtr.Size, IntPtr.Zero);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
+
+        public nint Pointer { get; private set; }
+
+        public void Dispose()
+        {
+            for (var i = 0; i < _strings.Length; i++)
+            {
+                var ptr = _strings[i];
+                if (ptr != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(ptr);
+                    _strings[i] = IntPtr.Zero;
+                }
+            }
+
+            if (Pointer != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(Pointer);
+                Pointer = IntPtr.Zero;
+            }
+        }
+
+        private static nint AllocateUtf8String(string value)
+        {
+            if (value.IndexOf('\0') >= 0)
+                throw new ArgumentException("Native strings cannot contain null characters.", nameof(value));
+
+            var bytes = Encoding.UTF8.GetBytes(value + '\0');
+            var ptr = Marshal.AllocHGlobal(bytes.Length);
+            Marshal.Copy(bytes, 0, ptr, bytes.Length);
+            return ptr;
+        }
     }
 }
