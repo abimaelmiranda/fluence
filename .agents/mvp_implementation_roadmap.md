@@ -668,15 +668,15 @@ Always remember:
 - [X] Create terminal panel
 - [X] Show stdout
 - [X] Show stderr
-- [X] Replace PTY/xterm-like grid with stable transcript console for MVP
+- [X] Native interactive terminal with PTY + XTerm.NET on macOS
 - [X] Execute typed commands through `ITerminalService`
 - [X] Keep terminal collapsed on startup
 - [X] Expand terminal automatically for Dotnet CLI commands
 - [X] Support explicit transcript clear via `clear` / `cls`
 - [X] Add process cancellation path
-- [ ] Post-MVP: evaluate `XTerm.NET` for a real native interactive terminal
-- [ ] Post-MVP: prototype `XTerm.NET` renderer in Avalonia
-- [ ] Post-MVP: connect `XTerm.NET` to `IPtyHost` / `IPtySession`
+- [X] macOS terminal flow validated as 100% functional
+- [ ] Validate Windows terminal flow
+- [ ] Validate Linux terminal flow
 
 ## Infrastructure
 

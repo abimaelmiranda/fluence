@@ -17,6 +17,8 @@ namespace Fluence.Modules.Terminal.Terminal;
 
 public sealed class TerminalControl : Avalonia.Controls.Control
 {
+    private const int LinesPerWheelDelta = 3;
+
     public static readonly StyledProperty<XTerminal?> TerminalProperty =
         AvaloniaProperty.Register<TerminalControl, XTerminal?>(nameof(Terminal));
 
@@ -294,6 +296,20 @@ public sealed class TerminalControl : Avalonia.Controls.Control
     {
         base.OnPointerPressed(e);
         Focus();
+    }
+
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+
+        var terminal = Terminal;
+        if (terminal is null || e.Delta.Y == 0)
+            return;
+
+        var lines = Math.Max(1, (int)Math.Ceiling(Math.Abs(e.Delta.Y) * LinesPerWheelDelta));
+        terminal.ScrollLines(e.Delta.Y > 0 ? -lines : lines);
+        e.Handled = true;
+        RequestRedraw();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

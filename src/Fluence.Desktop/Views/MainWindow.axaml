@@ -138,24 +138,35 @@
                 BorderBrush="{StaticResource FluenceBrushBorder}"
                 BorderThickness="0,1,0,0">
             <StackPanel>
-                <Button Command="{Binding ToggleTerminalCommand}"
+                <Border x:Name="TerminalResizeHandle"
+                        Height="6"
                         Background="Transparent"
-                        BorderThickness="0"
-                        Padding="0"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Stretch">
-                    <Grid Height="36" ColumnDefinitions="*,Auto">
+                        Cursor="SizeNorthSouth"
+                        PointerPressed="OnTerminalResizeHandlePointerPressed"
+                        PointerMoved="OnTerminalResizeHandlePointerMoved"
+                        PointerReleased="OnTerminalResizeHandlePointerReleased"
+                        PointerCaptureLost="OnTerminalResizeHandlePointerCaptureLost">
+                    <Border Height="1"
+                            VerticalAlignment="Top"
+                            Background="{StaticResource FluenceBrushBorder}"
+                            Opacity="0.65"/>
+                </Border>
+
+                <Border Height="26"
+                        Background="Transparent"
+                        PointerReleased="OnTerminalToggleHandlePointerReleased">
+                    <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0"
                                    Text="{Binding BottomBarTitle}"
-                                   Margin="16,0"
+                                   Margin="12,0"
                                    FontFamily="{StaticResource FluenceFontFamily}"
-                                   FontSize="{StaticResource FluenceFontSizeBody}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource FluenceBrushTextPrimary}"
                                    VerticalAlignment="Center"/>
                     </Grid>
-                </Button>
-                <Border Height="160"
+                </Border>
+                <Border Height="{Binding TerminalHeight}"
                         IsVisible="{Binding IsTerminalExpanded}">
                     <ContentControl Content="{Binding TerminalContent}"/>
                 </Border>

@@ -17,6 +17,9 @@ namespace Fluence.Desktop.ViewModels;
 
 public sealed partial class MainWindowViewModel : ViewModelBase
 {
+    public const double DefaultTerminalHeight = 160;
+    public const double MinimumTerminalHeight = 80;
+
     private readonly IWorkspaceContext _workspace;
     private readonly IUserNotificationService _notifications;
     private readonly IShellEventBus _eventBus;
@@ -27,6 +30,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isTerminalExpanded;
+
+    [ObservableProperty]
+    private double _terminalHeight = DefaultTerminalHeight;
 
     public MainWindowViewModel(
         IWorkspaceContext workspace,
@@ -181,6 +187,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private void ToggleTerminal()
     {
         IsTerminalExpanded = !IsTerminalExpanded;
+    }
+
+    public void SetTerminalHeight(double height, double maximumHeight)
+    {
+        var upperBound = Math.Max(MinimumTerminalHeight, maximumHeight);
+        TerminalHeight = Math.Clamp(height, MinimumTerminalHeight, upperBound);
     }
 
     [RelayCommand]

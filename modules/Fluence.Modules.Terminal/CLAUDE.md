@@ -16,6 +16,14 @@ A infraestrutura PTY está em `src/Fluence.Infrastructure/Pty/` e `src/Fluence.I
 
 ---
 
+## Status de plataforma
+
+- macOS: terminal integrado considerado 100% funcional no fluxo atual, incluindo PTY, XTerm.NET, scroll, foco, resize e teardown.
+- Windows: implementação ConPTY existe, mas não foi validada no fluxo atual.
+- Linux: não foi testado no fluxo atual.
+
+---
+
 ## Invariantes que não devem ser quebradas
 
 ### PTY I/O

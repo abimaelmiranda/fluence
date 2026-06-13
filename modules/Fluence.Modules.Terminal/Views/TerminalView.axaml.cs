@@ -24,6 +24,20 @@ public partial class TerminalView : UserControl
         InitializeComponent();
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == IsVisibleProperty && IsVisible)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                TerminalControl.RequestInitialResize();
+                ScheduleFocusForActiveSession();
+            }, DispatcherPriority.Loaded);
+        }
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
@@ -76,6 +90,7 @@ public partial class TerminalView : UserControl
             TerminalControl.RequestRedraw();
             TerminalControl.RequestInitialResize();
             ScheduleStartForActiveSession();
+            ScheduleFocusForActiveSession();
         }, DispatcherPriority.Loaded);
     }
 
@@ -158,6 +173,7 @@ public partial class TerminalView : UserControl
                     {
                         _activeSessionStartScheduled = false;
                         TerminalControl.RequestRedraw();
+                        ScheduleFocusForActiveSession();
                         ScheduleResize(session, version, cols, rows);
                     }
                     return;
@@ -257,6 +273,7 @@ public partial class TerminalView : UserControl
         {
             TerminalControl.RequestInitialResize();
             ScheduleStartForActiveSession();
+            ScheduleFocusForActiveSession();
         }, DispatcherPriority.Loaded);
     }
 
@@ -282,6 +299,29 @@ public partial class TerminalView : UserControl
         if (cts is null) return;
         try { cts.Cancel(); } catch (ObjectDisposedException) { }
         cts.Dispose();
+    }
+
+    private void ScheduleFocusForActiveSession()
+    {
+        var session = _activeSession;
+        var version = _activeSessionVersion;
+        if (session is null)
+            return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_isAttached ||
+                !ReferenceEquals(_activeSession, session) ||
+                version != _activeSessionVersion ||
+                session.Session.IsClosing ||
+                !ReferenceEquals(TerminalControl.Terminal, session.XTerminal) ||
+                !TerminalControl.IsVisible)
+            {
+                return;
+            }
+
+            TerminalControl.Focus();
+        }, DispatcherPriority.Loaded);
     }
 
     private static async Task<bool> DelayOrCancelledAsync(int millisecondsDelay, CancellationToken cancellationToken)
