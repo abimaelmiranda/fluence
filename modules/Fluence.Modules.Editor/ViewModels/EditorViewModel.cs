@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Fluence.Core.Debug;
 using Fluence.Core.Commands;
+using Fluence.Core.Modules;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Workspace;
 
@@ -15,6 +19,9 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     private readonly IWorkspaceContext _workspace;
     private readonly ICommandHandler<SaveActiveDocumentCommand> _saveHandler;
+    private readonly IDebugStateService _debugState;
+    private readonly IDebugService _debugService;
+    private readonly IShellEventBus _events;
     private readonly DispatcherTimer _autoSaveTimer;
     private bool _isRefreshingFromWorkspace;
     private string? _pendingAutoSavePath;
@@ -22,14 +29,23 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string _activeText = string.Empty;
 
-    public EditorViewModel(IWorkspaceContext workspace, ICommandHandler<SaveActiveDocumentCommand> saveHandler)
+    public EditorViewModel(
+        IWorkspaceContext workspace,
+        ICommandHandler<SaveActiveDocumentCommand> saveHandler,
+        IDebugStateService debugState,
+        IDebugService debugService,
+        IShellEventBus events)
     {
         _workspace = workspace;
         _saveHandler = saveHandler;
+        _debugState = debugState;
+        _debugService = debugService;
+        _events = events;
         _autoSaveTimer = new DispatcherTimer { Interval = AutoSaveDelay };
         _autoSaveTimer.Tick += OnAutoSaveTimerTick;
         RefreshFromWorkspace();
         _workspace.Changed += OnWorkspaceChanged;
+        _debugState.Changed += OnDebugStateChanged;
     }
 
     public bool HasActiveDocument => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument;
@@ -37,6 +53,38 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public string? ActiveDocumentPath => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument
         ? _workspace.Current.TabSession.ActiveDocument.Path
         : null;
+
+    public IReadOnlyList<DebugBreakpoint> ActiveDocumentBreakpoints =>
+        string.IsNullOrWhiteSpace(ActiveDocumentPath)
+            ? Array.Empty<DebugBreakpoint>()
+            : _debugState.Snapshot.Breakpoints
+                .Where(b => string.Equals(b.FilePath, ActiveDocumentPath, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+    public DebugExecutionLine? ActiveExecutionLine
+    {
+        get
+        {
+            var currentLine = _debugState.Snapshot.CurrentLine;
+            return currentLine is not null &&
+                   string.Equals(currentLine.FilePath, ActiveDocumentPath, StringComparison.OrdinalIgnoreCase)
+                ? currentLine
+                : null;
+        }
+    }
+
+    public bool IsDebuggerStopped => _debugState.Snapshot.IsStopped;
+
+    public Task<string?> EvaluateHoverAsync(string expression, CancellationToken cancellationToken) =>
+        _debugService.EvaluateAsync(expression, cancellationToken);
+
+    public void ToggleBreakpoint(int line)
+    {
+        if (string.IsNullOrWhiteSpace(ActiveDocumentPath) || line <= 0)
+            return;
+
+        _events.Publish(new ToggleBreakpointRequestedEvent(ActiveDocumentPath, line));
+    }
 
     public async Task SaveIfDirtyAsync()
     {
@@ -56,6 +104,23 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         RefreshFromWorkspace();
     }
 
+    private void OnDebugStateChanged(object? sender, EventArgs e)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            RefreshDebugStateProperties();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(RefreshDebugStateProperties);
+    }
+
+    private void RefreshDebugStateProperties()
+    {
+        OnPropertyChanged(nameof(ActiveDocumentBreakpoints));
+        OnPropertyChanged(nameof(ActiveExecutionLine));
+    }
+
     private void RefreshFromWorkspace()
     {
         _isRefreshingFromWorkspace = true;
@@ -65,6 +130,8 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _isRefreshingFromWorkspace = false;
         OnPropertyChanged(nameof(HasActiveDocument));
         OnPropertyChanged(nameof(ActiveDocumentPath));
+        OnPropertyChanged(nameof(ActiveDocumentBreakpoints));
+        OnPropertyChanged(nameof(ActiveExecutionLine));
     }
 
     private void ScheduleAutoSave(string? documentPath)
@@ -127,5 +194,6 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         CancelPendingAutoSave();
         _autoSaveTimer.Tick -= OnAutoSaveTimerTick;
         _workspace.Changed -= OnWorkspaceChanged;
+        _debugState.Changed -= OnDebugStateChanged;
     }
 }

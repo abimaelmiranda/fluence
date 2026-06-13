@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Fluence.Core.Debug;
 using Fluence.Core.Infrastructure;
 using Fluence.Core.Modules;
 using Fluence.Core.Ports;
@@ -10,6 +11,7 @@ using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
 using Fluence.Infrastructure.Pty;
+using Fluence.Infrastructure.Protocols.Dap;
 using Fluence.Modules.Debug;
 using Fluence.Modules.DotnetCli;
 using Fluence.Modules.Editor;
@@ -45,6 +47,8 @@ internal static class Bootstrapper
         services.AddSingleton<IProcessHost, ProcessHost>();
         services.AddSingleton<ILaunchSettingsService, LaunchSettingsService>();
         services.AddSingleton<ILaunchSettingsCoordinator, LaunchSettingsCoordinator>();
+        services.AddSingleton<NetcoredbgToolService>();
+        services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new MacOsPtyHost()

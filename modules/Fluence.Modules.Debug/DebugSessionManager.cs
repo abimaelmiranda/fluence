@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using Fluence.Core.Workspace;
 using Fluence.Core.Modules;
 using Fluence.Modules.Debug.ViewModels;
@@ -14,6 +15,12 @@ public sealed class DebugSessionManager(
 
     public void Start(ProjectExecutionTarget target, ExecutionMode mode)
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => Start(target, mode));
+            return;
+        }
+
         var architecture = target.Configuration?.Architecture;
         CurrentSession = new DebugSession(
             IsActive: true,
@@ -30,6 +37,12 @@ public sealed class DebugSessionManager(
 
     public void Stop()
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(Stop);
+            return;
+        }
+
         CurrentSession = null;
         sidebar.Clear();
         shellRegions.ClearContent(ShellRegion.Sidebar, "DebugSidebar");

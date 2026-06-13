@@ -6,12 +6,29 @@
              x:DataType="vm:EditorViewModel"
              HorizontalAlignment="Stretch"
              VerticalAlignment="Stretch">
-    <avaloniaEdit:TextEditor x:Name="Editor"
-                             ShowLineNumbers="True"
-                             FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
-                             FontSize="13"
-                             Background="{StaticResource FluenceBrushShell}"
-                             Foreground="{StaticResource FluenceBrushTextPrimary}"
-                             HorizontalAlignment="Stretch"
-                             VerticalAlignment="Stretch"/>
+    <Panel>
+        <avaloniaEdit:TextEditor x:Name="Editor"
+                                 ShowLineNumbers="True"
+                                 FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                                 FontSize="13"
+                                 Background="{StaticResource FluenceBrushShell}"
+                                 Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Stretch"/>
+        <Popup x:Name="HoverPopup"
+               Placement="Pointer"
+               IsLightDismissEnabled="False"
+               VerticalOffset="20">
+            <Border Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="1"
+                    Padding="8,4"
+                    CornerRadius="4">
+                <TextBlock x:Name="HoverText"
+                           Foreground="{StaticResource FluenceBrushTextPrimary}"
+                           FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                           FontSize="12"/>
+            </Border>
+        </Popup>
+    </Panel>
 </UserControl>

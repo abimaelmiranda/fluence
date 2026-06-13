@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Fluence.Core.Commands;
+using Fluence.Core.Debug;
 using Fluence.Core.Modules;
 using Fluence.Core.Workspace;
 using Fluence.Modules.Debug.ViewModels;
@@ -15,6 +16,8 @@ public sealed class DebugModule : IIdeModule
     public void Register(IServiceCollection services)
     {
         services.AddSingleton<DebugSidebarViewModel>();
+        services.AddSingleton<IDebugStateService, DebugStateService>();
+        services.AddSingleton<IDebugService, DebugService>();
         services.AddSingleton<IDebugSessionManager, DebugSessionManager>();
         services.AddSingleton<ICommandHandler<DebugProjectCommand>, DebugProjectCommandHandler>();
     }
@@ -27,7 +30,12 @@ public sealed class DebugModule : IIdeModule
     public void Initialize(IModuleHost host)
     {
         host.Events.Subscribe<DebugProjectRequestedEvent>(_event => { _ = HandleAsync(host); });
-        host.Events.Subscribe<StopDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugSessionManager>().Stop());
+        host.Events.Subscribe<StopDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().StopAsync(); });
+        host.Events.Subscribe<ContinueDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().ContinueAsync(); });
+        host.Events.Subscribe<StepOverDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().StepOverAsync(); });
+        host.Events.Subscribe<StepIntoDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().StepIntoAsync(); });
+        host.Events.Subscribe<StepOutDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().StepOutAsync(); });
+        host.Events.Subscribe<ToggleBreakpointRequestedEvent>(e => { _ = host.Services.GetRequiredService<IDebugService>().ToggleBreakpointAsync(e.FilePath, e.Line); });
         host.SetModuleState(Name, ModuleState.Active);
     }
 

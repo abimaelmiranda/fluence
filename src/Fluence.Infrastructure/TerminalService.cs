@@ -153,6 +153,26 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         await session.ExecuteAsync(command, workingDirectory, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task WriteOutputAsync(
+        string text,
+        bool isError = false,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        var session = ActiveSession;
+        if (session is null || session.HasExited)
+            session = CreateSession();
+
+        if (session is TerminalSession terminalSession)
+        {
+            await terminalSession.WriteSyntheticOutputAsync(text, isError, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_disposed)
@@ -448,6 +468,21 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         {
             if (!IsTerminalInactive(State))
                 Cleared?.Invoke(this, EventArgs.Empty);
+        }
+
+        public Task WriteSyntheticOutputAsync(
+            string text,
+            bool isError,
+            CancellationToken cancellationToken = default)
+        {
+            if (IsTerminalInactive(State))
+                return Task.CompletedTask;
+
+            var output = isError
+                ? $"\x1b[31m{text}\x1b[0m"
+                : text;
+            DataReceived?.Invoke(this, new TerminalDataEventArgs(Encoding.UTF8.GetBytes(output)));
+            return Task.CompletedTask;
         }
 
         private async Task DrainPendingCommandsAsync(CancellationToken cancellationToken)

@@ -26,4 +26,9 @@ public interface ITerminalService
         string command,
         string? workingDirectory = null,
         CancellationToken cancellationToken = default);
+
+    Task WriteOutputAsync(
+        string text,
+        bool isError = false,
+        CancellationToken cancellationToken = default);
 }

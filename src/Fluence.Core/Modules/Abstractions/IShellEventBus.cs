@@ -40,6 +40,16 @@ public sealed record DebugProjectRequestedEvent : IShellEvent;
 
 public sealed record StopDebugRequestedEvent : IShellEvent;
 
+public sealed record ContinueDebugRequestedEvent : IShellEvent;
+
+public sealed record StepOverDebugRequestedEvent : IShellEvent;
+
+public sealed record StepIntoDebugRequestedEvent : IShellEvent;
+
+public sealed record StepOutDebugRequestedEvent : IShellEvent;
+
+public sealed record ToggleBreakpointRequestedEvent(string FilePath, int Line) : IShellEvent;
+
 public sealed record TestWorkspaceRequestedEvent : IShellEvent;
 
 public sealed record BuildProjectRequestedEvent(string ProjectPath) : IShellEvent;

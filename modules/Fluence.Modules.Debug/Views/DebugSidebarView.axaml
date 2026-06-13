@@ -3,6 +3,7 @@
              xmlns:vm="using:Fluence.Modules.Debug.ViewModels"
              x:Class="Fluence.Modules.Debug.Views.DebugSidebarView"
              x:DataType="vm:DebugSidebarViewModel"
+             xmlns:vmn="using:Fluence.Modules.Debug.ViewModels"
              Background="Transparent">
 
     <StackPanel Spacing="10"
@@ -27,8 +28,40 @@
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                <TextBlock Text="{Binding Status}"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
             </StackPanel>
         </Border>
+
+        <StackPanel Orientation="Horizontal"
+                    Spacing="4">
+            <Button Content="Continue"
+                    Command="{Binding ContinueCommand}"
+                    IsEnabled="{Binding CanControlExecution}"
+                    Height="26"
+                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
+            <Button Content="Over"
+                    Command="{Binding StepOverCommand}"
+                    IsEnabled="{Binding CanControlExecution}"
+                    Height="26"
+                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
+            <Button Content="Into"
+                    Command="{Binding StepIntoCommand}"
+                    IsEnabled="{Binding CanControlExecution}"
+                    Height="26"
+                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
+            <Button Content="Out"
+                    Command="{Binding StepOutCommand}"
+                    IsEnabled="{Binding CanControlExecution}"
+                    Height="26"
+                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
+            <Button Content="Stop"
+                    Command="{Binding StopCommand}"
+                    Height="26"
+                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
+        </StackPanel>
 
         <Border Padding="10"
                 Background="{StaticResource FluenceBrushShell}"
@@ -41,10 +74,19 @@
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                <TextBlock Text="No variables"
-                           FontFamily="{StaticResource FluenceFontFamily}"
-                           FontSize="{StaticResource FluenceFontSizeSmall}"
-                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                <TreeView ItemsSource="{Binding Variables}"
+                          Background="Transparent"
+                          BorderThickness="0">
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate x:DataType="vmn:DebugVariableNode"
+                                          ItemsSource="{Binding Children}">
+                            <TextBlock Text="{Binding DisplayText}"
+                                       FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                       Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
             </StackPanel>
         </Border>
 
@@ -59,10 +101,7 @@
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                <TextBlock Text="No frames"
-                           FontFamily="{StaticResource FluenceFontFamily}"
-                           FontSize="{StaticResource FluenceFontSizeSmall}"
-                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                <ItemsControl ItemsSource="{Binding StackFrames}"/>
             </StackPanel>
         </Border>
 
@@ -77,10 +116,7 @@
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                <TextBlock Text="No breakpoints"
-                           FontFamily="{StaticResource FluenceFontFamily}"
-                           FontSize="{StaticResource FluenceFontSizeSmall}"
-                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                <ItemsControl ItemsSource="{Binding Breakpoints}"/>
             </StackPanel>
         </Border>
     </StackPanel>
