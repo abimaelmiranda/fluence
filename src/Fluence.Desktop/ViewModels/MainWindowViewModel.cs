@@ -31,6 +31,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isTerminalExpanded;
 
+    private bool _isProvisioning;
+
     [ObservableProperty]
     private double _terminalHeight = DefaultTerminalHeight;
 
@@ -51,6 +53,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _regions.Changed += OnShellRegionsChanged;
         _regions.RegionExpanded += OnShellRegionExpanded;
         _eventBus.Subscribe<ExpandPanelEvent>(OnExpandPanelRequested);
+        _eventBus.Subscribe<DebuggerProvisioningRequiredEvent>(_ => SetProvisioning(true));
+        _eventBus.Subscribe<DebuggerProvisioningFinishedEvent>(_ => SetProvisioning(false));
     }
 
     public WelcomeViewModel Welcome { get; }
@@ -274,7 +278,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
-    [RelayCommand(CanExecute = nameof(HasWorkspace))]
+    [RelayCommand(CanExecute = nameof(CanRunOrDebug))]
     private async Task RunAsync(CancellationToken cancellationToken)
     {
         IsTerminalExpanded = true;
@@ -282,7 +286,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
-    [RelayCommand(CanExecute = nameof(HasWorkspace))]
+    [RelayCommand(CanExecute = nameof(CanRunOrDebug))]
     private async Task DebugAsync(CancellationToken cancellationToken)
     {
         IsTerminalExpanded = true;
@@ -322,6 +326,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     private bool HasWorkspace() => WorkspaceMode != WorkspaceMode.Empty;
+
+    private bool CanRunOrDebug() => HasWorkspace() && !_isProvisioning;
+
+    private void SetProvisioning(bool value)
+    {
+        _isProvisioning = value;
+        Dispatcher.UIThread.Post(() =>
+        {
+            RunCommand.NotifyCanExecuteChanged();
+            DebugCommand.NotifyCanExecuteChanged();
+        });
+    }
 
     [RelayCommand]
     private void CloseActiveDocument()

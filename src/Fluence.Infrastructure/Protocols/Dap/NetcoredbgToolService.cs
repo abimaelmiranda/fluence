@@ -26,6 +26,11 @@ public sealed class NetcoredbgToolService
 
     public async Task<string> ResolveAsync(string workspaceRoot, CancellationToken cancellationToken = default)
     {
+        // Check the global Fluence installation first so a provisioned debugger is always preferred.
+        var globalPath = Path.Combine(DebuggerProvisioningService.ResolveGlobalInstallDir(), ResolveExecutableName());
+        if (File.Exists(globalPath) && await ValidateAsync(globalPath, cancellationToken).ConfigureAwait(false))
+            return globalPath;
+
         var bundled = FindBundledTool(workspaceRoot);
         if (bundled is not null)
             return bundled;

@@ -24,7 +24,8 @@ public sealed class DebugService(
     IUserNotificationService notifications,
     IShellRegionHost shellRegions,
     IShellEventBus events,
-    IDebugSessionManager sessions)
+    IDebugSessionManager sessions,
+    IDebuggerProvisioningService provisioning)
     : IDebugService, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -33,6 +34,12 @@ public sealed class DebugService(
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        if (!provisioning.IsProvisioned())
+        {
+            events.Publish(new DebuggerProvisioningRequiredEvent());
+            return;
+        }
+
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {

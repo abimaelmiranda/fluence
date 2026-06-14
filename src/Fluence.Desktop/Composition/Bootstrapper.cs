@@ -13,6 +13,7 @@ using Fluence.Infrastructure;
 using Fluence.Infrastructure.Pty;
 using Fluence.Infrastructure.Protocols.Dap;
 using Fluence.Modules.Debug;
+using Fluence.Modules.DebuggerSetup;
 using Fluence.Modules.DotnetCli;
 using Fluence.Modules.Editor;
 using Fluence.Modules.FileExplorer;
@@ -49,6 +50,7 @@ internal static class Bootstrapper
         services.AddSingleton<ILaunchSettingsCoordinator, LaunchSettingsCoordinator>();
         services.AddSingleton<NetcoredbgToolService>();
         services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
+        services.AddSingleton<IDebuggerProvisioningService, DebuggerProvisioningService>();
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new MacOsPtyHost()
@@ -65,6 +67,7 @@ internal static class Bootstrapper
             new NuGetExplorerModule(),
             new TerminalModule(),
             new DotnetCliModule(),
+            new DebuggerSetupModule(),
             new DebugModule(),
         };
 

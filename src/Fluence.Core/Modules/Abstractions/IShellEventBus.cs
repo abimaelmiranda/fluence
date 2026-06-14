@@ -63,3 +63,6 @@ public sealed record CleanProjectRequestedEvent(string ProjectPath) : IShellEven
 public sealed record RunSpecificProjectRequestedEvent(string ProjectPath) : IShellEvent;
 
 public sealed record TestProjectRequestedEvent(string ProjectPath) : IShellEvent;
+
+public sealed record DebuggerProvisioningRequiredEvent : IShellEvent;
+public sealed record DebuggerProvisioningFinishedEvent : IShellEvent;

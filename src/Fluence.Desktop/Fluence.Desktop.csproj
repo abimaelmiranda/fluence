@@ -45,5 +45,6 @@
     <ProjectReference Include="..\..\modules\Fluence.Modules.Terminal\Fluence.Modules.Terminal.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.DotnetCli\Fluence.Modules.DotnetCli.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.Debug\Fluence.Modules.Debug.csproj" />
+    <ProjectReference Include="..\..\modules\Fluence.Modules.DebuggerSetup\Fluence.Modules.DebuggerSetup.csproj" />
   </ItemGroup>
 </Project>
