@@ -13,6 +13,14 @@ using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
 using Fluence.Infrastructure.Pty;
 using Fluence.Infrastructure.Protocols.Dap;
+using FileExplorerEntrypoint = Fluence.Modules.FileExplorer.Entrypoint;
+using SolutionViewEntrypoint = Fluence.Modules.SolutionView.Entrypoint;
+using EditorEntrypoint = Fluence.Modules.Editor.Entrypoint;
+using NuGetExplorerEntrypoint = Fluence.Modules.NuGetExplorer.Entrypoint;
+using TerminalEntrypoint = Fluence.Modules.Terminal.Entrypoint;
+using DotnetCliEntrypoint = Fluence.Modules.DotnetCli.Entrypoint;
+using DebuggerSetupEntrypoint = Fluence.Modules.DebuggerSetup.Entrypoint;
+using DebugEntrypoint = Fluence.Modules.Debug.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Desktop.Composition;
@@ -54,14 +62,14 @@ internal static class Bootstrapper
 
         var modules = new IModule[]
         {
-            new Fluence.Modules.FileExplorer.Entrypoint(),
-            new Fluence.Modules.SolutionView.Entrypoint(),
-            new Fluence.Modules.Editor.Entrypoint(),
-            new Fluence.Modules.NuGetExplorer.Entrypoint(),
-            new Fluence.Modules.Terminal.Entrypoint(),
-            new Fluence.Modules.DotnetCli.Entrypoint(),
-            new Fluence.Modules.DebuggerSetup.Entrypoint(),
-            new Fluence.Modules.Debug.Entrypoint(),
+            new FileExplorerEntrypoint(),
+            new SolutionViewEntrypoint(),
+            new EditorEntrypoint(),
+            new NuGetExplorerEntrypoint(),
+            new TerminalEntrypoint(),
+            new DotnetCliEntrypoint(),
+            new DebuggerSetupEntrypoint(),
+            new DebugEntrypoint(),
         };
 
         foreach (var module in modules)

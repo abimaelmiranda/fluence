@@ -2,6 +2,8 @@ using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Fluence.Modules.SolutionView.Models;
+using Fluence.Modules.SolutionView.Models.Enums;
 
 namespace Fluence.Modules.SolutionView.ViewModels;
 

@@ -11,6 +11,15 @@ using Fluence.Core.Modules;
 using Fluence.Core.Ports;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Workspace;
+using Fluence.Modules.SolutionView.Abstractions;
+using Fluence.Modules.SolutionView.Commands;
+using Fluence.Modules.SolutionView.Commands.AddProjectReference;
+using Fluence.Modules.SolutionView.Commands.RemoveProjectReference;
+using Fluence.Modules.SolutionView.Commands.SetStartupProject;
+using Fluence.Modules.SolutionView.Exceptions;
+using Fluence.Modules.SolutionView.Models;
+using Fluence.Modules.SolutionView.Models.Enums;
+using Fluence.Modules.SolutionView.Services;
 
 namespace Fluence.Modules.SolutionView.ViewModels;
 

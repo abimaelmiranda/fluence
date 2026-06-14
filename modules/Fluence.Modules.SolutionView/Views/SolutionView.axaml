@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Fluence.Modules.SolutionView.ViewModels"
-             xmlns:conv="using:Fluence.Modules.SolutionView.Converters"
+             xmlns:conv="using:Fluence.Modules.SolutionView.Views.Converters"
              x:Class="Fluence.Modules.SolutionView.Views.SolutionView"
              x:DataType="vm:SolutionViewModel"
              HorizontalAlignment="Stretch"
