@@ -22,6 +22,8 @@ public sealed partial class SolutionTreeItem : ObservableObject
         string? path,
         Action<SolutionTreeItem>? activate,
         ICommand? openCommand = null,
+        ICommand? newFileCommand = null,
+        ICommand? newFolderCommand = null,
         ICommand? copyCommand = null,
         ICommand? pasteCommand = null,
         ICommand? deleteCommand = null,
@@ -45,6 +47,8 @@ public sealed partial class SolutionTreeItem : ObservableObject
         Path = path;
         _activate = activate;
         OpenCommand = openCommand;
+        NewFileCommand = newFileCommand;
+        NewFolderCommand = newFolderCommand;
         CopyCommand = copyCommand;
         PasteCommand = pasteCommand;
         DeleteCommand = deleteCommand;
@@ -72,6 +76,8 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public bool IsResolved { get; }
     public ObservableCollection<SolutionTreeItem> Children { get; } = [];
     public ICommand? OpenCommand { get; set; }
+    public ICommand? NewFileCommand { get; }
+    public ICommand? NewFolderCommand { get; }
     public ICommand? CopyCommand { get; set; }
     public ICommand? PasteCommand { get; set; }
     public ICommand? DeleteCommand { get; set; }
@@ -92,6 +98,8 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public bool IsSolution => Kind == SolutionTreeNodeKind.Solution;
     public bool IsProjectReference => Kind == SolutionTreeNodeKind.ProjectReference;
     public bool HasOpenCommand => OpenCommand is not null;
+    public bool HasNewFileCommand => NewFileCommand is not null;
+    public bool HasNewFolderCommand => NewFolderCommand is not null;
     public bool HasCopyCommand => CopyCommand is not null;
     public bool HasPasteCommand => PasteCommand is not null;
     public bool HasDeleteCommand => DeleteCommand is not null;
@@ -99,6 +107,8 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public bool HasCloseSolutionCommand => CloseSolutionCommand is not null;
     public bool HasManageNuGetPackagesCommand => ManageNuGetPackagesCommand is not null;
     public bool HasContextMenu => HasOpenCommand ||
+                                  HasNewFileCommand ||
+                                  HasNewFolderCommand ||
                                   HasCopyCommand ||
                                   HasPasteCommand ||
                                   HasDeleteCommand ||

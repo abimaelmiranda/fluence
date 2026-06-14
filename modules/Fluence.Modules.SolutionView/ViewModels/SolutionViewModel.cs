@@ -18,11 +18,13 @@ public sealed partial class SolutionViewModel : ViewModelBase
 {
     private readonly IWorkspaceContext _workspace;
     private readonly ISolutionWorkspaceLoader _solutionLoader;
+    private readonly ISolutionStructureService _solutionStructure;
     private readonly ICommandHandler<AddProjectReferencesCommand> _addProjectReferencesHandler;
     private readonly ICommandHandler<RemoveProjectReferenceCommand> _removeProjectReferenceHandler;
     private readonly ICommandHandler<SetStartupProjectCommand> _setStartupProjectHandler;
     private readonly IProjectReferenceService _projectReferences;
     private readonly IProjectReferenceDialogService _referenceDialogs;
+    private readonly ISolutionFileCreationDialogService _creationDialogs;
     private readonly IUserNotificationService _notifications;
     private readonly IFileClipboardService _clipboard;
     private readonly IFileOperationDialogService _fileDialogs;
@@ -42,11 +44,13 @@ public sealed partial class SolutionViewModel : ViewModelBase
     public SolutionViewModel(
         IWorkspaceContext workspace,
         ISolutionWorkspaceLoader solutionLoader,
+        ISolutionStructureService solutionStructure,
         ICommandHandler<AddProjectReferencesCommand> addProjectReferencesHandler,
         ICommandHandler<RemoveProjectReferenceCommand> removeProjectReferenceHandler,
         ICommandHandler<SetStartupProjectCommand> setStartupProjectHandler,
         IProjectReferenceService projectReferences,
         IProjectReferenceDialogService referenceDialogs,
+        ISolutionFileCreationDialogService creationDialogs,
         IUserNotificationService notifications,
         IFileClipboardService clipboard,
         IFileOperationDialogService fileDialogs,
@@ -56,11 +60,13 @@ public sealed partial class SolutionViewModel : ViewModelBase
     {
         _workspace = workspace;
         _solutionLoader = solutionLoader;
+        _solutionStructure = solutionStructure;
         _addProjectReferencesHandler = addProjectReferencesHandler;
         _removeProjectReferenceHandler = removeProjectReferenceHandler;
         _setStartupProjectHandler = setStartupProjectHandler;
         _projectReferences = projectReferences;
         _referenceDialogs = referenceDialogs;
+        _creationDialogs = creationDialogs;
         _notifications = notifications;
         _clipboard = clipboard;
         _fileDialogs = fileDialogs;
@@ -149,6 +155,8 @@ public sealed partial class SolutionViewModel : ViewModelBase
             node.Path,
             ActivateItem,
             CreateOpenCommand(node),
+            CreateNewFileCommand(node),
+            CreateNewFolderCommand(node),
             CreateCopyCommand(node),
             CreatePasteCommand(node),
             CreateDeleteCommand(node),
@@ -184,6 +192,21 @@ public sealed partial class SolutionViewModel : ViewModelBase
         _ => null,
     };
 
+    private ICommand? CreateNewFileCommand(SolutionTreeNode node) => node.Kind switch
+    {
+        SolutionTreeNodeKind.Project when node.Path is not null => new AsyncRelayCommand(() => CreateFileAsync(node)),
+        SolutionTreeNodeKind.Folder when node.Path is not null => new AsyncRelayCommand(() => CreateFileAsync(node)),
+        _ => null,
+    };
+
+    private ICommand? CreateNewFolderCommand(SolutionTreeNode node) => node.Kind switch
+    {
+        SolutionTreeNodeKind.Project when node.Path is not null => new AsyncRelayCommand(() => CreatePhysicalFolderAsync(node)),
+        SolutionTreeNodeKind.Folder when node.Path is not null => new AsyncRelayCommand(() => CreatePhysicalFolderAsync(node)),
+        SolutionTreeNodeKind.SolutionFolder => new AsyncRelayCommand(() => CreateSolutionSubfolderAsync(node)),
+        _ => null,
+    };
+
     private ICommand? CreateCopyCommand(SolutionTreeNode node) => node.Kind switch
     {
         SolutionTreeNodeKind.File when node.Path is not null => new RelayCommand(() => _clipboard.Copy(node.Path)),
@@ -202,6 +225,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
     {
         SolutionTreeNodeKind.File when node.Path is not null => new AsyncRelayCommand(() => DeleteAsync(node.Path, isDirectory: false)),
         SolutionTreeNodeKind.Project when node.Path is not null => new AsyncRelayCommand(() => DeleteAsync(node.Path, isDirectory: false)),
+        SolutionTreeNodeKind.Folder when node.Path is not null => new AsyncRelayCommand(() => DeletePhysicalFolderAsync(node)),
         _ => null,
     };
 
@@ -285,6 +309,136 @@ public sealed partial class SolutionViewModel : ViewModelBase
             execute();
         });
 
+    private async Task CreatePhysicalFolderAsync(SolutionTreeNode node)
+    {
+        var targetDirectory = GetTargetDirectory(node);
+        var projectPath = GetProjectPath(node);
+        if (targetDirectory is null || projectPath is null)
+            return;
+
+        try
+        {
+            var folderName = await _fileDialogs.PromptForNameAsync("New Folder", "Folder name");
+            if (string.IsNullOrWhiteSpace(folderName))
+                return;
+
+            EnsureValidFileSystemName(folderName);
+
+            var targetPath = Path.Combine(targetDirectory, folderName);
+            if (Directory.Exists(targetPath) || File.Exists(targetPath))
+            {
+                _notifications.ShowWarning("Create folder", "A file or folder with that name already exists.");
+                return;
+            }
+
+            await _solutionStructure.CreatePhysicalFolderAsync(projectPath, targetDirectory, folderName);
+            await ReloadCurrentSolutionAsync();
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to create folder", ex.Message);
+        }
+    }
+
+    private async Task CreateSolutionSubfolderAsync(SolutionTreeNode node)
+    {
+        var solutionPath = _workspace.Current.CurrentSolutionPath;
+        if (string.IsNullOrWhiteSpace(solutionPath))
+            return;
+
+        try
+        {
+            var folderName = await _fileDialogs.PromptForNameAsync("New Solution Folder", "Folder name");
+            if (string.IsNullOrWhiteSpace(folderName))
+                return;
+
+            EnsureValidFileSystemName(folderName);
+
+            await _solutionStructure.CreateSolutionFolderAsync(solutionPath, node.Name, folderName);
+            await ReloadCurrentSolutionAsync();
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to create solution folder", ex.Message);
+        }
+    }
+
+    private async Task CreateFileAsync(SolutionTreeNode node)
+    {
+        var targetDirectory = GetTargetDirectory(node);
+        var projectPath = GetProjectPath(node);
+        if (targetDirectory is null)
+        {
+            return;
+        }
+
+        if (projectPath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var creation = await _creationDialogs.ShowCreateFileDialogAsync();
+            if (creation is null)
+            {
+                return;
+            }
+
+            var fileName = string.IsNullOrWhiteSpace(creation.Name) ? null : creation.Name.Trim();
+            if (fileName is null)
+            {
+                return;
+            }
+
+            EnsureValidFileSystemName(fileName);
+
+            var targetPath = Path.Combine(targetDirectory, fileName.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ? fileName : $"{fileName}.cs");
+            if (Directory.Exists(targetPath) || File.Exists(targetPath))
+            {
+                _notifications.ShowWarning("Create file", "A file or folder with that name already exists.");
+                return;
+            }
+
+            var content = SolutionFileTemplateBuilder.Build(projectPath, targetDirectory, Path.GetFileName(targetPath), creation.Kind);
+            _fileService.WriteText(targetPath, content);
+            await ReloadCurrentSolutionAsync();
+            _eventBus.Publish(new OpenFileRequestedEvent(targetPath));
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to create file", ex.Message);
+        }
+    }
+
+    private string? GetTargetDirectory(SolutionTreeNode node)
+    {
+        return node.Kind switch
+        {
+            SolutionTreeNodeKind.Project when node.Path is not null => Path.GetDirectoryName(node.Path),
+            SolutionTreeNodeKind.Folder when node.Path is not null => node.Path,
+            _ => null,
+        };
+    }
+
+    private static string? GetProjectPath(SolutionTreeNode node)
+    {
+        return node.Kind switch
+        {
+            SolutionTreeNodeKind.Project => node.Path,
+            SolutionTreeNodeKind.Folder => node.ProjectPath,
+            _ => null,
+        };
+    }
+
+    private static void EnsureValidFileSystemName(string name)
+    {
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Contains(Path.DirectorySeparatorChar) || name.Contains(Path.AltDirectorySeparatorChar))
+        {
+            throw new InvalidOperationException("The name contains invalid characters.");
+        }
+    }
+
     private void ActivateItem(SolutionTreeItem item)
     {
         try
@@ -335,6 +489,31 @@ public sealed partial class SolutionViewModel : ViewModelBase
         catch (Exception ex)
         {
             _notifications.ShowError("Unable to delete", ex.Message);
+        }
+    }
+
+    private async Task DeletePhysicalFolderAsync(SolutionTreeNode node)
+    {
+        if (node.Path is null)
+            return;
+
+        var projectPath = GetProjectPath(node);
+        if (projectPath is null)
+            return;
+
+        try
+        {
+            var confirmed = await _fileDialogs.ConfirmDeleteAsync(node.Path, isDirectory: true);
+            if (!confirmed)
+                return;
+
+            await _solutionStructure.RemovePhysicalFolderAsync(projectPath, node.Path);
+            _fileService.Delete(node.Path, isDirectory: true);
+            await ReloadCurrentSolutionAsync();
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to delete folder", ex.Message);
         }
     }
 

@@ -18,8 +18,10 @@ public sealed class SolutionViewModule : IIdeModule
         services.AddSingleton<IProjectAssociationService>(provider => provider.GetRequiredService<SolutionProjectAssociationService>());
         services.AddSingleton<SolutionViewModel>();
         services.AddSingleton<ISolutionWorkspaceLoader, BuildalyzerSolutionWorkspaceLoader>();
+        services.AddSingleton<ISolutionStructureService, SolutionStructureService>();
         services.AddSingleton<IProjectReferenceService, ProjectReferenceService>();
         services.AddSingleton<IProjectReferenceDialogService, AvaloniaProjectReferenceDialogService>();
+        services.AddSingleton<ISolutionFileCreationDialogService, AvaloniaSolutionFileCreationDialogService>();
         services.AddSingleton<ICommandHandler<OpenSolutionWorkspaceCommand>, OpenSolutionWorkspaceCommandHandler>();
         services.AddSingleton<ICommandHandler<AddProjectReferencesCommand>, AddProjectReferencesCommandHandler>();
         services.AddSingleton<ICommandHandler<RemoveProjectReferenceCommand>, RemoveProjectReferenceCommandHandler>();

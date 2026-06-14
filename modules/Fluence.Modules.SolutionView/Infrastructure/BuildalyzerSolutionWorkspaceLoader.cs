@@ -17,7 +17,7 @@ namespace Fluence.Modules.SolutionView;
 
 public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoader
 {
-    private const int CacheFormatVersion = 1;
+    private const int CacheFormatVersion = 2;
     private const string CacheDirectoryName = ".fluence";
     private const string CacheFilePrefix = "solution-structure";
 
@@ -73,12 +73,22 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         }
 
         var projects = LoadProjectsWithBuildalyzer(solutionPath, solutionInfo, cancellationToken);
-        if (projects.Count == 0)
-        {
-            throw new SolutionWorkspaceLoadException(solutionPath, "No supported projects were found.");
-        }
 
         var rootBuilder = new MutableNode(SolutionTreeNodeKind.Solution, Path.GetFileName(solutionPath), solutionPath);
+        foreach (var folderPath in solutionInfo.SolutionFolderPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var parent = rootBuilder;
+            foreach (var folderName in folderPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            {
+                if (string.IsNullOrWhiteSpace(folderName))
+                {
+                    continue;
+                }
+
+                parent = parent.GetOrAddChild(SolutionTreeNodeKind.SolutionFolder, folderName, null);
+            }
+        }
+
         foreach (var project in projects.OrderBy(project => string.Join("/", project.SolutionFolderPath), StringComparer.OrdinalIgnoreCase)
                                        .ThenBy(project => project.Name, StringComparer.OrdinalIgnoreCase))
         {
@@ -196,7 +206,13 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        return new SolutionCacheFingerprint(files, visibleProjectFiles);
+        var visibleProjectDirectories = solutionInfo.ProjectPaths
+            .SelectMany(path => GetProjectDirectories(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new SolutionCacheFingerprint(files, visibleProjectFiles, visibleProjectDirectories);
     }
 
     private static SolutionCacheFileFingerprint CreateCacheFileFingerprint(string path)
@@ -264,7 +280,12 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             }
         }
 
-        return HasSamePaths(current.VisibleProjectFiles, cached.VisibleProjectFiles);
+        if (!HasSamePaths(current.VisibleProjectFiles, cached.VisibleProjectFiles))
+        {
+            return false;
+        }
+
+        return HasSamePaths(current.VisibleProjectDirectories, cached.VisibleProjectDirectories);
     }
 
     private static bool HasSamePaths(
@@ -322,6 +343,12 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             var projectBuilder = new MutableNode(SolutionTreeNodeKind.Project, projectName, projectPath);
             AddDependencies(projectBuilder, projectPath, solutionProjectPaths);
             projectBuilder.Children.Add(new MutableNode(SolutionTreeNodeKind.File, Path.GetFileName(projectPath), projectPath));
+
+            foreach (var directory in GetProjectDirectories(projectPath))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                AddProjectDirectory(projectBuilder, projectPath, directory);
+            }
 
             foreach (var file in GetProjectFiles(projectPath, analyzer))
             {
@@ -600,17 +627,79 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         }
 
         var parent = projectBuilder;
+        var currentDirectory = projectDirectory;
         for (var index = 0; index < parts.Length - 1; index++)
         {
-            parent = parent.GetOrAddChild(SolutionTreeNodeKind.Folder, parts[index], null);
+            currentDirectory = Path.Combine(currentDirectory, parts[index]);
+            parent = parent.GetOrAddChild(SolutionTreeNodeKind.Folder, parts[index], currentDirectory, projectPath);
         }
 
-        parent.GetOrAddChild(SolutionTreeNodeKind.File, parts[^1], filePath);
+        parent.GetOrAddChild(SolutionTreeNodeKind.File, parts[^1], filePath, projectPath);
+    }
+
+    private static void AddProjectDirectory(MutableNode projectBuilder, string projectPath, string directoryPath)
+    {
+        if (!IsVisibleDirectory(directoryPath))
+        {
+            return;
+        }
+
+        var projectDirectory = Path.GetDirectoryName(projectPath);
+        if (string.IsNullOrWhiteSpace(projectDirectory))
+        {
+            return;
+        }
+
+        var relativePath = Path.GetRelativePath(projectDirectory, directoryPath);
+        if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
+        {
+            return;
+        }
+
+        var parts = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (parts.Any(part => string.IsNullOrWhiteSpace(part) || HiddenPathSegments.Contains(part)))
+        {
+            return;
+        }
+
+        var parent = projectBuilder;
+        var currentDirectory = projectDirectory;
+        for (var index = 0; index < parts.Length; index++)
+        {
+            currentDirectory = Path.Combine(currentDirectory, parts[index]);
+            parent = parent.GetOrAddChild(SolutionTreeNodeKind.Folder, parts[index], currentDirectory, projectPath);
+        }
     }
 
     private static bool IsVisibleFile(string path)
     {
         return File.Exists(path) && !IsHiddenPath(path) && !HasHiddenAttributes(path);
+    }
+
+    private static IEnumerable<string> GetProjectDirectories(string projectPath)
+    {
+        var projectDirectory = Path.GetDirectoryName(projectPath);
+        if (string.IsNullOrWhiteSpace(projectDirectory) || !Directory.Exists(projectDirectory))
+        {
+            return [];
+        }
+
+        try
+        {
+            return Directory.EnumerateDirectories(projectDirectory, "*", SearchOption.AllDirectories)
+                .Where(path => IsVisibleDirectory(path))
+                .Select(Path.GetFullPath)
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private static bool IsVisibleDirectory(string path)
+    {
+        return Directory.Exists(path) && !IsHiddenPath(path) && !HasHiddenAttributes(path);
     }
 
     private static bool IsHiddenPath(string path)
@@ -650,7 +739,8 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
 
     private sealed record SolutionCacheFingerprint(
         IReadOnlyList<SolutionCacheFileFingerprint> Files,
-        IReadOnlyList<string> VisibleProjectFiles);
+        IReadOnlyList<string> VisibleProjectFiles,
+        IReadOnlyList<string> VisibleProjectDirectories);
 
     private sealed record SolutionCacheFileFingerprint(
         string Path,
@@ -675,7 +765,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         public bool IsResolved { get; } = isResolved;
         public List<MutableNode> Children { get; } = [];
 
-        public MutableNode GetOrAddChild(SolutionTreeNodeKind kind, string name, string? path)
+        public MutableNode GetOrAddChild(SolutionTreeNodeKind kind, string name, string? path, string? projectPath = null)
         {
             var existing = Children.FirstOrDefault(child =>
                 child.Kind == kind &&
@@ -686,7 +776,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
                 return existing;
             }
 
-            var child = new MutableNode(kind, name, path);
+            var child = new MutableNode(kind, name, path, projectPath: projectPath);
             Children.Add(child);
             return child;
         }
@@ -749,6 +839,8 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
 
         public IReadOnlyList<string> ProjectPaths { get; private init; } = [];
 
+        public IReadOnlyList<string> SolutionFolderPaths { get; private init; } = [];
+
         public static SolutionFileInfo Parse(string solutionPath)
         {
             var solutionDirectory = Path.GetDirectoryName(solutionPath) ?? Directory.GetCurrentDirectory();
@@ -759,7 +851,8 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
 
             if (!string.Equals(Path.GetExtension(solutionPath), ".sln", StringComparison.OrdinalIgnoreCase))
             {
-                var slnxProjectPaths = ParseSlnx(solutionPath, solutionDirectory, slnxFolderPathByProjectPath);
+                var slnxSolutionFolderPaths = new List<string>();
+                var slnxProjectPaths = ParseSlnx(solutionPath, solutionDirectory, slnxFolderPathByProjectPath, slnxSolutionFolderPaths);
                 return new SolutionFileInfo(
                     solutionDirectory,
                     projectIdByPath,
@@ -768,6 +861,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
                     slnxFolderPathByProjectPath)
                 {
                     ProjectPaths = slnxProjectPaths,
+                    SolutionFolderPaths = slnxSolutionFolderPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
                 };
             }
 
@@ -827,6 +921,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
                 slnxFolderPathByProjectPath)
             {
                 ProjectPaths = projectIdByPath.Keys.ToArray(),
+                SolutionFolderPaths = ParseSlnFolderPaths(solutionPath, folderNameById, parentIdById),
             };
         }
 
@@ -847,7 +942,10 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             {
                 if (_folderNameById.TryGetValue(parentId, out var folderName))
                 {
-                    folders.Push(folderName);
+                    foreach (var segment in SplitSlnxFolderName(folderName).Reverse())
+                    {
+                        folders.Push(segment);
+                    }
                 }
 
                 id = parentId;
@@ -861,6 +959,15 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             string solutionDirectory,
             Dictionary<string, IReadOnlyList<string>> folderPathByProjectPath)
         {
+            return ParseSlnx(solutionPath, solutionDirectory, folderPathByProjectPath, new List<string>());
+        }
+
+        private static IReadOnlyList<string> ParseSlnx(
+            string solutionPath,
+            string solutionDirectory,
+            Dictionary<string, IReadOnlyList<string>> folderPathByProjectPath,
+            List<string> solutionFolderPaths)
+        {
             var document = XDocument.Load(solutionPath);
             var projects = new List<string>();
             var root = document.Root;
@@ -869,7 +976,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
                 return projects;
             }
 
-            ReadSlnxElement(root, solutionDirectory, [], folderPathByProjectPath, projects);
+            ReadSlnxElement(root, solutionDirectory, Array.Empty<string>(), folderPathByProjectPath, solutionFolderPaths, projects);
             return projects;
         }
 
@@ -878,6 +985,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             string solutionDirectory,
             IReadOnlyList<string> folderPath,
             Dictionary<string, IReadOnlyList<string>> folderPathByProjectPath,
+            List<string> solutionFolderPaths,
             List<string> projects)
         {
             foreach (var child in element.Elements())
@@ -886,7 +994,11 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
                 {
                     var folderName = (string?)child.Attribute("Name") ?? string.Empty;
                     var childFolderPath = folderPath.Concat(SplitSlnxFolderName(folderName)).ToArray();
-                    ReadSlnxElement(child, solutionDirectory, childFolderPath, folderPathByProjectPath, projects);
+                    if (childFolderPath.Length > 0)
+                    {
+                        solutionFolderPaths.Add(string.Join("/", childFolderPath));
+                    }
+                    ReadSlnxElement(child, solutionDirectory, childFolderPath, folderPathByProjectPath, solutionFolderPaths, projects);
                     continue;
                 }
 
@@ -907,10 +1019,60 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             }
         }
 
+        private static IReadOnlyList<string> ParseSlnFolderPaths(
+            string solutionPath,
+            Dictionary<string, string> folderNameById,
+            Dictionary<string, string> parentIdById)
+        {
+            var folderPaths = new List<string>();
+            foreach (var id in folderNameById.Keys)
+            {
+                var path = GetFolderPath(id, folderNameById, parentIdById);
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    folderPaths.Add(path);
+                }
+            }
+
+            return folderPaths
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static string GetFolderPath(
+            string folderId,
+            IReadOnlyDictionary<string, string> folderNameById,
+            IReadOnlyDictionary<string, string> parentIdById)
+        {
+            var folders = new Stack<string>();
+            var currentId = folderId;
+
+            while (true)
+            {
+                if (folderNameById.TryGetValue(currentId, out var folderName))
+                {
+                    foreach (var segment in SplitSlnxFolderName(folderName).Reverse())
+                    {
+                        folders.Push(segment);
+                    }
+                }
+
+                if (!parentIdById.TryGetValue(currentId, out var parentId))
+                {
+                    break;
+                }
+
+                currentId = parentId;
+            }
+
+            return string.Join("/", folders);
+        }
+
         private static IReadOnlyList<string> SplitSlnxFolderName(string folderName)
         {
             return folderName
-                .Split('/', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Split(new[] { '/', '\\' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
                 .Where(part => !string.IsNullOrWhiteSpace(part))
                 .ToArray();
         }

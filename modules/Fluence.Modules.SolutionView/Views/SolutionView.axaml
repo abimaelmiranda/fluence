@@ -46,6 +46,12 @@
                                 <MenuItem Header="Open"
                                           Command="{Binding OpenCommand}"
                                           IsVisible="{Binding HasOpenCommand}"/>
+                                <MenuItem Header="New Folder"
+                                          Command="{Binding NewFolderCommand}"
+                                          IsVisible="{Binding HasNewFolderCommand}"/>
+                                <MenuItem Header="New File"
+                                          Command="{Binding NewFileCommand}"
+                                          IsVisible="{Binding HasNewFileCommand}"/>
                                 <MenuItem Header="Load Solution"
                                           Command="{Binding LoadSolutionCommand}"
                                           IsVisible="{Binding HasLoadSolutionCommand}"/>
