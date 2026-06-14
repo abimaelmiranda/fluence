@@ -499,14 +499,13 @@ internal sealed class DapClient : IDebugAdapterClient
 
     private async Task ReadErrorLoopAsync(Process process, CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested && !process.StandardError.EndOfStream)
+        string? line;
+        var streamReader = process.StandardError;
+        while (!cancellationToken.IsCancellationRequested
+            && (line = await streamReader.ReadLineAsync(cancellationToken)) is not null)
         {
-            var line = await process.StandardError.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-            if (line is not null)
-            {
-                await LogAsync("[stderr] " + line, CancellationToken.None).ConfigureAwait(false);
-                OutputReceived?.Invoke(this, new DebugAdapterOutputEvent("[netcoredbg] " + line + Environment.NewLine, true));
-            }
+            await LogAsync("[stderr] " + line, CancellationToken.None).ConfigureAwait(false);
+            OutputReceived?.Invoke(this, new DebugAdapterOutputEvent("[netcoredbg] " + line + Environment.NewLine, true));
         }
     }
 
