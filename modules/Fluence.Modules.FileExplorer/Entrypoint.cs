@@ -1,14 +1,14 @@
 using System.Threading.Tasks;
 using Fluence.Core.Commands;
+using Fluence.Core.Modules.Abstractions;
 using Fluence.Core.Modules;
 using Fluence.Core.Workspace;
 using Fluence.Modules.FileExplorer.ViewModels;
-using Fluence.Modules.FileExplorer.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.FileExplorer;
 
-public sealed class FileExplorerModule : IIdeModule
+public sealed class Entrypoint : IModule
 {
     public string Name => "FileExplorer";
 
@@ -16,11 +16,6 @@ public sealed class FileExplorerModule : IIdeModule
     {
         services.AddSingleton<FileExplorerViewModel>();
         services.AddSingleton<ICommandHandler<OpenFolderWorkspaceCommand>, OpenFolderWorkspaceCommandHandler>();
-    }
-
-    public void RegisterViews(IViewRegistry registry)
-    {
-        registry.Register<FileExplorerViewModel, FileExplorerView>();
     }
 
     public void Initialize(IModuleHost host)
@@ -38,7 +33,7 @@ public sealed class FileExplorerModule : IIdeModule
             host.ShellRegions.SetContent(
                 ShellRegion.Sidebar,
                 "FileExplorer",
-                "Explorer",
+                "Files",
                 host.Services.GetRequiredService<FileExplorerViewModel>());
             return;
         }

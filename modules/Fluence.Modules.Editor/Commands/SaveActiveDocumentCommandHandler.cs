@@ -2,8 +2,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Commands;
 using Fluence.Core.Workspace;
+using Fluence.Modules.Editor.Abstractions;
 
-namespace Fluence.Modules.Editor;
+namespace Fluence.Modules.Editor.Commands;
 
 public sealed class SaveActiveDocumentCommandHandler(IWorkspaceContext workspace, ITextFileService textFiles)
     : ICommandHandler<SaveActiveDocumentCommand>

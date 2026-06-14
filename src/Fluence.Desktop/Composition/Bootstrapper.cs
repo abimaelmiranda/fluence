@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Fluence.Core.Debug;
 using Fluence.Core.Infrastructure;
 using Fluence.Core.Modules;
+using Fluence.Core.Modules.Abstractions;
 using Fluence.Core.Ports;
 using Fluence.Core.Workspace;
 using Fluence.Desktop.Services;
@@ -12,14 +13,6 @@ using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
 using Fluence.Infrastructure.Pty;
 using Fluence.Infrastructure.Protocols.Dap;
-using Fluence.Modules.Debug;
-using Fluence.Modules.DebuggerSetup;
-using Fluence.Modules.DotnetCli;
-using Fluence.Modules.Editor;
-using Fluence.Modules.FileExplorer;
-using Fluence.Modules.NuGetExplorer;
-using Fluence.Modules.SolutionView;
-using Fluence.Modules.Terminal;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Desktop.Composition;
@@ -59,25 +52,24 @@ internal static class Bootstrapper
         services.AddSingleton<WelcomeViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 
-        var modules = new IIdeModule[]
+        var modules = new IModule[]
         {
-            new FileExplorerModule(),
-            new SolutionViewModule(),
-            new EditorModule(),
-            new NuGetExplorerModule(),
-            new TerminalModule(),
-            new DotnetCliModule(),
-            new DebuggerSetupModule(),
-            new DebugModule(),
+            new Fluence.Modules.FileExplorer.Entrypoint(),
+            new Fluence.Modules.SolutionView.Entrypoint(),
+            new Fluence.Modules.Editor.Entrypoint(),
+            new Fluence.Modules.NuGetExplorer.Entrypoint(),
+            new Fluence.Modules.Terminal.Entrypoint(),
+            new Fluence.Modules.DotnetCli.Entrypoint(),
+            new Fluence.Modules.DebuggerSetup.Entrypoint(),
+            new Fluence.Modules.Debug.Entrypoint(),
         };
 
         foreach (var module in modules)
         {
             module.Register(services);
-            module.RegisterViews(viewRegistry);
         }
 
-        services.AddSingleton<IReadOnlyList<IIdeModule>>(modules);
+        services.AddSingleton<IReadOnlyList<IModule>>(modules);
 
         return services.BuildServiceProvider();
     }
@@ -85,7 +77,7 @@ internal static class Bootstrapper
     public static void InitializeModules(IServiceProvider serviceProvider)
     {
         var host = serviceProvider.GetRequiredService<IModuleHost>();
-        var modules = serviceProvider.GetRequiredService<IReadOnlyList<IIdeModule>>();
+        var modules = serviceProvider.GetRequiredService<IReadOnlyList<IModule>>();
 
         foreach (var module in modules)
         {

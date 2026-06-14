@@ -5,11 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Fluence.Core.Debug;
 using Fluence.Core.Commands;
+using Fluence.Core.Debug;
 using Fluence.Core.Modules;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Workspace;
+using Fluence.Modules.Editor.Commands;
 
 namespace Fluence.Modules.Editor.ViewModels;
 

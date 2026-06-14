@@ -1,15 +1,15 @@
 using System.Threading.Tasks;
 using Fluence.Core.Commands;
 using Fluence.Core.Debug;
+using Fluence.Core.Modules.Abstractions;
 using Fluence.Core.Modules;
 using Fluence.Core.Workspace;
 using Fluence.Modules.Debug.ViewModels;
-using Fluence.Modules.Debug.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.Debug;
 
-public sealed class DebugModule : IIdeModule
+public sealed class Entrypoint : IModule
 {
     public string Name => "Debug";
 
@@ -20,11 +20,6 @@ public sealed class DebugModule : IIdeModule
         services.AddSingleton<IDebugService, DebugService>();
         services.AddSingleton<IDebugSessionManager, DebugSessionManager>();
         services.AddSingleton<ICommandHandler<DebugProjectCommand>, DebugProjectCommandHandler>();
-    }
-
-    public void RegisterViews(IViewRegistry registry)
-    {
-        registry.Register<DebugSidebarViewModel, DebugSidebarView>();
     }
 
     public void Initialize(IModuleHost host)

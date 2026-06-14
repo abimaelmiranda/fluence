@@ -1,12 +1,13 @@
 using System.Threading.Tasks;
 using Fluence.Core.Commands;
+using Fluence.Core.Modules.Abstractions;
 using Fluence.Core.Modules;
 using Fluence.Core.Workspace;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.DotnetCli;
 
-public sealed class DotnetCliModule : IIdeModule
+public sealed class Entrypoint : IModule
 {
     public string Name => "DotnetCli";
 

@@ -1,14 +1,14 @@
 using System.Threading.Tasks;
 using Fluence.Core.Commands;
+using Fluence.Core.Modules.Abstractions;
 using Fluence.Core.Modules;
 using Fluence.Core.Workspace;
 using Fluence.Modules.SolutionView.ViewModels;
-using Fluence.Modules.SolutionView.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.SolutionView;
 
-public sealed class SolutionViewModule : IIdeModule
+public sealed class Entrypoint : IModule
 {
     public string Name => "SolutionView";
 
@@ -26,11 +26,6 @@ public sealed class SolutionViewModule : IIdeModule
         services.AddSingleton<ICommandHandler<AddProjectReferencesCommand>, AddProjectReferencesCommandHandler>();
         services.AddSingleton<ICommandHandler<RemoveProjectReferenceCommand>, RemoveProjectReferenceCommandHandler>();
         services.AddSingleton<ICommandHandler<SetStartupProjectCommand>, SetStartupProjectCommandHandler>();
-    }
-
-    public void RegisterViews(IViewRegistry registry)
-    {
-        registry.Register<SolutionViewModel, Views.SolutionView>();
     }
 
     public void Initialize(IModuleHost host)

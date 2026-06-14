@@ -1,7 +1,7 @@
 using System;
 using Fluence.Core.Exceptions;
 
-namespace Fluence.Modules.Editor;
+namespace Fluence.Modules.Editor.Exceptions;
 
 public sealed class UnsupportedTextFileException : FluenceExceptionBase
 {

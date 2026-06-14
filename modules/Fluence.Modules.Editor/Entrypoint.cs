@@ -1,16 +1,19 @@
 using System;
 using System.Threading.Tasks;
 using Fluence.Core.Commands;
+using Fluence.Core.Modules.Abstractions;
 using Fluence.Core.Modules;
 using Fluence.Core.Ports;
 using Fluence.Core.Workspace;
+using Fluence.Modules.Editor.Abstractions;
+using Fluence.Modules.Editor.Commands;
+using Fluence.Modules.Editor.Services;
 using Fluence.Modules.Editor.ViewModels;
-using Fluence.Modules.Editor.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.Editor;
 
-public sealed class EditorModule : IIdeModule
+public sealed class Entrypoint : IModule
 {
     public string Name => "Editor";
 
@@ -20,11 +23,6 @@ public sealed class EditorModule : IIdeModule
         services.AddSingleton<ITextFileService, TextFileService>();
         services.AddSingleton<ICommandHandler<OpenFileWorkspaceCommand>, OpenFileWorkspaceCommandHandler>();
         services.AddSingleton<ICommandHandler<SaveActiveDocumentCommand>, SaveActiveDocumentCommandHandler>();
-    }
-
-    public void RegisterViews(IViewRegistry registry)
-    {
-        registry.Register<EditorViewModel, EditorView>();
     }
 
     public void Initialize(IModuleHost host)

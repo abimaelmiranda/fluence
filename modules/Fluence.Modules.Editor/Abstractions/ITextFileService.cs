@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Fluence.Modules.Editor;
+namespace Fluence.Modules.Editor.Abstractions;
 
 public interface ITextFileService
 {

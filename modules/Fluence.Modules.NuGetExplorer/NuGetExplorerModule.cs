@@ -1,12 +1,12 @@
+using Fluence.Core.Modules.Abstractions;
 using Fluence.Core.Modules;
 using Fluence.Core.Workspace;
 using Fluence.Modules.NuGetExplorer.ViewModels;
-using Fluence.Modules.NuGetExplorer.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.NuGetExplorer;
 
-public sealed class NuGetExplorerModule : IIdeModule
+public sealed class Entrypoint : IModule
 {
     public string Name => "NuGetExplorer";
 
@@ -16,11 +16,6 @@ public sealed class NuGetExplorerModule : IIdeModule
         services.AddSingleton<INuGetPackageSource, NuGetOrgPackageSource>();
         services.AddSingleton<INuGetProjectService, NuGetProjectService>();
         services.AddSingleton<PackageIconLoader>();
-    }
-
-    public void RegisterViews(IViewRegistry registry)
-    {
-        registry.Register<NuGetExplorerViewModel, NuGetExplorerView>();
     }
 
     public void Initialize(IModuleHost host)

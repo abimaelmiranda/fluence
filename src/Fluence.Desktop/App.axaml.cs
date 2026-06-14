@@ -6,7 +6,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
-using Fluence.Core.Modules;
 using Fluence.Desktop.Composition;
 using Fluence.Desktop.Services;
 using Fluence.Desktop.ViewModels;
@@ -33,7 +32,7 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             _serviceProvider = Bootstrapper.BuildServices();
-            DataTemplates.Add(new ViewLocator(_serviceProvider.GetRequiredService<IViewRegistry>()));
+            DataTemplates.Add(new ViewLocator());
             Bootstrapper.InitializeModules(_serviceProvider);
 
             var mainWindowViewModel = _serviceProvider.GetRequiredService<MainWindowViewModel>();
@@ -58,7 +57,7 @@ public partial class App : Avalonia.Application
         AppDomain.CurrentDomain.UnhandledException -= OnAppDomainUnhandledException;
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
 
-        if(_serviceProvider is null)
+        if (_serviceProvider is null)
             return;
 
         await _serviceProvider.DisposeAsync();

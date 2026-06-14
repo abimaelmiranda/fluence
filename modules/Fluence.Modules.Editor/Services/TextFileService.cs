@@ -4,8 +4,10 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Modules.Editor.Abstractions;
+using Fluence.Modules.Editor.Exceptions;
 
-namespace Fluence.Modules.Editor;
+namespace Fluence.Modules.Editor.Services;
 
 public sealed class TextFileService : ITextFileService
 {
