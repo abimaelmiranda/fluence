@@ -17,9 +17,6 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     private string _sessionTitle = "No debug session";
 
     [ObservableProperty]
-    private string _startupProject = "No project selected";
-
-    [ObservableProperty]
     private string _architecture = "x64";
 
     [ObservableProperty]
@@ -27,6 +24,9 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     private bool _canControlExecution;
+
+    [ObservableProperty]
+    private bool _canRestartSession;
 
     public DebugSidebarViewModel(IDebugStateService debugState, IShellEventBus events)
     {
@@ -45,7 +45,6 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     public void Update(DebugSession session)
     {
         SessionTitle = session.IsActive ? "Debug session active" : "No debug session";
-        StartupProject = session.StartupProjectId;
         Architecture = session.TargetArchitecture;
         RefreshState();
     }
@@ -53,7 +52,6 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     public void Clear()
     {
         SessionTitle = "No debug session";
-        StartupProject = "No project selected";
         Architecture = "x64";
         RefreshState();
     }
@@ -72,6 +70,9 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
 
     [RelayCommand]
     private void Stop() => _events.Publish(new StopDebugRequestedEvent());
+
+    [RelayCommand]
+    private void Reload() => _events.Publish(new ReloadDebugRequestedEvent());
 
     private void OnDebugStateChanged(object? sender, EventArgs e)
     {
@@ -92,6 +93,7 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
             : SessionTitle;
         Status = snapshot.Status.ToString();
         CanControlExecution = snapshot.IsStopped && snapshot.ActiveThreadId is not null;
+        CanRestartSession = snapshot.IsActive;
 
         Replace(Variables, snapshot.Variables.Select(FormatVariable).ToArray());
 

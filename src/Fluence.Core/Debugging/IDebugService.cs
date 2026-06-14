@@ -6,6 +6,8 @@ public interface IDebugService
 
     Task StopAsync(CancellationToken cancellationToken = default);
 
+    Task RestartAsync(CancellationToken cancellationToken = default);
+
     Task ContinueAsync(CancellationToken cancellationToken = default);
 
     Task StepOverAsync(CancellationToken cancellationToken = default);

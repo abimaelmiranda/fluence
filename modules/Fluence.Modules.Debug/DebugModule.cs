@@ -31,6 +31,7 @@ public sealed class DebugModule : IIdeModule
     {
         host.Events.Subscribe<DebugProjectRequestedEvent>(_event => { _ = HandleAsync(host); });
         host.Events.Subscribe<StopDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().StopAsync(); });
+        host.Events.Subscribe<ReloadDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().RestartAsync(); });
         host.Events.Subscribe<ContinueDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().ContinueAsync(); });
         host.Events.Subscribe<StepOverDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().StepOverAsync(); });
         host.Events.Subscribe<StepIntoDebugRequestedEvent>(_event => { _ = host.Services.GetRequiredService<IDebugService>().StepIntoAsync(); });

@@ -25,7 +25,6 @@ public sealed class DebugSessionManager(
         CurrentSession = new DebugSession(
             IsActive: true,
             ActiveMode: mode,
-            StartupProjectId: target.ProjectPath,
             TargetArchitecture: string.IsNullOrWhiteSpace(architecture) ? "x64" : architecture,
             ProcessId: null,
             Target: target);

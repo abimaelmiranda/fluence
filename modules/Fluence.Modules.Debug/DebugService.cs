@@ -46,52 +46,7 @@ public sealed class DebugService(
                 return;
             }
 
-            var workspaceRoot = launchSettings.GetWorkspaceRoot(workspace.Current);
-            if (string.IsNullOrWhiteSpace(workspaceRoot))
-            {
-                ShowWarning("No workspace root was found for the debug session.");
-                return;
-            }
-
-            ExpandBottomBar();
-            await terminal.WriteOutputAsync("[debug] Building project...\r\n", cancellationToken: cancellationToken).ConfigureAwait(false);
-            await processHost.RunAsync(
-                "dotnet",
-                $"build \"{target.ProjectPath}\" -c Debug",
-                Path.GetDirectoryName(target.ProjectPath),
-                line => _ = terminal.WriteOutputAsync(line + Environment.NewLine),
-                line => _ = terminal.WriteOutputAsync(line + Environment.NewLine, isError: true),
-                cancellationToken).ConfigureAwait(false);
-
-            var programPath = ResolveProgramPath(target.ProjectPath, workspaceRoot);
-            if (programPath is null)
-            {
-                ShowWarning("The debug build output DLL was not found.");
-                return;
-            }
-
-            sessions.Start(target, ExecutionMode.Debug);
-            debugState.StartSession();
-
-            _adapter = await adapterFactory.CreateAsync(workspaceRoot, cancellationToken).ConfigureAwait(false);
-            _adapter.Stopped += OnAdapterStopped;
-            _adapter.Terminated += OnAdapterTerminated;
-            _adapter.Continued += OnAdapterContinued;
-            _adapter.OutputReceived += OnAdapterOutputReceived;
-
-            var request = new DebugLaunchRequest(
-                ProjectPath: target.ProjectPath,
-                ProgramPath: programPath,
-                WorkingDirectory: Path.GetDirectoryName(target.ProjectPath) ?? workspaceRoot,
-                Configuration: target.Configuration ?? new LaunchConfiguration(),
-                Breakpoints: debugState.Snapshot.Breakpoints,
-                WorkspaceRoot: workspaceRoot);
-            await _adapter.StartAsync(request, cancellationToken).ConfigureAwait(false);
-            await SyncBreakpointsAsync(debugState.Snapshot.Breakpoints, cancellationToken).ConfigureAwait(false);
-            await _adapter.CompleteConfigurationAsync(cancellationToken).ConfigureAwait(false);
-            _adapterStarted = true;
-            debugState.Continue();
-            await terminal.WriteOutputAsync("[debug] Session started\r\n").ConfigureAwait(false);
+            await StartSessionAsync(target, ExecutionMode.Debug, cancellationToken).ConfigureAwait(false);
         }
         catch (FileNotFoundException ex)
         {
@@ -114,6 +69,39 @@ public sealed class DebugService(
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            await StopCoreAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task RestartAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var currentSession = sessions.CurrentSession;
+            if (currentSession is null)
+            {
+                ShowWarning("No active debug session to reload.");
+                return;
+            }
+
+            var target = currentSession.Target;
+            var mode = currentSession.ActiveMode;
+            await StopCoreAsync(cancellationToken).ConfigureAwait(false);
+            await StartSessionAsync(target, mode, cancellationToken).ConfigureAwait(false);
+        }
+        catch (FileNotFoundException ex)
+        {
+            ShowWarning(ex.Message);
+            await StopCoreAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
             await StopCoreAsync(cancellationToken).ConfigureAwait(false);
         }
         finally
@@ -207,6 +195,56 @@ public sealed class DebugService(
         {
             await terminal.WriteOutputAsync("[debug] Debug adapter did not respond to command in time.\r\n", isError: true).ConfigureAwait(false);
         }
+    }
+
+    private async Task StartSessionAsync(ProjectExecutionTarget target, ExecutionMode mode, CancellationToken cancellationToken)
+    {
+        var workspaceRoot = launchSettings.GetWorkspaceRoot(workspace.Current);
+        if (string.IsNullOrWhiteSpace(workspaceRoot))
+        {
+            ShowWarning("No workspace root was found for the debug session.");
+            return;
+        }
+
+        ExpandBottomBar();
+        await terminal.WriteOutputAsync("[debug] Building project...\r\n", cancellationToken: cancellationToken).ConfigureAwait(false);
+        await processHost.RunAsync(
+            "dotnet",
+            $"build \"{target.ProjectPath}\" -c Debug",
+            Path.GetDirectoryName(target.ProjectPath),
+            line => _ = terminal.WriteOutputAsync(line + Environment.NewLine),
+            line => _ = terminal.WriteOutputAsync(line + Environment.NewLine, isError: true),
+            cancellationToken).ConfigureAwait(false);
+
+        var programPath = ResolveProgramPath(target.ProjectPath, workspaceRoot);
+        if (programPath is null)
+        {
+            ShowWarning("The debug build output DLL was not found.");
+            return;
+        }
+
+        sessions.Start(target, mode);
+        debugState.StartSession();
+
+        _adapter = await adapterFactory.CreateAsync(workspaceRoot, cancellationToken).ConfigureAwait(false);
+        _adapter.Stopped += OnAdapterStopped;
+        _adapter.Terminated += OnAdapterTerminated;
+        _adapter.Continued += OnAdapterContinued;
+        _adapter.OutputReceived += OnAdapterOutputReceived;
+
+        var request = new DebugLaunchRequest(
+            ProjectPath: target.ProjectPath,
+            ProgramPath: programPath,
+            WorkingDirectory: Path.GetDirectoryName(target.ProjectPath) ?? workspaceRoot,
+            Configuration: target.Configuration ?? new LaunchConfiguration(),
+            Breakpoints: debugState.Snapshot.Breakpoints,
+            WorkspaceRoot: workspaceRoot);
+        await _adapter.StartAsync(request, cancellationToken).ConfigureAwait(false);
+        await SyncBreakpointsAsync(debugState.Snapshot.Breakpoints, cancellationToken).ConfigureAwait(false);
+        await _adapter.CompleteConfigurationAsync(cancellationToken).ConfigureAwait(false);
+        _adapterStarted = true;
+        debugState.Continue();
+        await terminal.WriteOutputAsync("[debug] Session started\r\n").ConfigureAwait(false);
     }
 
     private async Task StopCoreAsync(CancellationToken cancellationToken)

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:debug="using:Fluence.Modules.Debug"
              xmlns:vm="using:Fluence.Modules.Debug.ViewModels"
              x:Class="Fluence.Modules.Debug.Views.DebugSidebarView"
              x:DataType="vm:DebugSidebarViewModel"
@@ -18,11 +19,6 @@
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                <TextBlock Text="{Binding StartupProject}"
-                           FontFamily="{StaticResource FluenceFontFamily}"
-                           FontSize="{StaticResource FluenceFontSizeSmall}"
-                           Foreground="{StaticResource FluenceBrushTextSecondary}"
-                           TextWrapping="Wrap"/>
                 <TextBlock Text="{Binding Architecture}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeSmall}"
@@ -36,30 +32,90 @@
 
         <StackPanel Orientation="Horizontal"
                     Spacing="4">
-            <Button Content="Continue"
+            <Button Width="28"
+                    Height="28"
+                    Padding="0"
                     Command="{Binding ContinueCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    Height="26"
-                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
-            <Button Content="Over"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ToolTip.Tip="Continue">
+                <Path Data="{x:Static debug:DebugToolbarIconCatalog.ContinueIcon}"
+                      Width="12"
+                      Height="12"
+                      Stretch="Uniform"
+                      Fill="{StaticResource FluenceBrushTextPrimary}"/>
+            </Button>
+            <Button Width="28"
+                    Height="28"
+                    Padding="0"
                     Command="{Binding StepOverCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    Height="26"
-                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
-            <Button Content="Into"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ToolTip.Tip="Step over">
+                <Path Data="{x:Static debug:DebugToolbarIconCatalog.StepOverIcon}"
+                      Width="12"
+                      Height="12"
+                      Stretch="Uniform"
+                      Fill="{StaticResource FluenceBrushTextPrimary}"/>
+            </Button>
+            <Button Width="28"
+                    Height="28"
+                    Padding="0"
                     Command="{Binding StepIntoCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    Height="26"
-                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
-            <Button Content="Out"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ToolTip.Tip="Step into">
+                <Path Data="{x:Static debug:DebugToolbarIconCatalog.StepIntoIcon}"
+                      Width="12"
+                      Height="12"
+                      Stretch="Uniform"
+                      Fill="{StaticResource FluenceBrushTextPrimary}"/>
+            </Button>
+            <Button Width="28"
+                    Height="28"
+                    Padding="0"
                     Command="{Binding StepOutCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    Height="26"
-                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
-            <Button Content="Stop"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ToolTip.Tip="Step out">
+                <Path Data="{x:Static debug:DebugToolbarIconCatalog.StepOutIcon}"
+                      Width="12"
+                      Height="12"
+                      Stretch="Uniform"
+                      Fill="{StaticResource FluenceBrushTextPrimary}"/>
+            </Button>
+            <Button Width="28"
+                    Height="28"
+                    Padding="0"
                     Command="{Binding StopCommand}"
-                    Height="26"
-                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                    IsEnabled="{Binding CanRestartSession}"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ToolTip.Tip="Stop debug">
+                <Path Data="{x:Static debug:DebugToolbarIconCatalog.StopIcon}"
+                      Width="12"
+                      Height="12"
+                      Stretch="Uniform"
+                      Fill="{StaticResource FluenceBrushTextPrimary}"/>
+            </Button>
+            <Button Width="28"
+                    Height="28"
+                    Padding="0"
+                    Command="{Binding ReloadCommand}"
+                    IsEnabled="{Binding CanRestartSession}"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ToolTip.Tip="Reload session">
+                <Path Data="{x:Static debug:DebugToolbarIconCatalog.ReloadIcon}"
+                      Width="12"
+                      Height="12"
+                      Stretch="Uniform"
+                      Fill="{StaticResource FluenceBrushTextPrimary}"/>
+            </Button>
         </StackPanel>
 
         <Border Padding="10"

@@ -40,6 +40,8 @@ public sealed record DebugProjectRequestedEvent : IShellEvent;
 
 public sealed record StopDebugRequestedEvent : IShellEvent;
 
+public sealed record ReloadDebugRequestedEvent : IShellEvent;
+
 public sealed record ContinueDebugRequestedEvent : IShellEvent;
 
 public sealed record StepOverDebugRequestedEvent : IShellEvent;
