@@ -1,6 +1,7 @@
 using Fluence.Core.Workspace;
+using Fluence.Modules.Debug.Models;
 
-namespace Fluence.Modules.Debug;
+namespace Fluence.Modules.Debug.Abstractions.Session;
 
 public interface IDebugSessionManager
 {

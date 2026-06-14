@@ -10,6 +10,7 @@ using Fluence.Core.Infrastructure;
 using Fluence.Core.Modules;
 using Fluence.Core.Ports;
 using Fluence.Core.Workspace;
+using Fluence.Modules.Debug.Abstractions.Session;
 
 namespace Fluence.Modules.Debug;
 

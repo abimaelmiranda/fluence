@@ -1,6 +1,6 @@
 using Avalonia.Media;
 
-namespace Fluence.Modules.Debug;
+namespace Fluence.Modules.Debug.Models;
 
 public static class DebugToolbarIconCatalog
 {

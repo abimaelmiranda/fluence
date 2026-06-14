@@ -6,6 +6,9 @@ using Fluence.Core.Modules;
 using Fluence.Core.Workspace;
 using Fluence.Modules.Debug.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Fluence.Modules.Debug.Commands.DebugProject;
+using Fluence.Modules.Debug.Abstractions.Session;
+using Fluence.Modules.Debug.Services;
 
 namespace Fluence.Modules.Debug;
 

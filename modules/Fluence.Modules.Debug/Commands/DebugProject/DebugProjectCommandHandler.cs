@@ -1,9 +1,7 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Fluence.Core.Commands;
 using Fluence.Core.Debug;
 
-namespace Fluence.Modules.Debug;
+namespace Fluence.Modules.Debug.Commands.DebugProject;
 
 public sealed class DebugProjectCommandHandler(IDebugService debug)
     : ICommandHandler<DebugProjectCommand>

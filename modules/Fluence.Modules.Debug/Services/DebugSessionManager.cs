@@ -2,8 +2,10 @@ using Avalonia.Threading;
 using Fluence.Core.Workspace;
 using Fluence.Core.Modules;
 using Fluence.Modules.Debug.ViewModels;
+using Fluence.Modules.Debug.Abstractions.Session;
+using Fluence.Modules.Debug.Models;
 
-namespace Fluence.Modules.Debug;
+namespace Fluence.Modules.Debug.Services;
 
 public sealed class DebugSessionManager(
     IWorkspaceContext workspace,

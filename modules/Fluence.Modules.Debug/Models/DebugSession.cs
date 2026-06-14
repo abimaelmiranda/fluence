@@ -1,6 +1,6 @@
 using Fluence.Core.Workspace;
 
-namespace Fluence.Modules.Debug;
+namespace Fluence.Modules.Debug.Models;
 
 public sealed record DebugSession(
     bool IsActive,

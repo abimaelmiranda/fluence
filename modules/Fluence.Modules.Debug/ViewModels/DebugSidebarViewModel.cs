@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Debug;
 using Fluence.Core.Modules;
 using Fluence.Core.ViewModels;
+using Fluence.Modules.Debug.Models;
 
 namespace Fluence.Modules.Debug.ViewModels;
 
