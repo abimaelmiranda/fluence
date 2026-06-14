@@ -94,6 +94,8 @@ public sealed class FileExplorerViewModel : ViewModelBase
     {
         var item = FileTreeItem.CreateFile(path, CreateFileItem, CreateDirectoryItem);
         item.OpenCommand = new RelayCommand(() => OpenItem(item));
+        item.NewFileCommand = null;
+        item.NewFolderCommand = null;
         item.CopyCommand = new RelayCommand(() => _clipboard.Copy(item.Path));
         item.DeleteCommand = new AsyncRelayCommand(() => DeleteAsync(item));
         item.LoadSolutionCommand = item.IsSolutionFile
@@ -106,6 +108,8 @@ public sealed class FileExplorerViewModel : ViewModelBase
     {
         var item = FileTreeItem.CreateDirectory(path, CreateFileItem, CreateDirectoryItem);
         item.OpenCommand = new RelayCommand(() => item.IsExpanded = !item.IsExpanded);
+        item.NewFileCommand = new AsyncRelayCommand(() => CreateFileAsync(item));
+        item.NewFolderCommand = new AsyncRelayCommand(() => CreateFolderAsync(item));
         item.CopyCommand = new RelayCommand(() => _clipboard.Copy(item.Path));
         item.PasteCommand = new AsyncRelayCommand(() => PasteAsync(item));
         item.DeleteCommand = new AsyncRelayCommand(() => DeleteAsync(item));
@@ -144,6 +148,81 @@ public sealed class FileExplorerViewModel : ViewModelBase
         catch (Exception ex)
         {
             _notifications.ShowError("Unable to paste", ex.Message);
+        }
+    }
+
+    private async Task CreateFolderAsync(FileTreeItem item)
+    {
+        if (!item.IsDirectory)
+        {
+            return;
+        }
+
+        try
+        {
+            var folderName = await _fileDialogs.PromptForNameAsync("New Folder", "Folder name");
+            if (string.IsNullOrWhiteSpace(folderName))
+            {
+                return;
+            }
+
+            EnsureValidFileSystemName(folderName);
+
+            var targetPath = Path.Combine(item.Path, folderName);
+            if (Directory.Exists(targetPath) || File.Exists(targetPath))
+            {
+                _notifications.ShowWarning("Create folder", "A file or folder with that name already exists.");
+                return;
+            }
+
+            _fileService.CreateDirectory(targetPath);
+            item.ReloadChildren();
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to create folder", ex.Message);
+        }
+    }
+
+    private async Task CreateFileAsync(FileTreeItem item)
+    {
+        if (!item.IsDirectory)
+        {
+            return;
+        }
+
+        try
+        {
+            var fileName = await _fileDialogs.PromptForNameAsync("New File", "File name");
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return;
+            }
+
+            EnsureValidFileSystemName(fileName);
+
+            var targetPath = Path.Combine(item.Path, fileName);
+            if (Directory.Exists(targetPath) || File.Exists(targetPath))
+            {
+                _notifications.ShowWarning("Create file", "A file or folder with that name already exists.");
+                return;
+            }
+
+            _fileService.WriteText(targetPath, string.Empty);
+            item.ReloadChildren();
+            _eventBus.Publish(new OpenFileRequestedEvent(targetPath));
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to create file", ex.Message);
+        }
+    }
+
+    private static void EnsureValidFileSystemName(string name)
+    {
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Contains(Path.DirectorySeparatorChar) || name.Contains(Path.AltDirectorySeparatorChar))
+        {
+            throw new InvalidOperationException("The name contains invalid characters.");
         }
     }
 

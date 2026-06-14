@@ -44,17 +44,27 @@ public sealed partial class FileTreeItem : ObservableObject
     public bool IsDirectory { get; }
     public ObservableCollection<FileTreeItem> Children { get; }
     public ICommand? OpenCommand { get; set; }
+    public ICommand? NewFileCommand { get; set; }
+    public ICommand? NewFolderCommand { get; set; }
     public ICommand? CopyCommand { get; set; }
     public ICommand? PasteCommand { get; set; }
     public ICommand? DeleteCommand { get; set; }
     public ICommand? LoadSolutionCommand { get; set; }
 
     public bool HasOpenCommand => OpenCommand is not null;
+    public bool HasNewFileCommand => NewFileCommand is not null;
+    public bool HasNewFolderCommand => NewFolderCommand is not null;
     public bool HasCopyCommand => CopyCommand is not null;
     public bool HasPasteCommand => PasteCommand is not null;
     public bool HasDeleteCommand => DeleteCommand is not null;
     public bool HasLoadSolutionCommand => LoadSolutionCommand is not null;
-    public bool HasContextMenu => HasOpenCommand || HasCopyCommand || HasPasteCommand || HasDeleteCommand || HasLoadSolutionCommand;
+    public bool HasContextMenu => HasOpenCommand ||
+                                  HasNewFileCommand ||
+                                  HasNewFolderCommand ||
+                                  HasCopyCommand ||
+                                  HasPasteCommand ||
+                                  HasDeleteCommand ||
+                                  HasLoadSolutionCommand;
     public bool IsSolutionFile => string.Equals(System.IO.Path.GetExtension(Path), ".sln", StringComparison.OrdinalIgnoreCase) ||
                                   string.Equals(System.IO.Path.GetExtension(Path), ".slnx", StringComparison.OrdinalIgnoreCase);
 
@@ -99,6 +109,14 @@ public sealed partial class FileTreeItem : ObservableObject
         }
         catch (UnauthorizedAccessException) { }
         catch (IOException) { }
+    }
+
+    public void ReloadChildren()
+    {
+        if (IsDirectory)
+        {
+            LoadChildren();
+        }
     }
 
     public void Activate()
