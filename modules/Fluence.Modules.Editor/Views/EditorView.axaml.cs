@@ -205,15 +205,17 @@ public partial class EditorView : UserControl
         if (string.IsNullOrWhiteSpace(word))
             return;
 
+        var hoverPoint = e.GetPosition(EditorSurface);
+
         _hoverCts?.Cancel();
         _hoverCts?.Dispose();
         _hoverCts = new CancellationTokenSource();
         var token = _hoverCts.Token;
 
-        _ = EvaluateAndShowAsync(word, token);
+        _ = EvaluateAndShowAsync(word, hoverPoint, token);
     }
 
-    private async System.Threading.Tasks.Task EvaluateAndShowAsync(string expression, CancellationToken cancellationToken)
+    private async System.Threading.Tasks.Task EvaluateAndShowAsync(string expression, Point hoverPoint, CancellationToken cancellationToken)
     {
         try
         {
@@ -230,8 +232,10 @@ public partial class EditorView : UserControl
                     return;
 
                 var node = new HoverVariableNode(result, _viewModel.GetChildVariablesAsync);
+                HoverPopup.IsOpen = false;
                 HoverTree.ItemsSource = new[] { node };
-                HoverPopup.PlacementTarget = Editor.TextArea;
+                HoverPopup.PlacementTarget = EditorSurface;
+                HoverPopup.PlacementRect = new Rect(hoverPoint.X + 12, hoverPoint.Y + 18, 1, 1);
                 HoverPopup.IsOpen = true;
             });
         }

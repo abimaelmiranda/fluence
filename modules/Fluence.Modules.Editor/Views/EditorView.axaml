@@ -6,7 +6,7 @@
              x:DataType="vm:EditorViewModel"
              HorizontalAlignment="Stretch"
              VerticalAlignment="Stretch">
-    <Panel>
+    <Panel x:Name="EditorSurface">
         <avaloniaEdit:TextEditor x:Name="Editor"
                                  ShowLineNumbers="True"
                                  FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
@@ -16,9 +16,10 @@
                                  HorizontalAlignment="Stretch"
                                  VerticalAlignment="Stretch"/>
         <Popup x:Name="HoverPopup"
-               Placement="Pointer"
-               IsLightDismissEnabled="False"
-               VerticalOffset="20">
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight"
+               IsLightDismissEnabled="False">
             <Border x:Name="HoverPopupBorder"
                     Background="{StaticResource FluenceBrushSurfaceElevated}"
                     BorderBrush="{StaticResource FluenceBrushBorder}"
@@ -30,6 +31,11 @@
                 <TreeView x:Name="HoverTree"
                           Background="Transparent"
                           BorderThickness="0">
+                    <TreeView.Styles>
+                        <Style Selector="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay, DataType={x:Type vm:HoverVariableNode}}"/>
+                        </Style>
+                    </TreeView.Styles>
                     <TreeView.ItemTemplate>
                         <TreeDataTemplate x:DataType="vm:HoverVariableNode"
                                           ItemsSource="{Binding Children}">
