@@ -48,13 +48,79 @@ public sealed class AvaloniaFileOperationDialogService : IFileOperationDialogSer
         return result;
     }
 
+    public Task<string?> PromptForNameAsync(
+        string title,
+        string label,
+        string? initialValue = null,
+        CancellationToken cancellationToken = default)
+    {
+        var window = CreateWindow(title, 420, 180);
+
+        var prompt = new TextBlock
+        {
+            Text = label,
+            Margin = new Thickness(0, 0, 0, 8),
+            FontSize = 13,
+            Foreground = Brushes.White,
+        };
+
+        var textBox = new TextBox
+        {
+            Text = initialValue ?? string.Empty,
+            MinWidth = 320,
+        };
+
+        var okButton = new Button
+        {
+            Content = "OK",
+            Width = 78,
+            IsDefault = true,
+            Background = Brushes.Transparent,
+        };
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel",
+            Width = 78,
+            IsCancel = true,
+            Background = Brushes.Transparent,
+        };
+
+        var layout = new StackPanel
+        {
+            Margin = new Thickness(16),
+            Spacing = 12,
+            Children =
+            {
+                prompt,
+                textBox,
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 8,
+                    Children = { cancelButton, okButton },
+                },
+            },
+        };
+
+        window.Content = layout;
+        okButton.Click += (_, _) => window.Close(string.IsNullOrWhiteSpace(textBox.Text) ? null : textBox.Text.Trim());
+        cancelButton.Click += (_, _) => window.Close(null);
+
+        return ShowAsync(window, (string?)null, cancellationToken);
+    }
+
     private static Window CreateWindow()
+        => CreateWindow("Delete", 360, 150);
+
+    private static Window CreateWindow(string title, double width, double height)
     {
         return new Window
         {
-            Title = "Delete",
-            Width = 360,
-            Height = 150,
+            Title = title,
+            Width = width,
+            Height = height,
             CanResize = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Background = new SolidColorBrush(Color.Parse("#171B20")),
@@ -84,21 +150,21 @@ public sealed class AvaloniaFileOperationDialogService : IFileOperationDialogSer
         primaryButton.Click += (_, _) => window.Close(true);
         cancelButton.Click += (_, _) => window.Close(false);
 
-        return ShowAsync(window, cancellationToken);
+        return ShowAsync(window, false, cancellationToken);
     }
 
-    private static async Task<bool> ShowAsync(Window window, CancellationToken cancellationToken)
+    private static async Task<T> ShowAsync<T>(Window window, T fallback, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var _ = cancellationToken.Register(() => window.Close(false));
+        using var _ = cancellationToken.Register(() => window.Close(fallback));
 
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
         {
-            return await window.ShowDialog<bool>(owner);
+            return await window.ShowDialog<T>(owner);
         }
 
         window.Show();
-        return false;
+        return fallback;
     }
 }
