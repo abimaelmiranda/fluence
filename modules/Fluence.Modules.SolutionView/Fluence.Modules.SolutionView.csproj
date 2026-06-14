@@ -15,6 +15,21 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\shared\Fluence.Shared.MaterialIcons\MaterialIconTheme.cs"
+             Link="MaterialIcons\MaterialIconTheme.cs" />
+    <Content Include="..\..\third_party\material-icon-theme\dist\material-icons.json"
+             Link="MaterialIcons\dist\material-icons.json"
+             TargetPath="MaterialIcons\dist\material-icons.json"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\third_party\material-icon-theme\png\**\*.png"
+             Link="MaterialIcons\png\%(RecursiveDir)%(Filename)%(Extension)"
+             TargetPath="MaterialIcons\png\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Fluence.Core\Fluence.Core.csproj" />
   </ItemGroup>
 
