@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -55,12 +56,71 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         "testresults",
     };
 
+    public Task<SolutionWorkspaceSnapshot> LoadStructuralAsync(string solutionPath, CancellationToken cancellationToken = default)
+        => Task.Run(() => LoadStructural(solutionPath, cancellationToken), cancellationToken);
+
     public Task<SolutionWorkspaceSnapshot> LoadAsync(string solutionPath, CancellationToken cancellationToken = default)
+        => Load(solutionPath, cancellationToken);
+
+    public bool HasValidCache(string solutionPath)
     {
-        return Task.Run(() => Load(solutionPath, cancellationToken), cancellationToken);
+        try
+        {
+            if (!File.Exists(solutionPath)) return false;
+            var solutionInfo = SolutionFileInfo.Parse(solutionPath);
+            var fingerprint = CreateCacheFingerprint(solutionPath, solutionInfo, CancellationToken.None);
+            return TryLoadFromCache(solutionPath, fingerprint, out _);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
-    private static SolutionWorkspaceSnapshot Load(string solutionPath, CancellationToken cancellationToken)
+    private static SolutionWorkspaceSnapshot LoadStructural(string solutionPath, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (string.IsNullOrWhiteSpace(solutionPath) || !File.Exists(solutionPath))
+        {
+            throw new SolutionWorkspaceLoadException(solutionPath, "The solution file does not exist.");
+        }
+
+        var solutionInfo = SolutionFileInfo.Parse(solutionPath);
+        var root = new MutableNode(SolutionTreeNodeKind.Solution, Path.GetFileName(solutionPath), solutionPath);
+
+        foreach (var folderPath in solutionInfo.SolutionFolderPaths.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+        {
+            var parent = root;
+            foreach (var folderName in folderPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            {
+                if (!string.IsNullOrWhiteSpace(folderName))
+                    parent = parent.GetOrAddChild(SolutionTreeNodeKind.SolutionFolder, folderName, null);
+            }
+        }
+
+        foreach (var projectPath in solutionInfo.ProjectPaths.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!File.Exists(projectPath) || IsHiddenPath(projectPath))
+                continue;
+
+            var projectName = Path.GetFileNameWithoutExtension(projectPath);
+            var projectNode = new MutableNode(SolutionTreeNodeKind.Project, projectName, projectPath);
+            var folderPath = solutionInfo.GetFolderPath(projectPath);
+
+            var parent = root;
+            foreach (var folder in folderPath)
+                parent = parent.GetOrAddChild(SolutionTreeNodeKind.SolutionFolder, folder, null);
+
+            parent.Children.Add(projectNode);
+        }
+
+        return new SolutionWorkspaceSnapshot(solutionPath, root.ToImmutable());
+    }
+
+    private static async Task<SolutionWorkspaceSnapshot> Load(string solutionPath, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -76,7 +136,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             return cachedSnapshot;
         }
 
-        var projects = LoadProjectsWithBuildalyzer(solutionPath, solutionInfo, cancellationToken);
+        var projects = await LoadProjectsWithBuildalyzerAsync(solutionPath, solutionInfo, cancellationToken);
 
         var rootBuilder = new MutableNode(SolutionTreeNodeKind.Solution, Path.GetFileName(solutionPath), solutionPath);
         foreach (var folderPath in solutionInfo.SolutionFolderPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
@@ -312,7 +372,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         return true;
     }
 
-    private static List<ProjectLoadResult> LoadProjectsWithBuildalyzer(
+    private static async Task<List<ProjectLoadResult>> LoadProjectsWithBuildalyzerAsync(
         string solutionPath,
         SolutionFileInfo solutionInfo,
         CancellationToken cancellationToken)
@@ -333,38 +393,41 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         var solutionProjectPaths = projects
             .Select(project => project.ProjectPath)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var results = new List<ProjectLoadResult>();
-        foreach (var (projectPath, analyzer) in projects)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
+        var results = new ConcurrentBag<ProjectLoadResult>();
 
-            if (!File.Exists(projectPath) || IsHiddenPath(projectPath))
+        await Parallel.ForEachAsync(
+            projects,
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = cancellationToken },
+            async (project, ct) =>
             {
-                continue;
-            }
+                var (projectPath, analyzer) = project;
 
-            var projectName = Path.GetFileNameWithoutExtension(projectPath);
-            var projectBuilder = new MutableNode(SolutionTreeNodeKind.Project, projectName, projectPath);
-            AddDependencies(projectBuilder, projectPath, solutionProjectPaths);
-            projectBuilder.Children.Add(new MutableNode(SolutionTreeNodeKind.File, Path.GetFileName(projectPath), projectPath));
+                if (!File.Exists(projectPath) || IsHiddenPath(projectPath))
+                    return;
 
-            foreach (var directory in GetProjectDirectories(projectPath))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                AddProjectDirectory(projectBuilder, projectPath, directory);
-            }
+                var projectName = Path.GetFileNameWithoutExtension(projectPath);
+                var projectBuilder = new MutableNode(SolutionTreeNodeKind.Project, projectName, projectPath);
+                AddDependencies(projectBuilder, projectPath, solutionProjectPaths);
+                projectBuilder.Children.Add(new MutableNode(SolutionTreeNodeKind.File, Path.GetFileName(projectPath), projectPath));
 
-            foreach (var file in GetProjectFiles(projectPath, analyzer))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                AddProjectFile(projectBuilder, projectPath, file);
-            }
+                foreach (var directory in GetProjectDirectories(projectPath))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    AddProjectDirectory(projectBuilder, projectPath, directory);
+                }
 
-            var folderPath = solutionInfo.GetFolderPath(projectPath);
-            results.Add(new ProjectLoadResult(projectName, folderPath, projectBuilder));
-        }
+                var files = await Task.Run(() => GetProjectFiles(projectPath, analyzer), ct);
+                foreach (var file in files)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    AddProjectFile(projectBuilder, projectPath, file);
+                }
 
-        return results;
+                var folderPath = solutionInfo.GetFolderPath(projectPath);
+                results.Add(new ProjectLoadResult(projectName, folderPath, projectBuilder));
+            });
+
+        return results.ToList();
     }
 
     private static void AddDependencies(
