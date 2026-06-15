@@ -22,6 +22,8 @@ namespace Fluence.Modules.SolutionView;
 
 public sealed class Entrypoint : IModule
 {
+    private string? _activeTabId;
+
     public string Name => "SolutionView";
 
     public void Register(IServiceCollection services)
@@ -42,6 +44,11 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
+        host.Events.Subscribe<ActivityBarTabChangedEvent>(e =>
+        {
+            _activeTabId = e.TabId;
+            UpdateSidebar(host);
+        });
         host.Events.Subscribe<OpenSolutionRequestedEvent>(e => _ = OpenSolutionAsync(host, e.Path));
         host.Events.Subscribe<RefreshSolutionViewRequestedEvent>(_event => { _ = RefreshSolutionViewAsync(host); });
         host.Workspace.Changed += (_, _) => UpdateSidebar(host);
@@ -49,9 +56,12 @@ public sealed class Entrypoint : IModule
         host.SetModuleState(Name, ModuleState.Active);
     }
 
-    private static void UpdateSidebar(IModuleHost host)
+    private void UpdateSidebar(IModuleHost host)
     {
-        if (host.Workspace.Current.Mode == WorkspaceMode.Solution)
+        bool shouldShow = _activeTabId == "Files"
+                       && host.Workspace.Current.Mode == WorkspaceMode.Solution;
+
+        if (shouldShow)
         {
             host.ShellRegions.SetContent(
                 ShellRegion.Sidebar,
