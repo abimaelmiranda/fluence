@@ -4,10 +4,19 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Fluence.Core.Debug;
-using Fluence.Core.Modules;
+using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Models.Debugging;
+using Fluence.Core.Models.Debugging.Enums;
+using Fluence.Core.Services.Debugging;
+using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Models.Modules;
+using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Services.Modules;
 using Fluence.Core.ViewModels;
-using Fluence.Core.Workspace;
+using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Workspace;
+using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Services.Workspace;
 
 namespace Fluence.Modules.DebuggerSetup.ViewModels;
 

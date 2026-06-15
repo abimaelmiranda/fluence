@@ -3,7 +3,10 @@ using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Fluence.Core.Debug;
+using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Models.Debugging;
+using Fluence.Core.Models.Debugging.Enums;
+using Fluence.Core.Services.Debugging;
 
 namespace Fluence.Modules.Debug.ViewModels;
 

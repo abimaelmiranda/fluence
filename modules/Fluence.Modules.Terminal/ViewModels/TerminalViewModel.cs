@@ -4,9 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
-using Fluence.Core.Infrastructure;
+using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Models.Infrastructure;
 using Fluence.Core.ViewModels;
-using Fluence.Core.Workspace;
+using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Workspace;
+using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Services.Workspace;
 using XTerminal = global::XTerm.Terminal;
 
 namespace Fluence.Modules.Terminal.ViewModels;

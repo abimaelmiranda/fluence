@@ -1,5 +1,8 @@
-using Fluence.Core.Commands;
-using Fluence.Core.Debug;
+using Fluence.Core.Abstractions.Commands;
+using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Models.Debugging;
+using Fluence.Core.Models.Debugging.Enums;
+using Fluence.Core.Services.Debugging;
 
 namespace Fluence.Modules.Debug.Commands.DebugProject;
 

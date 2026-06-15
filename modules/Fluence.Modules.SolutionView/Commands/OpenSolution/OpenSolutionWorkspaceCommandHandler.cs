@@ -1,7 +1,10 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Commands;
-using Fluence.Core.Workspace;
+using Fluence.Core.Abstractions.Commands;
+using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Workspace;
+using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Services.Workspace;
 
 namespace Fluence.Modules.SolutionView.Commands.OpenSolution;
 

@@ -1,6 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Commands;
+using Fluence.Core.Abstractions.Commands;
 using Fluence.Modules.SolutionView.Abstractions;
 
 namespace Fluence.Modules.SolutionView.Commands.AddProjectReference;

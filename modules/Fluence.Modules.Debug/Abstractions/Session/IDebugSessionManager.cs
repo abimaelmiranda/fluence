@@ -1,4 +1,7 @@
-using Fluence.Core.Workspace;
+using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Workspace;
+using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Debug.Models;
 
 namespace Fluence.Modules.Debug.Abstractions.Session;

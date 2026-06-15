@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fluence.Core.Workspace;
+using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Workspace;
+using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Services.Workspace;
 using Fluence.Modules.SolutionView.Abstractions;
 using Fluence.Modules.SolutionView.Models;
 using Fluence.Modules.SolutionView.Models.Enums;

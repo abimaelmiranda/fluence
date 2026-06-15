@@ -1,8 +1,12 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Infrastructure;
-using Fluence.Core.Workspace;
+using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Models.Infrastructure;
+using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Workspace;
+using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Services.Workspace;
 
 namespace Fluence.Modules.DotnetCli.Abstractions.Commands;
 

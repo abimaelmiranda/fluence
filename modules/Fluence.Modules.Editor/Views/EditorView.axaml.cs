@@ -12,7 +12,10 @@ using Avalonia.Threading;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using AvaloniaEdit.TextMate;
-using Fluence.Core.Debug;
+using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Models.Debugging;
+using Fluence.Core.Models.Debugging.Enums;
+using Fluence.Core.Services.Debugging;
 using Fluence.Modules.Editor.ViewModels;
 using TextMateSharp.Grammars;
 

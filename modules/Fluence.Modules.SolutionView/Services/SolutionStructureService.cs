@@ -1,7 +1,10 @@
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
-using Fluence.Core.Ports;
+using Fluence.Core.Abstractions.Dialogs;
+using Fluence.Core.Abstractions.File;
+using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Services.File;
 using Fluence.Modules.SolutionView.Abstractions;
 
 namespace Fluence.Modules.SolutionView.Services;

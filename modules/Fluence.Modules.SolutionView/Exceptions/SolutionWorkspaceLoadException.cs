@@ -1,5 +1,5 @@
 using System;
-using Fluence.Core.Exceptions;
+using Fluence.Core.Abstractions.Exceptions;
 
 namespace Fluence.Modules.SolutionView.Exceptions;
 
