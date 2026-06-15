@@ -67,7 +67,7 @@ internal static class Bootstrapper
         services.AddSingleton<IDebuggerProvisioningService, DebuggerProvisioningService>();
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new MacOsPtyHost()
+                ? new PortaMacOsPtyHost()
                 : new WindowsPtyHost());
         services.AddSingleton<ITerminalService, TerminalService>();
         services.AddSingleton<WelcomeViewModel>();

@@ -401,8 +401,8 @@ public sealed class TerminalControl : Avalonia.Controls.Control
             FontSize,
             Brushes.White);
 
-        _charWidth = ft.Width;
-        _charHeight = ft.Height;
+        _charWidth = Math.Ceiling(ft.Width);
+        _charHeight = Math.Ceiling(ft.Height);
         _metricsValid = true;
     }
 

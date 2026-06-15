@@ -174,7 +174,8 @@ public partial class TerminalView : UserControl
                         _activeSessionStartScheduled = false;
                         TerminalControl.RequestRedraw();
                         ScheduleFocusForActiveSession();
-                        ScheduleResize(session, version, cols, rows);
+                        var (currentCols, currentRows) = TerminalControl.GetCurrentGridSize();
+                        ScheduleResize(session, version, currentCols, currentRows);
                     }
                     return;
                 }
