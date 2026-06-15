@@ -39,7 +39,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost) : IDeb
 
     public async Task ProvisionAsync(Action<string> onOutput, CancellationToken cancellationToken = default)
     {
-        await EnsureInstallDirectoryAsync(onOutput, cancellationToken).ConfigureAwait(false);
+        Directory.CreateDirectory(ResolveGlobalInstallDir());
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
@@ -50,115 +50,6 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost) : IDeb
         {
             await DownloadBinaryAsync(onOutput, cancellationToken).ConfigureAwait(false);
         }
-    }
-
-    // -----------------------------------------------------------------------
-    // Permission elevation — create the global install directory
-    // -----------------------------------------------------------------------
-
-    private static async Task EnsureInstallDirectoryAsync(Action<string> onOutput, CancellationToken cancellationToken)
-    {
-        var installDir = ResolveGlobalInstallDir();
-
-        if (Directory.Exists(installDir))
-            return;
-
-        try
-        {
-            Directory.CreateDirectory(installDir);
-            return;
-        }
-        catch (UnauthorizedAccessException) { }
-
-        // Need elevated permissions to create the directory.
-        onOutput("[Fluence] Administrator privileges required to create the install directory.");
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            await ElevateOnMacOsAsync(installDir, onOutput, cancellationToken).ConfigureAwait(false);
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            await ElevateOnLinuxAsync(installDir, onOutput, cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            // Windows: re-throw so the OS UAC prompt fires from the shell; caller should restart elevated.
-            throw new UnauthorizedAccessException(
-                $"Cannot create '{installDir}'. Run Fluence as Administrator for the first-time debugger setup.");
-        }
-
-        if (!Directory.Exists(installDir))
-            throw new InvalidOperationException(
-                $"Failed to create install directory '{installDir}'. Check your permissions and try again.");
-    }
-
-    private static async Task ElevateOnMacOsAsync(string installDir, Action<string> onOutput, CancellationToken cancellationToken)
-    {
-        // osascript shows the native macOS password dialog.
-        // After creating the dir, chown it to the current user so all subsequent writes work without sudo.
-        // Use ArgumentList (not Arguments) to avoid shell-level escaping; paths use single-quotes inside AppleScript.
-        var currentUser = Environment.GetEnvironmentVariable("USER") ?? Environment.UserName;
-
-        // Shell command that runs inside AppleScript's do shell script — single-quote the path (no double-quote nesting needed).
-        var shellCmd = $"mkdir -p '{installDir}' && chown -R {currentUser} '{installDir}'";
-        var appleScript = $"do shell script \"{shellCmd}\" with administrator privileges";
-
-        onOutput("[Fluence] A system dialog will ask for your password...");
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = "osascript",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardError = true,
-        };
-        psi.ArgumentList.Add("-e");
-        psi.ArgumentList.Add(appleScript);
-
-        using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to launch osascript.");
-
-        var stderr = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-
-        if (process.ExitCode != 0)
-        {
-            var reason = string.IsNullOrWhiteSpace(stderr) ? "user cancelled or password incorrect" : stderr.Trim();
-            throw new UnauthorizedAccessException($"Privilege elevation failed: {reason}");
-        }
-
-        onOutput("[Fluence] Directory created successfully.");
-    }
-
-    private static async Task ElevateOnLinuxAsync(string installDir, Action<string> onOutput, CancellationToken cancellationToken)
-    {
-        // pkexec shows the system polkit password dialog (works in most desktop environments).
-        var currentUser = Environment.GetEnvironmentVariable("USER") ?? Environment.UserName;
-        onOutput("[Fluence] A system dialog will ask for your password...");
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = "pkexec",
-            Arguments = $"bash -c \"mkdir -p '{installDir}' && chown -R {currentUser} '{installDir}'\"",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardError = true,
-        };
-
-        using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to launch pkexec.");
-
-        var stderr = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-
-        if (process.ExitCode != 0)
-        {
-            var reason = string.IsNullOrWhiteSpace(stderr) ? "user cancelled or pkexec not available" : stderr.Trim();
-            throw new UnauthorizedAccessException($"Privilege elevation failed: {reason}");
-        }
-
-        onOutput("[Fluence] Directory created successfully.");
     }
 
     // -----------------------------------------------------------------------
@@ -540,18 +431,10 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost) : IDeb
         }
     }
 
-    internal static string ResolveGlobalInstallDir()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "Fluence", "debuggers", "csharp");
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            return "/Library/Application Support/Fluence/debuggers/csharp";
-
-        return "/opt/fluence/debuggers/csharp";
-    }
+    internal static string ResolveGlobalInstallDir() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".fluence", "debuggers", "csharp");
 
     private static string ResolveExecutableName() =>
         RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "netcoredbg.exe" : "netcoredbg";

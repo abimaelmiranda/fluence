@@ -18,7 +18,7 @@ public static class OpenFileFailureNotification
             DecoderFallbackException => "This file could not be decoded as text.",
             _ => null,
         };
-
+		
         if (reason is null)
             return false;
 

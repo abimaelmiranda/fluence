@@ -14,7 +14,48 @@
                                  Background="{StaticResource FluenceBrushShell}"
                                  Foreground="{StaticResource FluenceBrushTextPrimary}"
                                  HorizontalAlignment="Stretch"
-                                 VerticalAlignment="Stretch"/>
+                                 VerticalAlignment="Stretch">
+            <avaloniaEdit:TextEditor.ContextMenu>
+                <ContextMenu x:Name="EditorContextMenu" Opening="OnContextMenuOpening">
+                    <MenuItem x:Name="MenuItemIntelliSense"
+                              Header="IntelliSense"
+                              InputGesture="Ctrl+Space"
+                              Click="OnMenuIntelliSense" />
+                    <Separator />
+                    <MenuItem x:Name="MenuItemGoToDefinition"
+                              Header="Go to Definition"
+                              InputGesture="F12"
+                              Click="OnMenuGoToDefinition" />
+                    <MenuItem x:Name="MenuItemGoToImplementation"
+                              Header="Go to Implementation"
+                              InputGesture="Ctrl+F12"
+                              Click="OnMenuGoToImplementation" />
+                    <MenuItem x:Name="MenuItemGoToTypeDefinition"
+                              Header="Go to Type Definition"
+                              InputGesture="Ctrl+Shift+F12"
+                              Click="OnMenuGoToTypeDefinition" />
+                </ContextMenu>
+            </avaloniaEdit:TextEditor.ContextMenu>
+        </avaloniaEdit:TextEditor>
+        <Popup x:Name="CompletionPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight">
+            <Border Background="#1A1A2A"
+                    BorderBrush="#3A3A5A"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    MinWidth="380"
+                    MaxWidth="720">
+                <ListBox x:Name="CompletionListBox"
+                         Background="#1A1A2A"
+                         Foreground="#CCCCCC"
+                         Height="240"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+            </Border>
+        </Popup>
         <Popup x:Name="HoverPopup"
                Placement="AnchorAndGravity"
                PlacementAnchor="BottomLeft"
@@ -46,6 +87,45 @@
                         </TreeDataTemplate>
                     </TreeView.ItemTemplate>
                 </TreeView>
+            </Border>
+        </Popup>
+        <Popup x:Name="LspHoverPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight">
+            <Border x:Name="LspHoverBorder"
+                    Background="#1A1A2A"
+                    BorderBrush="#3A3A5A"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8"
+                    MaxWidth="520"
+                    MaxHeight="220">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="LspHoverText"
+                               Foreground="#CCCCCC"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"/>
+                </ScrollViewer>
+            </Border>
+        </Popup>
+        <Popup x:Name="SignatureHelpPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="TopLeft"
+               PlacementGravity="TopRight">
+            <Border Background="#1E1E30"
+                    BorderBrush="#3A3A5A"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8,4">
+                <TextBlock x:Name="SignatureHelpText"
+                           Foreground="#AAAACC"
+                           FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                           FontSize="12"/>
             </Border>
         </Popup>
     </Panel>

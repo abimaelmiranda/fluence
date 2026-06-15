@@ -47,5 +47,7 @@
     <ProjectReference Include="..\..\modules\Fluence.Modules.Debug\Fluence.Modules.Debug.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.DebuggerSetup\Fluence.Modules.DebuggerSetup.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.SourceControl\Fluence.Modules.SourceControl.csproj" />
+    <ProjectReference Include="..\..\modules\Fluence.Modules.LspSetup\Fluence.Modules.LspSetup.csproj" />
+    <ProjectReference Include="..\..\modules\Fluence.Modules.LanguageServer\Fluence.Modules.LanguageServer.csproj" />
   </ItemGroup>
 </Project>

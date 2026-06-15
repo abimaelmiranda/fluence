@@ -498,4 +498,5 @@ public sealed class DebugService(
         await StopAsync().ConfigureAwait(false);
         _gate.Dispose();
     }
+
 }

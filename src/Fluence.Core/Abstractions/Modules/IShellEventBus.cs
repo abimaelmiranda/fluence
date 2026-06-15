@@ -68,3 +68,22 @@ public sealed record DebuggerProvisioningRequiredEvent : IShellEvent;
 public sealed record DebuggerProvisioningFinishedEvent : IShellEvent;
 
 public sealed record ActivityBarTabChangedEvent(string? TabId) : IShellEvent;
+
+// LSP — Editor → LanguageServer
+public sealed record DocumentOpenedEvent(string FilePath, string Content, string LanguageId) : IShellEvent;
+public sealed record DocumentChangedEvent(string FilePath, string Content, int Version) : IShellEvent;
+public sealed record DocumentClosedEvent(string FilePath) : IShellEvent;
+public sealed record GoToDefinitionRequestedEvent(string FilePath, int Line, int Character) : IShellEvent;
+public sealed record GoToImplementationRequestedEvent(string FilePath, int Line, int Character) : IShellEvent;
+public sealed record GoToTypeDefinitionRequestedEvent(string FilePath, int Line, int Character) : IShellEvent;
+
+// LSP — LanguageServer → Editor
+public sealed record DiagnosticsUpdatedEvent(string FilePath, System.Collections.Generic.IReadOnlyList<Core.Models.LanguageServer.LspDiagnostic> Diagnostics) : IShellEvent;
+public sealed record NavigationResolvedEvent(string FilePath, int Line, int Character) : IShellEvent;
+
+// LSP — provisioning lifecycle
+public sealed record LspProvisioningRequiredEvent : IShellEvent;
+public sealed record LspProvisioningCompletedEvent : IShellEvent;
+
+// LSP — sync control
+public sealed record FlushDocumentSyncEvent(string FilePath) : IShellEvent;

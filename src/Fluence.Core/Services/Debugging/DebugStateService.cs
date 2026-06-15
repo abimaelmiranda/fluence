@@ -37,7 +37,6 @@ public sealed class DebugStateService : IDebugStateService
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         if (line <= 0)
             return Snapshot.Breakpoints;
-
         lock (_gate)
         {
             var breakpoints = _snapshot.Breakpoints.ToList();

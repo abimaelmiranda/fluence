@@ -27,8 +27,6 @@ public sealed class AvaloniaFileOperationDialogService : IFileOperationDialogSer
             Text = message,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 12),
-            FontSize = 13,
-            Foreground = Brushes.White,
         };
 
         var delete = new Button

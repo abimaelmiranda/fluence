@@ -25,6 +25,8 @@ using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
 using Fluence.Infrastructure.Pty;
 using Fluence.Infrastructure.Protocols.Dap;
+using Fluence.Infrastructure.Protocols.Lsp;
+using Fluence.Core.Abstractions.LanguageServer;
 using FileExplorerEntrypoint = Fluence.Modules.FileExplorer.Entrypoint;
 using SolutionViewEntrypoint = Fluence.Modules.SolutionView.Entrypoint;
 using EditorEntrypoint = Fluence.Modules.Editor.Entrypoint;
@@ -34,6 +36,8 @@ using DotnetCliEntrypoint = Fluence.Modules.DotnetCli.Entrypoint;
 using DebuggerSetupEntrypoint = Fluence.Modules.DebuggerSetup.Entrypoint;
 using DebugEntrypoint = Fluence.Modules.Debug.Entrypoint;
 using SourceControlEntrypoint = Fluence.Modules.SourceControl.Entrypoint;
+using LspSetupEntrypoint = Fluence.Modules.LspSetup.Entrypoint;
+using LanguageServerEntrypoint = Fluence.Modules.LanguageServer.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Desktop.Composition;
@@ -65,6 +69,7 @@ internal static class Bootstrapper
         services.AddSingleton<NetcoredbgToolService>();
         services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
         services.AddSingleton<IDebuggerProvisioningService, DebuggerProvisioningService>();
+        services.AddSingleton<ILspProvisioningService>(new OmniSharpProvisioningService());
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new PortaMacOsPtyHost()
@@ -73,6 +78,7 @@ internal static class Bootstrapper
         services.AddSingleton<WelcomeViewModel>();
         services.AddSingleton<ActivityBarViewModel>();
         services.AddSingleton<MainWindowViewModel>();
+        
 
         var modules = new IModule[]
         {
@@ -82,6 +88,8 @@ internal static class Bootstrapper
             new NuGetExplorerEntrypoint(),
             new TerminalEntrypoint(),
             new DotnetCliEntrypoint(),
+            new LspSetupEntrypoint(),
+            new LanguageServerEntrypoint(),
             new DebuggerSetupEntrypoint(),
             new DebugEntrypoint(),
             new SourceControlEntrypoint(),

@@ -44,7 +44,7 @@ public sealed class TextFileService : ITextFileService
 
     public bool CanOpenAsText(string path)
     {
-        if (string.IsNullOrWhiteSpace(path))
+        if (string.IsNullOrEmpty(path))
         {
             return false;
         }

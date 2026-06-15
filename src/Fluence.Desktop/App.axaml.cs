@@ -51,7 +51,7 @@ public partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private async void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
+    private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
         Dispatcher.UIThread.UnhandledException -= OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException -= OnAppDomainUnhandledException;
@@ -60,7 +60,9 @@ public partial class App : Avalonia.Application
         if (_serviceProvider is null)
             return;
 
-        await _serviceProvider.DisposeAsync();
+        // Synchronous block required: async void does not hold the process alive long enough
+        // for the service provider to finish disposing (OmniSharp would be left as an orphan process).
+        _serviceProvider.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _serviceProvider = null;
     }
 
