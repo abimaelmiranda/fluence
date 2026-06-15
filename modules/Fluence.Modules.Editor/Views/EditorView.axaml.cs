@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -12,6 +13,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
@@ -25,6 +27,8 @@ using Fluence.Core.Models.LanguageServer;
 using Fluence.Core.Services.Debugging;
 using Fluence.Modules.Editor.ViewModels;
 using TextMateSharp.Grammars;
+using TextMateSharp.Internal.Themes.Reader;
+using TextMateSharp.Themes;
 
 namespace Fluence.Modules.Editor.Views;
 
@@ -899,9 +903,24 @@ public partial class EditorView : UserControl
 
     private void InitializeTextMate()
     {
-        _registryOptions = new RegistryOptions(ThemeName.DarkPlus);
+        _registryOptions = new RegistryOptions(ThemeName.VisualStudioDark);
         _textMateInstallation = Editor.InstallTextMate(_registryOptions);
+
+        var theme = LoadVs2019DarkTheme();
+        if (theme is not null)
+            _textMateInstallation.SetTheme(theme);
     }
+
+    private static IRawTheme? LoadVs2019DarkTheme()
+    {
+        // Hardcoded default theme. Later we'll expose an API to set custom themes and load from disk. 
+        var uri = new Uri("avares://Fluence.Modules.Editor/Assets/Themes/fluence-default-dark.json");
+
+        using var stream = AssetLoader.Open(uri);
+        using var reader = new StreamReader(stream);
+        return ThemeReader.ReadThemeSync(reader);
+    }
+
 
     private void ApplyGrammarForPath(string? path)
     {
