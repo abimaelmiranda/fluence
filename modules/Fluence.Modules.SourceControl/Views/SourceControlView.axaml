@@ -1,0 +1,215 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.SourceControl.ViewModels"
+             x:Class="Fluence.Modules.SourceControl.Views.SourceControlView"
+             x:DataType="vm:SourceControlViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="5,3"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="{StaticResource FluenceFontSizeSmall}"/>
+            <Setter Property="FontFamily" Value="{StaticResource FluenceFontFamily}"/>
+            <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextSecondary}"/>
+        </Style>
+        <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource FluenceBrushBorder}"/>
+        </Style>
+
+        <!-- Row hover: highlight background -->
+        <Style Selector="Border.fileRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+        <Style Selector="Border.fileRow:pointerover">
+            <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+        </Style>
+        <!-- Show action buttons only on row hover -->
+        <Style Selector="Border.fileRow StackPanel.fileActions">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="Border.fileRow:pointerover StackPanel.fileActions">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- TOP: Commit area -->
+        <Border Grid.Row="0"
+                Padding="8,8,8,6"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="0,0,0,1"
+                IsVisible="{Binding IsGitRepository}">
+            <StackPanel Spacing="5">
+
+                <!-- Branch info -->
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <PathIcon Width="12" Height="12"
+                              Foreground="{StaticResource FluenceBrushTextSecondary}"
+                              Data="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25z"/>
+                    <TextBlock Text="{Binding CurrentBranch}"
+                               FontFamily="{StaticResource FluenceFontFamily}"
+                               FontSize="{StaticResource FluenceFontSizeSmall}"
+                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <TextBox Text="{Binding CommitMessage}"
+                         PlaceholderText="Commit message..."
+                         AcceptsReturn="False"
+                         FontFamily="{StaticResource FluenceFontFamily}"
+                         FontSize="{StaticResource FluenceFontSizeSmall}"/>
+
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <Button Grid.Column="0"
+                            Content="✓ Commit"
+                            Command="{Binding CommitCommand}"
+                            IsEnabled="{Binding !IsBusy}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Height="26"
+                            FontFamily="{StaticResource FluenceFontFamily}"
+                            FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                    <Button Grid.Column="1" Classes="ghost" Content="↓ Pull"
+                            Command="{Binding PullCommand}" IsEnabled="{Binding !IsBusy}"
+                            Height="26" Margin="4,0,0,0"/>
+                    <Button Grid.Column="2" Classes="ghost" Content="↑ Push"
+                            Command="{Binding PushCommand}" IsEnabled="{Binding !IsBusy}"
+                            Height="26" Margin="4,0,0,0"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- BOTTOM: File lists -->
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="4,4">
+
+                <!-- No git repo -->
+                <TextBlock Text="No Git repository found"
+                           IsVisible="{Binding !IsGitRepository}"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           HorizontalAlignment="Center"
+                           Margin="0,24,0,0"/>
+
+                <!-- Working tree clean -->
+                <TextBlock Text="Working tree clean"
+                           IsVisible="{Binding IsWorkingTreeClean}"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           HorizontalAlignment="Center"
+                           Margin="0,16,0,0"/>
+
+                <!-- Staged changes -->
+                <StackPanel IsVisible="{Binding HasStagedChanges}">
+                    <Border Padding="4,8,8,4">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding StagedChanges.Count, StringFormat='STAGED CHANGES ({0})'}"
+                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                            <Button Grid.Column="1" Classes="ghost"
+                                    Content="− all" FontSize="11" Height="20" Padding="4,0"
+                                    Command="{Binding UnstageAllCommand}"
+                                    ToolTip.Tip="Unstage all"/>
+                        </Grid>
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding StagedChanges}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:GitFileChangeViewModel">
+                                <Border Classes="fileRow" Padding="4,2,4,2">
+                                    <Grid ColumnDefinitions="18,*,Auto">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding StatusLabel}"
+                                                   FontFamily="monospace" FontSize="11" FontWeight="Bold"
+                                                   Foreground="{Binding StatusColor}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding FileName}"
+                                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip.Tip="{Binding FilePath}"/>
+                                        <StackPanel Grid.Column="2" Classes="fileActions"
+                                                    Orientation="Horizontal">
+                                            <Button Classes="ghost" Content="~"
+                                                    Command="{Binding OpenDiffCommand}"
+                                                    ToolTip.Tip="View diff"/>
+                                            <Button Classes="ghost" Content="−"
+                                                    Command="{Binding UnstageCommand}"
+                                                    ToolTip.Tip="Unstage"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Unstaged changes -->
+                <StackPanel IsVisible="{Binding HasUnstagedChanges}">
+                    <Border Padding="4,8,8,4">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding UnstagedChanges.Count, StringFormat='CHANGES ({0})'}"
+                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                            <Button Grid.Column="1" Classes="ghost"
+                                    Content="+ all" FontSize="11" Height="20" Padding="4,0"
+                                    Command="{Binding StageAllCommand}"
+                                    ToolTip.Tip="Stage all"/>
+                        </Grid>
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding UnstagedChanges}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:GitFileChangeViewModel">
+                                <Border Classes="fileRow" Padding="4,2,4,2">
+                                    <Grid ColumnDefinitions="18,*,Auto">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding StatusLabel}"
+                                                   FontFamily="monospace" FontSize="11" FontWeight="Bold"
+                                                   Foreground="{Binding StatusColor}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding FileName}"
+                                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip.Tip="{Binding FilePath}"/>
+                                        <StackPanel Grid.Column="2" Classes="fileActions"
+                                                    Orientation="Horizontal">
+                                            <Button Classes="ghost" Content="~"
+                                                    Command="{Binding OpenDiffCommand}"
+                                                    ToolTip.Tip="View diff"/>
+                                            <Button Classes="ghost" Content="+"
+                                                    Command="{Binding StageCommand}"
+                                                    ToolTip.Tip="Stage"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+    </Grid>
+</UserControl>
