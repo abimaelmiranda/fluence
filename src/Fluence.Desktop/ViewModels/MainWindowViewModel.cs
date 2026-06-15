@@ -50,12 +50,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         WelcomeViewModel welcome,
         IUserNotificationService notifications,
         IShellEventBus eventBus,
-        IShellRegionHost regions)
+        IShellRegionHost regions,
+        ActivityBarViewModel activityBar)
     {
         _workspace = workspace;
         _notifications = notifications;
         _eventBus = eventBus;
         _regions = regions;
+        ActivityBar = activityBar;
         Welcome = welcome;
         _workspaceMode = workspace.Current.Mode;
         _workspace.Changed += OnWorkspaceChanged;
@@ -65,6 +67,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _eventBus.Subscribe<DebuggerProvisioningRequiredEvent>(_ => SetProvisioning(true));
         _eventBus.Subscribe<DebuggerProvisioningFinishedEvent>(_ => SetProvisioning(false));
     }
+
+    public ActivityBarViewModel ActivityBar { get; }
 
     public WelcomeViewModel Welcome { get; }
 
@@ -182,6 +186,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(EditorPlaceholder));
         OnPropertyChanged(nameof(SidebarPlaceholder));
         OnPropertyChanged(nameof(SidebarDetail));
+        ActivityBar.RePublishActiveTab();
     }
 
     private void OnExpandPanelRequested(ExpandPanelEvent e)

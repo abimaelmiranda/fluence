@@ -3,6 +3,7 @@
              x:Class="Fluence.Desktop.App"
              xmlns:local="using:Fluence.Desktop"
              xmlns:semi="https://irihi.tech/semi"
+             xmlns:converters="using:Fluence.Desktop.Converters"
              Name="Fluence IDE"
              RequestedThemeVariant="Dark">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
@@ -16,6 +17,8 @@
                 <ResourceInclude Source="avares://Fluence.Desktop/Themes/Colors.axaml"/>
                 <ResourceInclude Source="avares://Fluence.Desktop/Themes/Typography.axaml"/>
             </ResourceDictionary.MergedDictionaries>
+            <converters:ActivityBarBgConverter x:Key="ActivityBarBgConverter"/>
+            <converters:ActivityBarFgConverter x:Key="ActivityBarFgConverter"/>
         </ResourceDictionary>
     </Application.Resources>
   

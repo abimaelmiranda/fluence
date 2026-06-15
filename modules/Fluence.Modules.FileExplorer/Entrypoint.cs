@@ -15,6 +15,8 @@ namespace Fluence.Modules.FileExplorer;
 
 public sealed class Entrypoint : IModule
 {
+    private string? _activeTabId;
+
     public string Name => "FileExplorer";
 
     public void Register(IServiceCollection services)
@@ -25,15 +27,23 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
+        host.Events.Subscribe<ActivityBarTabChangedEvent>(e =>
+        {
+            _activeTabId = e.TabId;
+            UpdateSidebar(host);
+        });
         host.Events.Subscribe<OpenFolderRequestedEvent>(e => _ = OpenFolderAsync(host, e.Path));
         host.Workspace.Changed += (_, _) => UpdateSidebar(host);
         UpdateSidebar(host);
         host.SetModuleState(Name, ModuleState.Active);
     }
 
-    private static void UpdateSidebar(IModuleHost host)
+    private void UpdateSidebar(IModuleHost host)
     {
-        if (host.Workspace.Current.Mode == WorkspaceMode.Folder)
+        bool shouldShow = _activeTabId == "Files"
+                       && host.Workspace.Current.Mode == WorkspaceMode.Folder;
+
+        if (shouldShow)
         {
             host.ShellRegions.SetContent(
                 ShellRegion.Sidebar,

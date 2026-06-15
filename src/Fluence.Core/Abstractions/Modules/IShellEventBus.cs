@@ -66,3 +66,5 @@ public sealed record TestProjectRequestedEvent(string ProjectPath) : IShellEvent
 
 public sealed record DebuggerProvisioningRequiredEvent : IShellEvent;
 public sealed record DebuggerProvisioningFinishedEvent : IShellEvent;
+
+public sealed record ActivityBarTabChangedEvent(string? TabId) : IShellEvent;

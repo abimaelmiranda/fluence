@@ -33,6 +33,7 @@ using TerminalEntrypoint = Fluence.Modules.Terminal.Entrypoint;
 using DotnetCliEntrypoint = Fluence.Modules.DotnetCli.Entrypoint;
 using DebuggerSetupEntrypoint = Fluence.Modules.DebuggerSetup.Entrypoint;
 using DebugEntrypoint = Fluence.Modules.Debug.Entrypoint;
+using SourceControlEntrypoint = Fluence.Modules.SourceControl.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Desktop.Composition;
@@ -70,6 +71,7 @@ internal static class Bootstrapper
                 : new WindowsPtyHost());
         services.AddSingleton<ITerminalService, TerminalService>();
         services.AddSingleton<WelcomeViewModel>();
+        services.AddSingleton<ActivityBarViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 
         var modules = new IModule[]
@@ -82,6 +84,7 @@ internal static class Bootstrapper
             new DotnetCliEntrypoint(),
             new DebuggerSetupEntrypoint(),
             new DebugEntrypoint(),
+            new SourceControlEntrypoint(),
         };
 
         foreach (var module in modules)
