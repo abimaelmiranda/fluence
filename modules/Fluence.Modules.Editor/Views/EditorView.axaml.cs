@@ -153,20 +153,35 @@ public partial class EditorView : UserControl
         }, DispatcherPriority.Background);
     }
 
-    private void OnNavigationResolved(NavigationResolvedEvent e)
+    private void OnNavigationResolved(NavigationResolvedEvent e) =>
+        NavigateToLocation(e, retries: 0);
+
+    private void NavigateToLocation(NavigationResolvedEvent e, int retries)
     {
         Dispatcher.UIThread.Post(() =>
         {
             var doc = Editor.Document;
             if (doc is null) return;
 
-            // LSP lines are 0-based
+            // Cross-file navigation: wait for the correct document to be loaded
+            var loadedPath = _viewModel?.ActiveDocumentPath;
+            if (!string.Equals(loadedPath, e.FilePath, StringComparison.OrdinalIgnoreCase))
+            {
+                if (retries < 10)
+                    Task.Delay(50).ContinueWith(_ => NavigateToLocation(e, retries + 1));
+                return;
+            }
+
+            // LSP lines are 0-based; clamp final offset against doc length
             var targetLine = Math.Clamp(e.Line + 1, 1, doc.LineCount);
             var docLine = doc.GetLineByNumber(targetLine);
-            var offset = docLine.Offset + Math.Clamp(e.Character, 0, docLine.Length);
+            var offset = Math.Clamp(
+                docLine.Offset + Math.Clamp(e.Character, 0, docLine.Length),
+                0, doc.TextLength);
+
             SetCaretOffset(offset);
             Editor.ScrollToLine(targetLine);
-        });
+        }, DispatcherPriority.Background);
     }
 
     private void OnTextEntered(object? sender, Avalonia.Input.TextInputEventArgs e)
