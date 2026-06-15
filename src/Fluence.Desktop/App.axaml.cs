@@ -10,6 +10,7 @@ using Fluence.Desktop.Composition;
 using Fluence.Desktop.Services;
 using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
+using Fluence.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Desktop;
@@ -18,6 +19,7 @@ public partial class App : Avalonia.Application
 {
     private ServiceProvider? _serviceProvider;
     private int _isShowingFatalException;
+    private bool _isSavingWorkspace;
 
     public override void Initialize()
     {
@@ -35,6 +37,9 @@ public partial class App : Avalonia.Application
             DataTemplates.Add(new ViewLocator());
             Bootstrapper.InitializeModules(_serviceProvider);
 
+            // Resolve eagerly to subscribe to workspace.Changed for auto-save
+            var snapshotCoordinator = _serviceProvider.GetRequiredService<WorkspaceSnapshotCoordinator>();
+
             var mainWindowViewModel = _serviceProvider.GetRequiredService<MainWindowViewModel>();
             var mainWindow = new MainWindow
             {
@@ -43,6 +48,25 @@ public partial class App : Avalonia.Application
             _serviceProvider.GetRequiredService<AvaloniaUserNotificationService>().Attach(mainWindow);
 
             NativeMenu.SetMenu(mainWindow, NativeMenus.CreateMainMenu(mainWindowViewModel));
+
+            mainWindow.Closing += async (_, e) =>
+            {
+                if (_isSavingWorkspace)
+                    return; // save finished, allow close
+
+                if (!snapshotCoordinator.HasWorkspaceToSave)
+                    return; // nothing to save, allow close immediately
+
+                e.Cancel = true;
+                _isSavingWorkspace = true;
+                mainWindowViewModel.IsSavingWorkspace = true;
+
+                await Task.WhenAll(
+                    snapshotCoordinator.SaveAsync(),
+                    Task.Delay(500));
+
+                mainWindow.Close();
+            };
 
             desktop.MainWindow = mainWindow;
             desktop.Exit += OnDesktopExit;
