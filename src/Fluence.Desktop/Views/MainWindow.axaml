@@ -17,6 +17,7 @@
     <Design.DataContext>
     </Design.DataContext>
 
+    <Panel>
     <Grid RowDefinitions="*,Auto">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
             <Border Grid.Column="0"
@@ -257,5 +258,31 @@
             </StackPanel>
         </Border>
     </Grid>
+
+    <!-- Saving workspace overlay -->
+    <Border IsVisible="{Binding IsSavingWorkspace}"
+            Background="#BB000000">
+        <Border Background="{StaticResource FluenceBrushSurface}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="32,24"
+                Width="280"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <StackPanel Spacing="16" HorizontalAlignment="Center">
+                <TextBlock Text="Saving workspace..."
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeBody}"
+                           Foreground="{StaticResource FluenceBrushTextPrimary}"
+                           HorizontalAlignment="Center"/>
+                <ProgressBar IsIndeterminate="True"
+                             Height="3"
+                             HorizontalAlignment="Stretch"/>
+            </StackPanel>
+        </Border>
+    </Border>
+
+    </Panel>
 
 </Window>

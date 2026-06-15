@@ -75,10 +75,12 @@ internal static class Bootstrapper
                 ? new PortaMacOsPtyHost()
                 : new WindowsPtyHost());
         services.AddSingleton<ITerminalService, TerminalService>();
+        services.AddSingleton<IRecentProjectsService, RecentProjectsService>();
+        services.AddSingleton<IWorkspaceSnapshotService, WorkspaceSnapshotService>();
+        services.AddSingleton<WorkspaceSnapshotCoordinator>();
         services.AddSingleton<WelcomeViewModel>();
         services.AddSingleton<ActivityBarViewModel>();
         services.AddSingleton<MainWindowViewModel>();
-        
 
         var modules = new IModule[]
         {

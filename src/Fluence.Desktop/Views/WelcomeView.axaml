@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Fluence.Desktop.ViewModels"
+             xmlns:models="using:Fluence.Core.Models.Workspace"
              x:Class="Fluence.Desktop.Views.WelcomeView"
              x:DataType="vm:WelcomeViewModel">
     <Grid RowDefinitions="*,Auto,*" ColumnDefinitions="*,420,*">
@@ -33,6 +34,51 @@
                         Command="{Binding OpenSolutionCommand}"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel Spacing="6"
+                        IsVisible="{Binding HasRecentProjects}"
+                        Margin="0,4,0,0">
+                <TextBlock Text="Recent"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                <ItemsControl ItemsSource="{Binding RecentProjects}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:RecentProject">
+                            <Button Command="{Binding $parent[UserControl].((vm:WelcomeViewModel)DataContext).OpenRecentCommand}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="6,5">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0" Spacing="1">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                                   FontSize="{StaticResource FluenceFontSizeBody}"
+                                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Path}"
+                                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Kind}"
+                                               FontFamily="{StaticResource FluenceFontFamily}"
+                                               FontSize="{StaticResource FluenceFontSizeSmall}"
+                                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                               VerticalAlignment="Center"
+                                               Margin="12,0,0,0"/>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
 
             <TextBlock Text="{Binding Status}"

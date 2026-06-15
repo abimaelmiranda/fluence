@@ -38,6 +38,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private WorkspaceMode _workspaceMode;
 
     [ObservableProperty]
+    private bool _isSavingWorkspace;
+
+    [ObservableProperty]
     private bool _isTerminalExpanded;
 
     private bool _isProvisioning;
