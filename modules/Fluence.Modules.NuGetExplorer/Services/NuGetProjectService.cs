@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Xml.Linq;
+using Fluence.Modules.NuGetExplorer.Abstractions;
+using Fluence.Modules.NuGetExplorer.Models;
 
-namespace Fluence.Modules.NuGetExplorer;
+namespace Fluence.Modules.NuGetExplorer.Services;
 
 public sealed class NuGetProjectService : INuGetProjectService
 {

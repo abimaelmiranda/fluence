@@ -1,5 +1,6 @@
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Fluence.Modules.NuGetExplorer.Models;
 
 namespace Fluence.Modules.NuGetExplorer.ViewModels;
 

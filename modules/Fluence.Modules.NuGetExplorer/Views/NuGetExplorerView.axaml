@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Fluence.Modules.NuGetExplorer.ViewModels"
-             xmlns:models="using:Fluence.Modules.NuGetExplorer"
+             xmlns:models="using:Fluence.Modules.NuGetExplorer.Models"
              x:Class="Fluence.Modules.NuGetExplorer.Views.NuGetExplorerView"
              x:DataType="vm:NuGetExplorerViewModel"
              Background="{StaticResource FluenceBrushShell}">

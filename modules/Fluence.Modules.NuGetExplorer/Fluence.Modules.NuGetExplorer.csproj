@@ -17,4 +17,8 @@
     <ProjectReference Include="..\..\src\Fluence.Core\Fluence.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Models/" />
+  </ItemGroup>
+
 </Project>

@@ -1,12 +1,7 @@
-using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 
-namespace Fluence.Modules.NuGetExplorer;
+namespace Fluence.Modules.NuGetExplorer.Services;
 
 public sealed class PackageIconLoader
 {

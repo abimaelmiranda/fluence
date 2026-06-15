@@ -12,6 +12,9 @@ using Fluence.Core.Modules;
 using Fluence.Core.Ports;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Workspace;
+using Fluence.Modules.NuGetExplorer.Abstractions;
+using Fluence.Modules.NuGetExplorer.Models;
+using Fluence.Modules.NuGetExplorer.Services;
 using NuGet.Versioning;
 
 namespace Fluence.Modules.NuGetExplorer.ViewModels;

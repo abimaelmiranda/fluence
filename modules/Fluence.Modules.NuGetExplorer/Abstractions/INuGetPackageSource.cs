@@ -1,8 +1,9 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Modules.NuGetExplorer.Models;
 
-namespace Fluence.Modules.NuGetExplorer;
+namespace Fluence.Modules.NuGetExplorer.Abstractions;
 
 public interface INuGetPackageSource
 {

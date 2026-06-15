@@ -1,12 +1,10 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using Fluence.Modules.NuGetExplorer.Abstractions;
+using Fluence.Modules.NuGetExplorer.Models;
 using NuGet.Common;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 
-namespace Fluence.Modules.NuGetExplorer;
+namespace Fluence.Modules.NuGetExplorer.Services;
 
 public sealed class NuGetOrgPackageSource : INuGetPackageSource
 {
