@@ -1,5 +1,6 @@
 using System;
-using Fluence.Core.Infrastructure;
+using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Models.Infrastructure;
 
 namespace Fluence.Infrastructure.Pty;
 

@@ -5,7 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Infrastructure;
+using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Models.Infrastructure;
 
 namespace Fluence.Infrastructure;
 

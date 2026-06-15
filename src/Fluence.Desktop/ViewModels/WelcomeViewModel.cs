@@ -3,8 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Fluence.Core.Modules;
-using Fluence.Core.Ports;
+using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Models.Modules;
+using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Services.Modules;
+using Fluence.Core.Abstractions.Dialogs;
+using Fluence.Core.Abstractions.File;
+using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Services.File;
 using Fluence.Core.ViewModels;
 
 namespace Fluence.Desktop.ViewModels;

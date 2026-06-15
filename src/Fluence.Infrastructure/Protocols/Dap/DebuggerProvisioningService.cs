@@ -8,8 +8,12 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Debug;
-using Fluence.Core.Infrastructure;
+using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Models.Debugging;
+using Fluence.Core.Models.Debugging.Enums;
+using Fluence.Core.Services.Debugging;
+using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Models.Infrastructure;
 
 namespace Fluence.Infrastructure.Protocols.Dap;
 

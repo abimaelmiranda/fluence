@@ -9,7 +9,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Debug;
+using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Models.Debugging;
+using Fluence.Core.Models.Debugging.Enums;
+using Fluence.Core.Services.Debugging;
 
 namespace Fluence.Infrastructure.Protocols.Dap;
 
@@ -355,6 +358,7 @@ internal sealed class DapClient : IDebugAdapterClient
         JsonObject arguments,
         CancellationToken cancellationToken)
     {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var seq = Interlocked.Increment(ref _seq);
         var tcs = new TaskCompletionSource<JsonObject?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending[seq] = tcs;
@@ -377,7 +381,6 @@ internal sealed class DapClient : IDebugAdapterClient
             orphaned?.TrySetCanceled();
             throw;
         }
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(RequestTimeout);
         using var timeoutReg = timeout.Token.Register(() =>
         {

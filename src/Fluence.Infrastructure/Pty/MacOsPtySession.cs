@@ -2,7 +2,8 @@ using System;
 using System.IO;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
-using Fluence.Core.Infrastructure;
+using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Models.Infrastructure;
 
 namespace Fluence.Infrastructure.Pty;
 

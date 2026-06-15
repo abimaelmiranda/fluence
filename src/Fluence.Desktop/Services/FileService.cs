@@ -1,5 +1,8 @@
 using System.IO;
-using Fluence.Core.Ports;
+using Fluence.Core.Abstractions.Dialogs;
+using Fluence.Core.Abstractions.File;
+using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Services.File;
 
 namespace Fluence.Desktop.Services;
 

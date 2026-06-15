@@ -6,7 +6,10 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Fluence.Core.Ports;
+using Fluence.Core.Abstractions.Dialogs;
+using Fluence.Core.Abstractions.File;
+using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Services.File;
 
 namespace Fluence.Desktop.Services;
 

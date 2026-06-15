@@ -1,5 +1,8 @@
 using System;
-using Fluence.Core.Modules;
+using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Models.Modules;
+using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Services.Modules;
 
 namespace Fluence.Desktop.Services;
 

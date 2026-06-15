@@ -7,11 +7,20 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Fluence.Core.Exceptions;
-using Fluence.Core.Modules;
-using Fluence.Core.Ports;
+using Fluence.Core.Abstractions.Exceptions;
+using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Models.Modules;
+using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Services.Modules;
+using Fluence.Core.Abstractions.Dialogs;
+using Fluence.Core.Abstractions.File;
+using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Services.File;
 using Fluence.Core.ViewModels;
-using Fluence.Core.Workspace;
+using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Workspace;
+using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Services.Workspace;
 
 namespace Fluence.Desktop.ViewModels;
 
