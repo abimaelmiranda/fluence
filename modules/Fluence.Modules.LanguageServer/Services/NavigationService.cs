@@ -15,8 +15,11 @@ internal sealed class NavigationService(ILanguageServerService lsp, LspClientHol
     public Task<LspLocation?> GetImplementationAsync(string filePath, int line, int character, CancellationToken cancellationToken = default) =>
         SendNavigationRequestAsync("textDocument/implementation", filePath, line, character, cancellationToken);
 
-    public Task<LspLocation?> GetTypeDefinitionAsync(string filePath, int line, int character, CancellationToken cancellationToken = default) =>
-        SendNavigationRequestAsync("textDocument/typeDefinition", filePath, line, character, cancellationToken);
+    public async Task<LspLocation?> GetTypeDefinitionAsync(string filePath, int line, int character, CancellationToken cancellationToken = default)
+    {
+        var result = await SendNavigationRequestAsync("textDocument/typeDefinition", filePath, line, character, cancellationToken);
+        return result ?? await SendNavigationRequestAsync("textDocument/definition", filePath, line, character, cancellationToken);
+    }
 
     private async Task<LspLocation?> SendNavigationRequestAsync(
         string method,
@@ -50,7 +53,7 @@ internal sealed class NavigationService(ILanguageServerService lsp, LspClientHol
             return null;
 
         // Result can be Location | Location[] | LocationLink[]
-        var location = result is JsonArray arr ? arr[0] : result;
+        var location = result is JsonArray arr ? (arr.Count > 0 ? arr[0] : null) : result;
         if (location is not JsonObject obj)
             return null;
 
