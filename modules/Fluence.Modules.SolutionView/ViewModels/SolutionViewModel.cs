@@ -141,9 +141,20 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
         try
         {
+            // When cache is cold, show the structural skeleton immediately so the tree
+            // appears in < 100ms while Buildalyzer runs in background.
+            if (!_solutionLoader.HasValidCache(solutionPath))
+            {
+                var skeleton = await _solutionLoader.LoadStructuralAsync(solutionPath, cancellationToken);
+                RootItems.Add(CreateTreeItem(skeleton.Root));
+                IsLoading = false;
+            }
+
             var snapshot = await _solutionLoader.LoadAsync(solutionPath, cancellationToken);
             _loadedSnapshot = snapshot;
             _projectAssociations.Update(snapshot);
+
+            RootItems.Clear();
             RootItems.Add(CreateTreeItem(snapshot.Root));
             UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
             UpdateStartupProject(_workspace.Current.StartupProjectPath);

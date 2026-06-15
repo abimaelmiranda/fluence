@@ -6,5 +6,7 @@ namespace Fluence.Modules.SolutionView.Abstractions;
 
 public interface ISolutionWorkspaceLoader
 {
+    Task<SolutionWorkspaceSnapshot> LoadStructuralAsync(string solutionPath, CancellationToken cancellationToken = default);
     Task<SolutionWorkspaceSnapshot> LoadAsync(string solutionPath, CancellationToken cancellationToken = default);
+    bool HasValidCache(string solutionPath);
 }
