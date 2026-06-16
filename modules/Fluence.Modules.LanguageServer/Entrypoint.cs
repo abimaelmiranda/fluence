@@ -385,7 +385,8 @@ public sealed class Entrypoint : IModule, IDisposable
         try
         {
             var tokens = await service.RequestAsync(filePath, CancellationToken.None).ConfigureAwait(false);
-            events.Publish(new SemanticTokensUpdatedEvent(filePath, tokens));
+            if (tokens.Length > 0)
+                events.Publish(new SemanticTokensUpdatedEvent(filePath, tokens));
         }
         catch { }
     }
