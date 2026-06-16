@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Fluence.Modules.SourceControl.Models;
 
@@ -14,4 +15,14 @@ public interface IGitService
     Task<string> GetCurrentBranchAsync(string repoRoot);
     Task<string> PullAsync(string repoRoot);
     Task<string> PushAsync(string repoRoot);
+    Task<IReadOnlyList<GitBranch>> GetBranchesAsync(string repoRoot);
+    Task<CheckoutResult> CheckoutBranchAsync(string branchName, string repoRoot);
+    Task<CheckoutResult> ForceCheckoutBranchAsync(string branchName, string repoRoot);
+    Task StashAsync(string repoRoot);
+    Task DeleteBranchAsync(string branchName, bool force, string repoRoot);
+    Task FetchAsync(string repoRoot);
+    Task<(int Ahead, int Behind)> GetAheadBehindAsync(string repoRoot);
+    Task<IReadOnlyList<GitStash>> GetStashListAsync(string repoRoot);
+    Task PopStashAsync(string stashRef, string repoRoot);
+    Task DropStashAsync(string stashRef, string repoRoot);
 }

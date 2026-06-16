@@ -34,6 +34,21 @@
         <Style Selector="Border.fileRow:pointerover StackPanel.fileActions">
             <Setter Property="IsVisible" Value="True"/>
         </Style>
+
+        <!-- Branch picker rows -->
+        <Style Selector="Border.branchRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="Border.branchRow:pointerover">
+            <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+        </Style>
+        <Style Selector="Border.branchRow StackPanel.branchActions">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="Border.branchRow:pointerover StackPanel.branchActions">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*">
@@ -46,17 +61,133 @@
                 IsVisible="{Binding IsGitRepository}">
             <StackPanel Spacing="5">
 
-                <!-- Branch info -->
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <PathIcon Width="12" Height="12"
-                              Foreground="{StaticResource FluenceBrushTextSecondary}"
-                              Data="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25z"/>
-                    <TextBlock Text="{Binding CurrentBranch}"
-                               FontFamily="{StaticResource FluenceFontFamily}"
-                               FontSize="{StaticResource FluenceFontSizeSmall}"
-                               Foreground="{StaticResource FluenceBrushTextSecondary}"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
+                <!-- Branch picker button -->
+                <Button Classes="ghost"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Padding="2,2"
+                        ToolTip.Tip="Switch branch">
+                    <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
+                            <Border MinWidth="230" MaxHeight="320"
+                                    Background="{StaticResource FluenceBrushSurface}"
+                                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="4,4">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:SourceControlViewModel)DataContext).Branches}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:BranchItemViewModel">
+                                                <Border Classes="branchRow" Padding="6,3,4,3" Margin="0,1">
+                                                    <Grid ColumnDefinitions="14,*,Auto">
+                                                        <TextBlock Grid.Column="0"
+                                                                   Text="●" FontSize="7"
+                                                                   IsVisible="{Binding IsCurrent}"
+                                                                   Foreground="{StaticResource FluenceBrushAccent}"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{Binding Name}"
+                                                                   FontFamily="monospace" FontSize="11"
+                                                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center"
+                                                                   ToolTip.Tip="{Binding Name}"/>
+                                                        <StackPanel Grid.Column="2" Classes="branchActions"
+                                                                    Orientation="Horizontal">
+                                                            <Button Classes="ghost" Content="⎇"
+                                                                    Command="{Binding CheckoutCommand}"
+                                                                    IsVisible="{Binding CanCheckout}"
+                                                                    ToolTip.Tip="Checkout branch"
+                                                                    Height="20" Padding="4,0"/>
+                                                            <Button Classes="ghost" Content="✕"
+                                                                    Command="{Binding DeleteCommand}"
+                                                                    IsVisible="{Binding CanDelete}"
+                                                                    ToolTip.Tip="Delete branch"
+                                                                    Height="20" Padding="4,0"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                        </Flyout>
+                    </Button.Flyout>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Width="12" Height="12"
+                                  Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                  Data="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25z"/>
+                        <TextBlock Text="{Binding CurrentBranch}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding AheadCount, StringFormat='↑{0}'}"
+                                   IsVisible="{Binding HasAhead}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                   VerticalAlignment="Center"
+                                   ToolTip.Tip="Commits ahead of remote"/>
+                        <TextBlock Text="{Binding BehindCount, StringFormat='↓{0}'}"
+                                   IsVisible="{Binding HasBehind}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                   VerticalAlignment="Center"
+                                   ToolTip.Tip="Commits behind remote"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Checkout conflict warning -->
+                <Border IsVisible="{Binding HasPendingCheckoutConflict}"
+                        Background="{StaticResource FluenceBrushSurfaceElevated}"
+                        BorderBrush="{StaticResource FluenceBrushBorder}"
+                        BorderThickness="1"
+                        CornerRadius="5"
+                        Padding="8,7">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Local changes would be overwritten"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding PendingCheckoutBranch, StringFormat='→ {0}'}"
+                                   FontFamily="monospace" FontSize="11"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                        <StackPanel Spacing="4">
+                            <Button Content="Stash &amp; Checkout"
+                                    Command="{Binding StashAndCheckoutCommand}"
+                                    IsEnabled="{Binding !IsBusy}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Height="24"
+                                    FontFamily="{StaticResource FluenceFontFamily}"
+                                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Button Grid.Column="0"
+                                        Classes="ghost" Content="Force Checkout"
+                                        Command="{Binding ForceCheckoutCommand}"
+                                        IsEnabled="{Binding !IsBusy}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Height="24"
+                                        FontFamily="{StaticResource FluenceFontFamily}"
+                                        FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                                <Button Grid.Column="1"
+                                        Classes="ghost" Content="Cancel"
+                                        Command="{Binding CancelCheckoutCommand}"
+                                        Height="24" Margin="4,0,0,0"
+                                        FontFamily="{StaticResource FluenceFontFamily}"
+                                        FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
 
                 <TextBox Text="{Binding CommitMessage}"
                          PlaceholderText="Commit message..."
@@ -64,7 +195,7 @@
                          FontFamily="{StaticResource FluenceFontFamily}"
                          FontSize="{StaticResource FluenceFontSizeSmall}"/>
 
-                <Grid ColumnDefinitions="*,Auto,Auto">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                     <Button Grid.Column="0"
                             Content="✓ Commit"
                             Command="{Binding CommitCommand}"
@@ -80,6 +211,9 @@
                     <Button Grid.Column="2" Classes="ghost" Content="↑ Push"
                             Command="{Binding PushCommand}" IsEnabled="{Binding !IsBusy}"
                             Height="26" Margin="4,0,0,0"/>
+                    <Button Grid.Column="3" Classes="ghost" Content="⟳ Fetch"
+                            Command="{Binding FetchCommand}" IsEnabled="{Binding !IsBusy}"
+                            Height="26" Margin="4,0,0,0" ToolTip.Tip="Fetch all remotes"/>
                 </Grid>
             </StackPanel>
         </Border>
@@ -200,6 +334,50 @@
                                             <Button Classes="ghost" Content="+"
                                                     Command="{Binding StageCommand}"
                                                     ToolTip.Tip="Stage"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Stashes -->
+                <StackPanel IsVisible="{Binding HasStashes}">
+                    <Border Padding="4,8,8,4">
+                        <TextBlock Text="{Binding Stashes.Count, StringFormat='STASHES ({0})'}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding Stashes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:StashItemViewModel">
+                                <Border Classes="fileRow" Padding="4,3,4,3">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0" Spacing="1">
+                                            <TextBlock Text="{Binding Message}"
+                                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                       Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip.Tip="{Binding Message}"/>
+                                            <TextBlock Text="{Binding RelativeDate}"
+                                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                                       FontSize="10"
+                                                       Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Classes="fileActions"
+                                                    Orientation="Horizontal">
+                                            <Button Classes="ghost" Content="⊕"
+                                                    Command="{Binding PopCommand}"
+                                                    ToolTip.Tip="Apply &amp; drop stash"
+                                                    Height="20" Padding="4,0"/>
+                                            <Button Classes="ghost" Content="✕"
+                                                    Command="{Binding DropCommand}"
+                                                    ToolTip.Tip="Drop stash"
+                                                    Height="20" Padding="4,0"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>

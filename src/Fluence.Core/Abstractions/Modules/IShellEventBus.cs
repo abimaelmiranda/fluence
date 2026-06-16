@@ -87,3 +87,6 @@ public sealed record LspProvisioningCompletedEvent : IShellEvent;
 
 // LSP — sync control
 public sealed record FlushDocumentSyncEvent(string FilePath) : IShellEvent;
+
+// Git
+public sealed record GitCheckoutCompletedEvent(string BranchName) : IShellEvent;
