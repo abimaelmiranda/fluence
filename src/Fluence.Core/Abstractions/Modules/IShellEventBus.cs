@@ -85,6 +85,7 @@ public sealed record SemanticTokensUpdatedEvent(string FilePath, Core.Models.Lan
 // LSP — provisioning lifecycle
 public sealed record LspProvisioningRequiredEvent : IShellEvent;
 public sealed record LspProvisioningCompletedEvent : IShellEvent;
+public sealed record LspServerReadyEvent : IShellEvent;
 
 // LSP — sync control
 public sealed record FlushDocumentSyncEvent(string FilePath) : IShellEvent;

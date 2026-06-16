@@ -152,6 +152,7 @@ public partial class EditorView : UserControl
         eventBus.Subscribe<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
         eventBus.Subscribe<NavigationResolvedEvent>(OnNavigationResolved);
         eventBus.Subscribe<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
+        eventBus.Subscribe<LspServerReadyEvent>(OnLspServerReady);
     }
 
     private void OnDiagnosticsUpdated(DiagnosticsUpdatedEvent e)
@@ -164,6 +165,18 @@ public partial class EditorView : UserControl
         {
             _diagnosticRenderer.Update(Editor.Document, e.Diagnostics);
             Editor.TextArea.TextView.InvalidateLayer(KnownLayer.Background);
+        }, DispatcherPriority.Background);
+    }
+
+    private void OnLspServerReady(LspServerReadyEvent _)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            var path = _viewModel?.ActiveDocumentPath;
+            if (string.IsNullOrEmpty(path)) return;
+
+            var text = Editor.Document.Text;
+            _eventBus?.Publish(new DocumentOpenedEvent(path, text, "csharp"));
         }, DispatcherPriority.Background);
     }
 
@@ -1956,7 +1969,7 @@ public partial class EditorView : UserControl
 
                 // Members — OmniSharp names
                 "method" or "extensionMethod" => SemanticBrushes.Method,
-                "property" => SemanticBrushes.Property,
+                "property" => null,
                 "field" when isStatic => SemanticBrushes.ConstantField,
                 "field" => SemanticBrushes.Field,
                 "enumMember" => SemanticBrushes.EnumMember,

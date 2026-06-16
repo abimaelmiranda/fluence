@@ -60,6 +60,8 @@ internal sealed class LanguageServerService : ILanguageServerService, IAsyncDisp
 
         await _client.SendNotificationAsync("initialized", new JsonObject(), cancellationToken)
             .ConfigureAwait(false);
+
+        _events.Publish(new LspServerReadyEvent());
     }
 
     public async Task StopAsync()
