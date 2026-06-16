@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
@@ -15,6 +16,7 @@ using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Editor.Abstractions;
 using Fluence.Modules.Editor.Commands;
+using Fluence.Modules.Editor.Json;
 using Fluence.Modules.Editor.Services;
 using Fluence.Modules.Editor.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +37,9 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
+        host.Services.GetRequiredService<ISettingsRegistry>()
+            .Register(EditorSettingsJsonContext.Default.EditorSettings);
+
         host.ShellRegions.SetContent(
             ShellRegion.Main,
             Name,

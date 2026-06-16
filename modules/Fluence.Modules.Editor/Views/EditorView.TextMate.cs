@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using Avalonia.Platform;
 using AvaloniaEdit.TextMate;
 using TextMateSharp.Grammars;
@@ -25,12 +26,31 @@ public partial class EditorView
 
     private static IRawTheme? LoadStandardTheme()
     {
-        // Hardcoded default theme. Later we'll expose an API to set custom themes and load from disk.
         var uri = new Uri("avares://Fluence.Modules.Editor/Assets/Themes/standard_dark.json");
 
         using var stream = AssetLoader.Open(uri);
         using var reader = new StreamReader(stream);
         return ThemeReader.ReadThemeSync(reader);
+    }
+
+    private void ApplyTextMateThemeJson(string themeJson)
+    {
+        if (_textMateInstallation is null || string.IsNullOrWhiteSpace(themeJson))
+            return;
+
+        try
+        {
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(themeJson));
+            using var reader = new StreamReader(stream);
+            var theme = ThemeReader.ReadThemeSync(reader);
+            _textMateInstallation.SetTheme(theme);
+        }
+        catch
+        {
+            var fallback = LoadStandardTheme();
+            if (fallback is not null)
+                _textMateInstallation.SetTheme(fallback);
+        }
     }
 
     private void ApplyGrammarForPath(string? path)

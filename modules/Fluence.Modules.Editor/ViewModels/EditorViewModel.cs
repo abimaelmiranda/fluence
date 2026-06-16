@@ -8,7 +8,11 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.LanguageServer;
+using Fluence.Core.Abstractions.Settings;
+using Fluence.Core.Abstractions.Theming;
+using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Models.LanguageServer;
@@ -35,10 +39,14 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private readonly IDebugStateService _debugState;
     private readonly IDebugService _debugService;
     private readonly IShellEventBus _events;
+    private readonly ISettingsService _settings;
+    private readonly IKeybindingService _keybindings;
+    private readonly ICommandRegistry _commands;
     private readonly ICompletionService? _completionService;
     private readonly IHoverService? _hoverService;
     private readonly ISignatureHelpService? _signatureHelpService;
     private readonly ICodeActionService? _codeActionService;
+    private readonly IThemeLoader? _themeLoader;
     private readonly DispatcherTimer _autoSaveTimer;
     private bool _isRefreshingFromWorkspace;
     private string? _pendingAutoSavePath;
@@ -54,22 +62,31 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         IDebugStateService debugState,
         IDebugService debugService,
         IShellEventBus events,
+        ISettingsService settings,
+        IKeybindingService keybindings,
+        ICommandRegistry commands,
         ICompletionService? completionService = null,
         IHoverService? hoverService = null,
         ISignatureHelpService? signatureHelpService = null,
-        ICodeActionService? codeActionService = null)
+        ICodeActionService? codeActionService = null,
+        IThemeLoader? themeLoader = null)
     {
         _workspace = workspace;
         _saveHandler = saveHandler;
         _debugState = debugState;
         _debugService = debugService;
         _events = events;
+        _settings = settings;
+        _keybindings = keybindings;
+        _commands = commands;
         _completionService = completionService;
         _hoverService = hoverService;
         _signatureHelpService = signatureHelpService;
         _codeActionService = codeActionService;
+        _themeLoader = themeLoader;
         _autoSaveTimer = new DispatcherTimer { Interval = AutoSaveDelay };
         _autoSaveTimer.Tick += OnAutoSaveTimerTick;
+        RegisterEditorCommands();
         RefreshFromWorkspace();
         _workspace.Changed += OnWorkspaceChanged;
         _debugState.Changed += OnDebugStateChanged;
@@ -79,7 +96,10 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public IHoverService? HoverService => _hoverService;
     public ISignatureHelpService? SignatureHelpService => _signatureHelpService;
     public ICodeActionService? CodeActionService => _codeActionService;
+    public IThemeLoader? ThemeLoader => _themeLoader;
     public IShellEventBus EventBus => _events;
+    public ISettingsService Settings => _settings;
+    public IKeybindingService Keybindings => _keybindings;
 
     public bool HasActiveDocument => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument;
 
@@ -107,6 +127,30 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     }
 
     public bool IsDebuggerStopped => _debugState.Snapshot.IsStopped;
+
+    private void RegisterEditorCommands()
+    {
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.EditorTriggerCompletion,
+            "Trigger Completion",
+            KeybindingScope.Editor,
+            "Ctrl+Space"));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.EditorGoToDefinition,
+            "Go to Definition",
+            KeybindingScope.Editor,
+            "F12"));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.EditorGoToImplementation,
+            "Go to Implementation",
+            KeybindingScope.Editor,
+            "Ctrl+F12"));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.EditorGoToTypeDefinition,
+            "Go to Type Definition",
+            KeybindingScope.Editor,
+            "Ctrl+Shift+F12"));
+    }
 
     public Task<DebugVariable?> EvaluateHoverAsync(string expression, CancellationToken cancellationToken) =>
         _debugService.EvaluateAsync(expression, cancellationToken);

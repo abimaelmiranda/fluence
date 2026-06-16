@@ -9,7 +9,23 @@ namespace Fluence.Modules.Editor.Rendering;
 
 internal sealed class SemanticColorizer : DocumentColorizingTransformer
 {
+    private static readonly IReadOnlyDictionary<string, string> DefaultColors =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["type"] = "#4EC9B0",
+            ["interface"] = "#B8D7A3",
+            ["struct"] = "#86C691",
+            ["enum"] = "#B8D7A3",
+            ["enumMember"] = "#51B6C4",
+            ["typeParameter"] = "#B8D7A3",
+            ["method"] = "#DCDCAA",
+            ["field"] = "#D4D4D4",
+            ["staticSymbol"] = "#51B6C4",
+            ["variable"] = "#9CDCFE",
+        };
+
     private Dictionary<int, List<SemanticToken>> _tokensByLine = [];
+    private IReadOnlyDictionary<string, IBrush> _brushes = CreateBrushes(DefaultColors);
 
     public void Update(SemanticToken[] tokens)
     {
@@ -23,6 +39,18 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
         _tokensByLine = map;
     }
 
+    public void ApplyTheme(IReadOnlyDictionary<string, string> semanticTokenColors)
+    {
+        var colors = new Dictionary<string, string>(DefaultColors, StringComparer.OrdinalIgnoreCase);
+        foreach (var item in semanticTokenColors)
+        {
+            var key = NormalizeTokenKey(item.Key);
+            if (!string.IsNullOrWhiteSpace(key))
+                colors[key] = item.Value;
+        }
+
+        _brushes = CreateBrushes(colors);
+    }
 
     protected override void ColorizeLine(DocumentLine line)
     {
@@ -47,52 +75,66 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
         }
     }
 
-    private static IBrush? TokenTypeToBrush(string tokenType, string[] modifiers)
+    private IBrush? TokenTypeToBrush(string tokenType, string[] modifiers)
     {
         // OmniSharp uses "staticSymbol" as a token TYPE (not modifier) for static members.
         // Standard LSP modifier "static" is also checked as fallback.
         var isStatic = tokenType == "staticSymbol" || Array.IndexOf(modifiers, "static") >= 0;
 
-        return tokenType switch
+        var key = tokenType switch
         {
             // Types — OmniSharp names
-            "class" or "delegateName" or "record" => SemanticBrushes.Type,
-            "interface"                            => SemanticBrushes.Interface,
-            "enum"                                 => SemanticBrushes.Enum,
-            "struct" or "recordStruct"             => SemanticBrushes.Struct,
-            "typeParameter"                        => SemanticBrushes.TypeParameter,
+            "class" or "delegateName" or "record" => "type",
+            "interface"                            => "interface",
+            "enum"                                 => "enum",
+            "struct" or "recordStruct"             => "struct",
+            "typeParameter"                        => "typeParameter",
             "namespace" or "module"                => null,
 
             // Members — OmniSharp names
-            "method" or "extensionMethod"          => SemanticBrushes.Method,
+            "method" or "extensionMethod"          => "method",
             "property"                             => null,
-            "field" when isStatic                  => SemanticBrushes.ConstantField,
-            "field"                                => SemanticBrushes.Field,
-            "enumMember"                           => SemanticBrushes.EnumMember,
-            "event"                                => SemanticBrushes.Method,
+            "field" when isStatic                  => "staticSymbol",
+            "field"                                => "field",
+            "enumMember"                           => "enumMember",
+            "event"                                => "method",
 
             // Locals — OmniSharp uses "local" for local variables
-            "local" or "parameter"                 => SemanticBrushes.Variable,
+            "local" or "parameter"                 => "variable",
 
             // Static catch-all: when OmniSharp emits staticSymbol as the type
-            "staticSymbol"                         => SemanticBrushes.ConstantField,
+            "staticSymbol"                         => "staticSymbol",
 
-            _                                      => null,
+            _                                      => NormalizeTokenKey(tokenType),
         };
+
+        return key is not null && _brushes.TryGetValue(key, out var brush) ? brush : null;
     }
 
-    private static class SemanticBrushes
+    private static IReadOnlyDictionary<string, IBrush> CreateBrushes(IReadOnlyDictionary<string, string> colors)
     {
-        public static readonly ISolidColorBrush Type          = new SolidColorBrush(Color.Parse("#4EC9B0"));
-        public static readonly ISolidColorBrush Interface     = new SolidColorBrush(Color.Parse("#B8D7A3"));
-        public static readonly ISolidColorBrush Struct        = new SolidColorBrush(Color.Parse("#86C691"));
-        public static readonly ISolidColorBrush Enum          = new SolidColorBrush(Color.Parse("#B8D7A3"));
-        public static readonly ISolidColorBrush EnumMember    = new SolidColorBrush(Color.Parse("#51B6C4"));
-        public static readonly ISolidColorBrush TypeParameter = new SolidColorBrush(Color.Parse("#B8D7A3"));
-        public static readonly ISolidColorBrush Method        = new SolidColorBrush(Color.Parse("#DCDCAA"));
-        public static readonly ISolidColorBrush Property      = new SolidColorBrush(Color.Parse("#9CDCFE"));
-        public static readonly ISolidColorBrush Field         = new SolidColorBrush(Color.Parse("#D4D4D4"));
-        public static readonly ISolidColorBrush ConstantField = new SolidColorBrush(Color.Parse("#51B6C4"));
-        public static readonly ISolidColorBrush Variable      = new SolidColorBrush(Color.Parse("#9CDCFE"));
+        var brushes = new Dictionary<string, IBrush>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in colors)
+        {
+            try
+            {
+                brushes[item.Key] = new SolidColorBrush(Color.Parse(item.Value));
+            }
+            catch
+            {
+            }
+        }
+
+        return brushes;
     }
+
+    private static string? NormalizeTokenKey(string tokenType) =>
+        tokenType switch
+        {
+            "class" or "delegateName" or "record" => "type",
+            "recordStruct" => "struct",
+            "extensionMethod" => "method",
+            "local" or "parameter" => "variable",
+            _ => string.IsNullOrWhiteSpace(tokenType) ? null : tokenType,
+        };
 }

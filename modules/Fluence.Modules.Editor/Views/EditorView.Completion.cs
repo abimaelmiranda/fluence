@@ -27,7 +27,7 @@ public partial class EditorView
             caret.Offset,
             Interlocked.Increment(ref _completionRequestVersion));
 
-        ScheduleCompletionRequest(request, immediate ? DotCompletionDelay : CompletionDebounceDelay);
+        ScheduleCompletionRequest(request, immediate ? DotCompletionDelay : CompletionDebounce);
         return Task.CompletedTask;
     }
 
@@ -121,7 +121,7 @@ public partial class EditorView
                         this,
                         Timeout.InfiniteTimeSpan,
                         Timeout.InfiniteTimeSpan);
-                    _completionTimer.Change(CompletionDebounceDelay, Timeout.InfiniteTimeSpan);
+                    _completionTimer.Change(CompletionDebounce, Timeout.InfiniteTimeSpan);
                 }
             }
         }
