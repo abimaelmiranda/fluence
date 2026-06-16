@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +20,9 @@ internal sealed class LanguageServerService : ILanguageServerService, IAsyncDisp
     private LspClient? _client;
 
     public bool IsRunning => _client is not null;
+
+    public IReadOnlyList<string> SemanticTokenTypes { get; private set; } = [];
+    public IReadOnlyList<string> SemanticTokenModifiers { get; private set; } = [];
 
     public LanguageServerService(
         ILspProvisioningService provisioning,
@@ -49,8 +53,10 @@ internal sealed class LanguageServerService : ILanguageServerService, IAsyncDisp
         await _client.StartAsync(executable, arguments, null, env, cancellationToken).ConfigureAwait(false);
 
         // LSP handshake
-        await _client.SendRequestAsync("initialize", BuildInitializeParams(rootPath), cancellationToken)
+        var initResult = await _client.SendRequestAsync("initialize", BuildInitializeParams(rootPath), cancellationToken)
             .ConfigureAwait(false);
+
+        CaptureSemanticTokenLegend(initResult);
 
         await _client.SendNotificationAsync("initialized", new JsonObject(), cancellationToken)
             .ConfigureAwait(false);
@@ -117,6 +123,23 @@ internal sealed class LanguageServerService : ILanguageServerService, IAsyncDisp
         {
             ["textDocument"] = new JsonObject { ["uri"] = FilePathToUri(filePath) },
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private void CaptureSemanticTokenLegend(JsonNode? initResult)
+    {
+        try
+        {
+            var legend = initResult?["capabilities"]?["semanticTokensProvider"]?["legend"];
+            if (legend is not JsonObject legendObj)
+                return;
+
+            if (legendObj["tokenTypes"] is JsonArray types)
+                SemanticTokenTypes = types.Select(t => t?.GetValue<string>() ?? string.Empty).ToArray();
+
+            if (legendObj["tokenModifiers"] is JsonArray mods)
+                SemanticTokenModifiers = mods.Select(m => m?.GetValue<string>() ?? string.Empty).ToArray();
+        }
+        catch { }
     }
 
     private void OnClientDisconnected()
@@ -206,6 +229,25 @@ internal sealed class LanguageServerService : ILanguageServerService, IAsyncDisp
                         ["parameterInformation"] = new JsonObject { ["labelOffsetSupport"] = true },
                     },
                     ["contextSupport"] = true,
+                },
+                ["semanticTokens"] = new JsonObject
+                {
+                    ["requests"] = new JsonObject { ["full"] = true },
+                    ["tokenTypes"] = new JsonArray
+                    {
+                        "namespace", "type", "class", "enum", "interface", "struct",
+                        "typeParameter", "parameter", "variable", "property",
+                        "enumMember", "event", "function", "method", "keyword",
+                        "modifier", "comment", "string", "number", "operator",
+                    },
+                    ["tokenModifiers"] = new JsonArray
+                    {
+                        "declaration", "definition", "readonly", "static",
+                        "abstract", "async", "modification", "documentation", "defaultLibrary",
+                    },
+                    ["formats"] = new JsonArray { "relative" },
+                    ["overlappingTokenSupport"] = false,
+                    ["multilineTokenSupport"] = true,
                 },
             },
             ["workspace"] = new JsonObject

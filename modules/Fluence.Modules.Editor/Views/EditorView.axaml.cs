@@ -61,6 +61,7 @@ public partial class EditorView : UserControl
     private TextMate.Installation? _textMateInstallation;
     private readonly DebugLineRenderer _debugLineRenderer = new();
     private readonly DiagnosticRenderer _diagnosticRenderer = new();
+    private readonly SemanticColorizer _semanticColorizer = new(); //TODO when adding the theme customization, this should be reworked to support dynamic theme changes.
     private BreakpointMargin? _breakpointMargin;
     private bool _mouseInPopup;
     private ICompletionService? _completionService;
@@ -150,6 +151,7 @@ public partial class EditorView : UserControl
 
         eventBus.Subscribe<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
         eventBus.Subscribe<NavigationResolvedEvent>(OnNavigationResolved);
+        eventBus.Subscribe<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
     }
 
     private void OnDiagnosticsUpdated(DiagnosticsUpdatedEvent e)
@@ -162,6 +164,19 @@ public partial class EditorView : UserControl
         {
             _diagnosticRenderer.Update(Editor.Document, e.Diagnostics);
             Editor.TextArea.TextView.InvalidateLayer(KnownLayer.Background);
+        }, DispatcherPriority.Background);
+    }
+
+    private void OnSemanticTokensUpdated(SemanticTokensUpdatedEvent e)
+    {
+        var activePath = _viewModel?.ActiveDocumentPath;
+        if (!string.Equals(activePath, e.FilePath, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            _semanticColorizer.Update(e.Tokens);
+            Editor.TextArea.TextView.Redraw();
         }, DispatcherPriority.Background);
     }
 
@@ -933,12 +948,15 @@ public partial class EditorView : UserControl
         _registryOptions = new RegistryOptions(ThemeName.VisualStudioDark);
         _textMateInstallation = Editor.InstallTextMate(_registryOptions);
 
-        var theme = LoadVs2019DarkTheme();
+        var theme = LoadStandardTheme();
         if (theme is not null)
             _textMateInstallation.SetTheme(theme);
+
+        // Must be registered AFTER TextMate so semantic colors override grammar colors.
+        Editor.TextArea.TextView.LineTransformers.Add(_semanticColorizer);
     }
 
-    private static IRawTheme? LoadVs2019DarkTheme()
+    private static IRawTheme? LoadStandardTheme()
     {
         // Hardcoded default theme. Later we'll expose an API to set custom themes and load from disk. 
         var uri = new Uri("avares://Fluence.Modules.Editor/Assets/Themes/fluence-default-dark.json");
@@ -1887,6 +1905,86 @@ public partial class EditorView : UserControl
                 var y = visualLine.VisualTop + visualLine.Height - textView.ScrollOffset.Y - 1;
                 drawingContext.DrawLine(pen, new Point(x0, y), new Point(x1, y));
             }
+        }
+    }
+
+    private sealed class SemanticColorizer : DocumentColorizingTransformer
+    {
+        private SemanticToken[] _tokens = [];
+
+        public void Update(SemanticToken[] tokens) => _tokens = tokens;
+
+        protected override void ColorizeLine(DocumentLine line)
+        {
+            if (_tokens.Length == 0) return;
+
+            var lineIndex = line.LineNumber - 1; // LSP 0-based
+            var lineStart = line.Offset;
+            var lineLength = line.Length;
+
+            foreach (var token in _tokens)
+            {
+                if (token.Line != lineIndex) continue;
+                if (token.StartChar >= lineLength) continue;
+
+                var brush = TokenTypeToBrush(token.TokenType, token.Modifiers);
+                if (brush is null) continue;
+
+                var start = lineStart + token.StartChar;
+                var end = Math.Min(start + token.Length, lineStart + lineLength);
+                if (end <= start) continue;
+
+                ChangeLinePart(start, end, e => e.TextRunProperties.SetForegroundBrush(brush));
+            }
+        }
+
+        private static IBrush? TokenTypeToBrush(string tokenType, string[] modifiers)
+        {
+            // OmniSharp uses "staticSymbol" as a token TYPE (not modifier) for static members.
+            // Standard LSP modifier "static" is also checked as fallback.
+            var isStatic = tokenType == "staticSymbol" || Array.IndexOf(modifiers, "static") >= 0;
+
+            return tokenType switch
+            {
+                // Types — OmniSharp names
+                "class" or "delegateName" or "record" => SemanticBrushes.Type,
+                "interface" => SemanticBrushes.Interface,
+                "enum" => SemanticBrushes.Enum,
+                "struct" or "recordStruct" => SemanticBrushes.Struct,
+                "typeParameter" => SemanticBrushes.TypeParameter,
+                "namespace" or "module" => null,
+
+                // Members — OmniSharp names
+                "method" or "extensionMethod" => SemanticBrushes.Method,
+                "property" => SemanticBrushes.Property,
+                "field" when isStatic => SemanticBrushes.ConstantField,
+                "field" => SemanticBrushes.Field,
+                "enumMember" => SemanticBrushes.EnumMember,
+                "event" => SemanticBrushes.Method,
+
+                // Locals — OmniSharp uses "local" for local variables
+                "local" or "parameter" => SemanticBrushes.Variable,
+
+                // Static catch-all: when OmniSharp emits staticSymbol as the type
+                "staticSymbol" => SemanticBrushes.ConstantField,
+
+                _ => null,
+            };
+        }
+
+        private static class SemanticBrushes
+        {
+            public static readonly ISolidColorBrush Type         = new SolidColorBrush(Color.Parse("#4EC9B0"));
+            public static readonly ISolidColorBrush Interface    = new SolidColorBrush(Color.Parse("#B8D7A3"));
+            public static readonly ISolidColorBrush Struct       = new SolidColorBrush(Color.Parse("#86C691"));
+            public static readonly ISolidColorBrush Enum         = new SolidColorBrush(Color.Parse("#B8D7A3"));
+            public static readonly ISolidColorBrush EnumMember   = new SolidColorBrush(Color.Parse("#51B6C4"));
+            public static readonly ISolidColorBrush TypeParameter = new SolidColorBrush(Color.Parse("#B8D7A3"));
+            public static readonly ISolidColorBrush Method       = new SolidColorBrush(Color.Parse("#DCDCAA"));
+            public static readonly ISolidColorBrush Property     = new SolidColorBrush(Color.Parse("#9CDCFE"));
+            public static readonly ISolidColorBrush Field        = new SolidColorBrush(Color.Parse("#D4D4D4"));
+            public static readonly ISolidColorBrush ConstantField = new SolidColorBrush(Color.Parse("#51B6C4"));
+            public static readonly ISolidColorBrush Variable     = new SolidColorBrush(Color.Parse("#9CDCFE"));
         }
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Workspace;
@@ -13,15 +14,22 @@ namespace Fluence.Modules.LanguageServer;
 public sealed class Entrypoint : IModule, IDisposable
 {
     private static readonly TimeSpan DidChangeDebounceDelay = TimeSpan.FromMilliseconds(750);
+    private static readonly TimeSpan SemanticTokensDebounceDelay = TimeSpan.FromMilliseconds(800);
 
     private bool _provisioningPending;
     private string? _lastStartedRootPath;
     private ILanguageServerService? _languageServer;
+    private SemanticTokensService? _semanticTokensService;
+    private IShellEventBus? _eventBus;
     private readonly object _pendingDidChangeGate = new();
     private PendingDidChange? _pendingDidChange;
     private DateTime? _pendingDidChangeDueAtUtc;
     private Timer? _pendingDidChangeTimer;
     private Task? _pendingDidChangeSendTask;
+
+    private readonly object _pendingSemanticGate = new();
+    private string? _pendingSemanticFilePath;
+    private Timer? _pendingSemanticTimer;
 
     public string Name => "LanguageServer";
 
@@ -51,15 +59,25 @@ public sealed class Entrypoint : IModule, IDisposable
             new SignatureHelpService(
                 provider.GetRequiredService<ILanguageServerService>(),
                 provider.GetRequiredService<LspClientHolder>()));
+        services.AddSingleton<SemanticTokensService>(provider =>
+            new SemanticTokensService(
+                (LanguageServerService)provider.GetRequiredService<ILanguageServerService>(),
+                provider.GetRequiredService<LspClientHolder>()));
     }
 
-    public void Dispose() => _pendingDidChangeTimer?.Dispose();
+    public void Dispose()
+    {
+        _pendingDidChangeTimer?.Dispose();
+        _pendingSemanticTimer?.Dispose();
+    }
 
     public void Initialize(IModuleHost host)
     {
         var lsp = host.Services.GetRequiredService<ILanguageServerService>();
         var provisioning = host.Services.GetRequiredService<ILspProvisioningService>();
         _languageServer = lsp;
+        _semanticTokensService = host.Services.GetRequiredService<SemanticTokensService>();
+        _eventBus = host.Events;
 
         // Start language server when workspace has a root
         host.Workspace.Changed += (_, _) => TryStartOrRestart(host, lsp, provisioning, fromProvisioning: false);
@@ -69,18 +87,28 @@ public sealed class Entrypoint : IModule, IDisposable
         {
             if (!lsp.IsRunning) return;
             SafeSend(lsp.SendDidOpenAsync(e.FilePath, e.LanguageId, e.Content, CancellationToken.None));
+            QueueSemanticTokens(e.FilePath);
         });
 
         host.Events.Subscribe<DocumentChangedEvent>(e =>
         {
             if (!lsp.IsRunning) return;
             QueueDidChange(e.FilePath, e.Version, e.Content);
+            QueueSemanticTokens(e.FilePath);
         });
 
         host.Events.Subscribe<DocumentClosedEvent>(e =>
         {
             if (!lsp.IsRunning) return;
             SafeSend(FlushPendingDidChangeAndCloseAsync(lsp, e.FilePath));
+        });
+
+        // Use diagnostics as a signal that OmniSharp finished analyzing — safe moment to fetch semantic tokens.
+        // This also covers the startup case where the LSP wasn't running when DocumentOpenedEvent fired.
+        host.Events.Subscribe<DiagnosticsUpdatedEvent>(e =>
+        {
+            if (!lsp.IsRunning) return;
+            QueueSemanticTokens(e.FilePath);
         });
 
         host.Events.Subscribe<FlushDocumentSyncEvent>(e =>
@@ -323,6 +351,43 @@ public sealed class Entrypoint : IModule, IDisposable
         catch
         {
         }
+    }
+
+    private void QueueSemanticTokens(string filePath)
+    {
+        lock (_pendingSemanticGate)
+        {
+            _pendingSemanticFilePath = filePath;
+            _pendingSemanticTimer ??= new Timer(
+                static state => ((Entrypoint)state!).OnSemanticTokensTimerElapsed(),
+                this,
+                Timeout.InfiniteTimeSpan,
+                Timeout.InfiniteTimeSpan);
+            _pendingSemanticTimer.Change(SemanticTokensDebounceDelay, Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private void OnSemanticTokensTimerElapsed()
+    {
+        string? filePath;
+        lock (_pendingSemanticGate)
+        {
+            filePath = _pendingSemanticFilePath;
+            _pendingSemanticFilePath = null;
+        }
+
+        if (filePath is null || _semanticTokensService is null || _eventBus is null) return;
+        SafeSend(SendSemanticTokensAsync(_semanticTokensService, _eventBus, filePath));
+    }
+
+    private static async Task SendSemanticTokensAsync(SemanticTokensService service, IShellEventBus events, string filePath)
+    {
+        try
+        {
+            var tokens = await service.RequestAsync(filePath, CancellationToken.None).ConfigureAwait(false);
+            events.Publish(new SemanticTokensUpdatedEvent(filePath, tokens));
+        }
+        catch { }
     }
 
     private static string? ResolveRootPath(IWorkspaceContext workspace)
