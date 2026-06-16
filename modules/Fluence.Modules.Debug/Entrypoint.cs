@@ -1,8 +1,10 @@
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
+using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Services.Debugging;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
@@ -43,6 +45,22 @@ public sealed class Entrypoint : IModule
         host.Events.SubscribeAsync<StepIntoDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().StepIntoAsync());
         host.Events.SubscribeAsync<StepOutDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().StepOutAsync());
         host.Events.SubscribeAsync<ToggleBreakpointRequestedEvent>(e => host.Services.GetRequiredService<IDebugService>().ToggleBreakpointAsync(e.FilePath, e.Line));
+
+        var commands = host.Services.GetRequiredService<ICommandRegistry>();
+        var debug = host.Services.GetRequiredService<IDebugService>();
+
+        commands.Register(new IdeCommandDefinition(
+            CommandIds.DebugContinue, "Continue", KeybindingScope.Global, "F5",
+            _ => debug.ContinueAsync()));
+        commands.Register(new IdeCommandDefinition(
+            CommandIds.DebugStepOver, "Step Over", KeybindingScope.Global, "F10",
+            _ => debug.StepOverAsync()));
+        commands.Register(new IdeCommandDefinition(
+            CommandIds.DebugStepInto, "Step Into", KeybindingScope.Global, "F11",
+            _ => debug.StepIntoAsync()));
+        commands.Register(new IdeCommandDefinition(
+            CommandIds.DebugStepOut, "Step Out", KeybindingScope.Global, "Shift+F11",
+            _ => debug.StepOutAsync()));
         host.SetModuleState(Name, ModuleState.Active);
     }
 
