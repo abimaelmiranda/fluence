@@ -10,8 +10,11 @@ using Fluence.Core.Models.LanguageServer;
 
 namespace Fluence.Modules.LanguageServer.Services;
 
-internal sealed class HoverService(ILanguageServerService lsp, LspClientHolder holder) : IHoverService
+internal sealed partial class HoverService(ILanguageServerService lsp, LspClientHolder holder) : IHoverService
 {
+    [GeneratedRegex(@"^```[a-zA-Z]*\r?$", RegexOptions.Multiline)]
+    private static partial Regex CodeFenceRegex();
+
     public async Task<LspHover?> GetHoverAsync(string filePath, int line, int character, CancellationToken cancellationToken = default)
     {
         if (!lsp.IsRunning || holder.Client is null)
@@ -50,7 +53,7 @@ internal sealed class HoverService(ILanguageServerService lsp, LspClientHolder h
     {
         if (string.IsNullOrWhiteSpace(text)) return text;
         // Remove ```lang and ``` fence lines, keeping the content inside
-        text = Regex.Replace(text, @"^```[a-zA-Z]*\r?$", string.Empty, RegexOptions.Multiline);
+        text = CodeFenceRegex().Replace(text, string.Empty);
         return text.Trim();
     }
 
