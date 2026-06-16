@@ -120,6 +120,12 @@ public partial class EditorView
     {
         if (_viewModel is null) return;
 
+        if (TryHandleAcceleratedUndo(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (CompletionPopup.IsOpen)
         {
             if (e.Key == Key.Down)
@@ -187,6 +193,58 @@ public partial class EditorView
             _viewModel.PublishGoToTypeDefinition(line, character);
             e.Handled = true;
         }
+    }
+
+    private bool TryHandleAcceleratedUndo(KeyEventArgs e)
+    {
+        if (e.Key != Key.Z || !IsUndoModifier(e.KeyModifiers))
+        {
+            ResetUndoAcceleration();
+            return false;
+        }
+
+        var undoStack = Editor.Document?.UndoStack;
+        if (undoStack is null || !undoStack.CanUndo)
+            return true;
+
+        var undoCount = GetAcceleratedUndoCount();
+        for (var i = 0; i < undoCount && undoStack.CanUndo; i++)
+            undoStack.Undo();
+
+        return true;
+    }
+
+    private int GetAcceleratedUndoCount()
+    {
+        var now = DateTime.UtcNow;
+        if (now - _lastUndoShortcutAt > TimeSpan.FromMilliseconds(220))
+            _undoShortcutRepeatCount = 0;
+
+        _lastUndoShortcutAt = now;
+        _undoShortcutRepeatCount++;
+
+        return _undoShortcutRepeatCount switch
+        {
+            <= 4  => 1,
+            <= 8  => 2,
+            <= 14 => 4,
+            _     => 8,
+        };
+    }
+
+    private void ResetUndoAcceleration()
+    {
+        _undoShortcutRepeatCount = 0;
+        _lastUndoShortcutAt = DateTime.MinValue;
+    }
+
+    private static bool IsUndoModifier(KeyModifiers modifiers)
+    {
+        var primaryModifier = OperatingSystem.IsMacOS()
+            ? KeyModifiers.Meta
+            : KeyModifiers.Control;
+
+        return modifiers == primaryModifier;
     }
 
     private bool TryHandleMacEditingShortcut(KeyEventArgs e)
