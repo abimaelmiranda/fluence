@@ -1,10 +1,11 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Modules.LanguageServer.Protocol;
 
 namespace Fluence.Modules.LanguageServer.Services;
 
@@ -22,17 +23,14 @@ internal sealed class SemanticTokensService(LanguageServerService lss, LspClient
                 ["textDocument"] = new JsonObject { ["uri"] = new Uri(filePath).AbsoluteUri },
             }, cancellationToken).ConfigureAwait(false);
 
-            if (result?["data"] is not JsonArray dataArray)
+            var raw = result?.Deserialize(LspJsonContext.Default.LspSemanticTokensRaw);
+            if (raw?.Data is null or { Length: 0 })
             {
-                Console.Error.WriteLine($"[ST] no data — result={result?.ToJsonString()?.Substring(0, Math.Min(120, result.ToJsonString().Length))}");
+                Debug.WriteLine($"[ST] no data — result={result?.ToJsonString()?.Substring(0, Math.Min(120, result.ToJsonString().Length))}");
                 return [];
             }
 
-            var data = new List<int>(dataArray.Count);
-            foreach (var item in dataArray)
-                data.Add(item?.GetValue<int>() ?? 0);
-
-            return Decode(data, lss.SemanticTokenTypes, lss.SemanticTokenModifiers);
+            return Decode(raw.Data, lss.SemanticTokenTypes, lss.SemanticTokenModifiers);
         }
         catch
         {
@@ -40,12 +38,12 @@ internal sealed class SemanticTokensService(LanguageServerService lss, LspClient
         }
     }
 
-    private static SemanticToken[] Decode(List<int> data, IReadOnlyList<string> tokenTypes, IReadOnlyList<string> tokenModifiers)
+    private static SemanticToken[] Decode(int[] data, System.Collections.Generic.IReadOnlyList<string> tokenTypes, System.Collections.Generic.IReadOnlyList<string> tokenModifiers)
     {
-        if (data.Count % 5 != 0)
+        if (data.Length % 5 != 0)
             return [];
 
-        var count = data.Count / 5;
+        var count = data.Length / 5;
         var tokens = new SemanticToken[count];
         var currentLine = 0;
         var currentChar = 0;
@@ -77,12 +75,12 @@ internal sealed class SemanticTokensService(LanguageServerService lss, LspClient
         return tokens;
     }
 
-    private static string[] DecodeModifiers(int bitmask, IReadOnlyList<string> tokenModifiers)
+    private static string[] DecodeModifiers(int bitmask, System.Collections.Generic.IReadOnlyList<string> tokenModifiers)
     {
         if (bitmask == 0 || tokenModifiers.Count == 0)
             return [];
 
-        var result = new List<string>();
+        var result = new System.Collections.Generic.List<string>();
         for (var i = 0; i < tokenModifiers.Count; i++)
         {
             if ((bitmask & (1 << i)) != 0)

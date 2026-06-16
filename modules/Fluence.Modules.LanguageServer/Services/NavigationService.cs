@@ -1,9 +1,11 @@
 using System;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Modules.LanguageServer.Protocol;
 
 namespace Fluence.Modules.LanguageServer.Services;
 
@@ -52,21 +54,17 @@ internal sealed class NavigationService(ILanguageServerService lsp, LspClientHol
         if (result is null)
             return null;
 
-        // Result can be Location | Location[] | LocationLink[]
-        var location = result is JsonArray arr ? (arr.Count > 0 ? arr[0] : null) : result;
-        if (location is not JsonObject obj)
+        // Result can be Location | Location[] | LocationLink[] — take first element if array.
+        LspLocationRaw? raw;
+        if (result is JsonArray arr)
+            raw = arr.Count > 0 ? arr[0]?.Deserialize(LspJsonContext.Default.LspLocationRaw) : null;
+        else
+            raw = result.Deserialize(LspJsonContext.Default.LspLocationRaw);
+
+        if (raw?.Uri is null)
             return null;
 
-        var uri = obj["uri"]?.GetValue<string>();
-        var range = obj["range"]?.AsObject();
-        if (uri is null || range is null)
-            return null;
-
-        var start = range["start"]?.AsObject();
-        var line = start?["line"]?.GetValue<int>() ?? 0;
-        var character = start?["character"]?.GetValue<int>() ?? 0;
-
-        return new LspLocation(UriToFilePath(uri), line, character);
+        return new LspLocation(UriToFilePath(raw.Uri), raw.Range.Start.Line, raw.Range.Start.Character);
     }
 
     private static string FilePathToUri(string path) =>
