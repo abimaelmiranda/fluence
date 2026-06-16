@@ -10,6 +10,7 @@ public interface IGitService
     Task<GitStatus> GetStatusAsync(string repoRoot);
     Task StageAsync(string filePath, string repoRoot);
     Task UnstageAsync(string filePath, string repoRoot);
+    Task RevertFileAsync(GitFileChange change, string repoRoot);
     Task CommitAsync(string message, string repoRoot);
     Task<string> GetDiffAsync(string filePath, bool staged, string repoRoot);
     Task<string> GetCurrentBranchAsync(string repoRoot);

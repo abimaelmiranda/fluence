@@ -1,8 +1,10 @@
 namespace Fluence.Modules.SourceControl.Models;
 
-public sealed record GitFileChange(string FilePath, GitChangeStatus Status, bool IsStaged)
+public sealed record GitFileChange(string FilePath, GitChangeStatus Status, bool IsStaged, string? OriginalPath = null)
 {
     public string FileName => System.IO.Path.GetFileName(FilePath.TrimEnd('/', '\\'));
+
+    public bool DeletesUntrackedFile => Status is GitChangeStatus.Untracked || (Status is GitChangeStatus.Added && IsStaged);
 
     public string StatusLabel => Status switch
     {
