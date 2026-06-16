@@ -19,6 +19,10 @@ public sealed class AvaloniaWorkspaceDialogService : IWorkspaceDialogService
 
     public async Task<string?> PickFileAsync(CancellationToken cancellationToken = default)
     {
+        // Yield to let the native menu fully dismiss before opening the picker.
+        // Without this, macOS rejects the NSOpenPanel with a com.apple.view-bridge XPC error.
+        await Task.Yield();
+
         var window = GetMainWindow();
         if (window is null)
         {
@@ -38,6 +42,8 @@ public sealed class AvaloniaWorkspaceDialogService : IWorkspaceDialogService
 
     public async Task<string?> PickFolderAsync(CancellationToken cancellationToken = default)
     {
+        await Task.Yield();
+
         var window = GetMainWindow();
         if (window is null)
         {
@@ -57,6 +63,8 @@ public sealed class AvaloniaWorkspaceDialogService : IWorkspaceDialogService
 
     public async Task<string?> PickSolutionAsync(CancellationToken cancellationToken = default)
     {
+        await Task.Yield();
+
         var window = GetMainWindow();
         if (window is null)
         {

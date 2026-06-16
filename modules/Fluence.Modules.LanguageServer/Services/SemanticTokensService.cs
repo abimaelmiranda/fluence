@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +23,10 @@ internal sealed class SemanticTokensService(LanguageServerService lss, LspClient
             }, cancellationToken).ConfigureAwait(false);
 
             if (result?["data"] is not JsonArray dataArray)
+            {
+                Console.Error.WriteLine($"[ST] no data — result={result?.ToJsonString()?.Substring(0, Math.Min(120, result.ToJsonString().Length))}");
                 return [];
+            }
 
             var data = new List<int>(dataArray.Count);
             foreach (var item in dataArray)

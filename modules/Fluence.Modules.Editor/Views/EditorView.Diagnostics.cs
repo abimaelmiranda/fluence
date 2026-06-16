@@ -1,0 +1,56 @@
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using AvaloniaEdit.Rendering;
+using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Models.LanguageServer;
+
+namespace Fluence.Modules.Editor.Views;
+
+public partial class EditorView
+{
+    private void OnDiagnosticsUpdated(DiagnosticsUpdatedEvent e)
+    {
+        var activePath = _viewModel?.ActiveDocumentPath;
+        if (!string.Equals(activePath, e.FilePath, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            _diagnosticRenderer.Update(Editor.Document, e.Diagnostics);
+            Editor.TextArea.TextView.InvalidateLayer(KnownLayer.Background);
+        }, DispatcherPriority.Background);
+    }
+
+    private void OnContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        var hasLsp = _completionService is not null && _viewModel?.ActiveDocumentPath is not null;
+        MenuItemIntelliSense.IsEnabled = hasLsp;
+        MenuItemGoToDefinition.IsEnabled = hasLsp;
+        MenuItemGoToImplementation.IsEnabled = hasLsp;
+        MenuItemGoToTypeDefinition.IsEnabled = hasLsp;
+    }
+
+    private void OnMenuIntelliSense(object? sender, RoutedEventArgs e) =>
+        _ = TriggerCompletionAsync(immediate: true);
+
+    private void OnMenuGoToDefinition(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null) return;
+        var caret = Editor.TextArea.Caret;
+        _viewModel.PublishGoToDefinition(caret.Line - 1, caret.Column - 1);
+    }
+
+    private void OnMenuGoToImplementation(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null) return;
+        var caret = Editor.TextArea.Caret;
+        _viewModel.PublishGoToImplementation(caret.Line - 1, caret.Column - 1);
+    }
+
+    private void OnMenuGoToTypeDefinition(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null) return;
+        var caret = Editor.TextArea.Caret;
+        _viewModel.PublishGoToTypeDefinition(caret.Line - 1, caret.Column - 1);
+    }
+}
