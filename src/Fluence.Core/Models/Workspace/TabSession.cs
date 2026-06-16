@@ -35,7 +35,7 @@ public sealed class TabSession
             return new TabSession(Documents, existingDocument);
         }
 
-        var documents = Documents.Concat([document]).ToArray();
+        var documents = new[] { document }.Concat(Documents).ToArray();
         return new TabSession(documents, document);
     }
 
