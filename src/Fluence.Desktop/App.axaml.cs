@@ -11,6 +11,7 @@ using Fluence.Desktop.Services;
 using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
+using Fluence.Core.Abstractions.Keybindings;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Desktop;
@@ -47,7 +48,11 @@ public partial class App : Avalonia.Application
             };
             _serviceProvider.GetRequiredService<AvaloniaUserNotificationService>().Attach(mainWindow);
 
-            NativeMenu.SetMenu(mainWindow, NativeMenus.CreateMainMenu(mainWindowViewModel));
+            NativeMenu.SetMenu(
+                mainWindow,
+                NativeMenus.CreateMainMenu(
+                    mainWindowViewModel,
+                    _serviceProvider.GetRequiredService<IKeybindingService>()));
 
             mainWindow.Closing += async (_, e) =>
             {

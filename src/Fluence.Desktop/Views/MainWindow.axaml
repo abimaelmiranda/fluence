@@ -143,7 +143,7 @@
             </Border>
 
             <Border Grid.Column="1"
-                    Width="300"
+                    Width="{Binding SidebarWidth}"
                     Background="{StaticResource FluenceBrushSurface}"
                     BorderBrush="{StaticResource FluenceBrushBorder}"
                     BorderThickness="1,0,0,0"
@@ -172,7 +172,7 @@
             <!-- ActivityBar — fixed 48px strip on the far right -->
             <Border Grid.Column="2"
                     Width="48"
-                    Background="{StaticResource FluenceBrushShell}"
+                    Background="{StaticResource FluenceBrushActivityBarBackground}"
                     BorderBrush="{StaticResource FluenceBrushBorder}"
                     BorderThickness="1,0,0,0"
                     IsVisible="{Binding IsWorkspaceVisible}">
@@ -219,7 +219,7 @@
         </Grid>
 
         <Border Grid.Row="1"
-                Background="{StaticResource FluenceBrushSurfaceElevated}"
+                Background="{StaticResource FluenceBrushBottomBarBackground}"
                 BorderBrush="{StaticResource FluenceBrushBorder}"
                 BorderThickness="0,1,0,0">
             <StackPanel>
@@ -278,6 +278,7 @@
                            HorizontalAlignment="Center"/>
                 <ProgressBar IsIndeterminate="True"
                              Height="3"
+                             Foreground="{StaticResource FluenceBrushAccent}"
                              HorizontalAlignment="Stretch"/>
             </StackPanel>
         </Border>
