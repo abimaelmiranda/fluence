@@ -118,7 +118,7 @@ public partial class EditorView
             // Wire LSP services if available
             if (_completionService is null && _viewModel.CompletionService is not null)
                 SetServices(_viewModel.CompletionService, _viewModel.EventBus,
-                    _viewModel.HoverService, _viewModel.SignatureHelpService);
+                    _viewModel.HoverService, _viewModel.SignatureHelpService, _viewModel.CodeActionService);
         }
         else
         {

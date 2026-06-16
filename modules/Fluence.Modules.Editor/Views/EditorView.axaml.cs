@@ -9,6 +9,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using AvaloniaEdit.TextMate;
+using System.Collections.Generic;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Debugging;
@@ -86,6 +87,7 @@ public partial class EditorView : UserControl
     private ICompletionService?      _completionService;
     private IHoverService?           _hoverService;
     private ISignatureHelpService?   _signatureHelpService;
+    private ICodeActionService?      _codeActionService;
     private IShellEventBus?          _eventBus;
 
     // ── Completion state ────────────────────────────────────────────────────
@@ -157,10 +159,12 @@ public partial class EditorView : UserControl
         Editor.TextArea.TextView.BackgroundRenderers.Add(_diagnosticRenderer);
         Editor.TextArea.TextView.PointerHover        += OnPointerHover;
         Editor.TextArea.TextView.PointerHoverStopped += OnPointerHoverStopped;
-        HoverPopupBorder.PointerEntered += (_, _) => { _mouseInPopup = true;  CancelPopupClose(); };
-        HoverPopupBorder.PointerExited  += (_, _) => { _mouseInPopup = false; ClosePopupDelayed(); };
-        LspHoverBorder.PointerEntered   += (_, _) => { _mouseInPopup = true;  CancelPopupClose(); };
-        LspHoverBorder.PointerExited    += (_, _) => { _mouseInPopup = false; ClosePopupDelayed(); };
+        HoverPopupBorder.PointerEntered    += (_, _) => { _mouseInPopup = true;  CancelPopupClose(); };
+        HoverPopupBorder.PointerExited     += (_, _) => { _mouseInPopup = false; ClosePopupDelayed(); };
+        LspHoverBorder.PointerEntered      += (_, _) => { _mouseInPopup = true;  CancelPopupClose(); };
+        LspHoverBorder.PointerExited       += (_, _) => { _mouseInPopup = false; ClosePopupDelayed(); };
+        CodeActionPopupBorder.PointerEntered += (_, _) => { _mouseInPopup = true;  CancelPopupClose(); };
+        CodeActionPopupBorder.PointerExited  += (_, _) => { _mouseInPopup = false; ClosePopupDelayed(); };
         Editor.TextArea.TextEntering    += OnTextEntering;
         Editor.TextArea.TextEntered     += OnTextEntered;
         Editor.AddHandler(KeyDownEvent, OnEditorPreviewKeyDown, RoutingStrategies.Tunnel, true);
@@ -181,16 +185,59 @@ public partial class EditorView : UserControl
         ICompletionService completionService,
         IShellEventBus eventBus,
         IHoverService? hoverService = null,
-        ISignatureHelpService? signatureHelpService = null)
+        ISignatureHelpService? signatureHelpService = null,
+        ICodeActionService? codeActionService = null)
     {
-        _completionService      = completionService;
-        _eventBus               = eventBus;
-        _hoverService           = hoverService;
-        _signatureHelpService   = signatureHelpService;
+        _completionService    = completionService;
+        _eventBus             = eventBus;
+        _hoverService         = hoverService;
+        _signatureHelpService = signatureHelpService;
+        _codeActionService    = codeActionService;
 
         eventBus.SubscribeSync<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
         eventBus.SubscribeSync<NavigationResolvedEvent>(OnNavigationResolved);
         eventBus.SubscribeSync<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
         eventBus.SubscribeSync<LspServerReadyEvent>(OnLspServerReady);
+        eventBus.SubscribeSync<WorkspaceEditRequestedEvent>(OnWorkspaceEditRequested);
+    }
+
+    private void OnWorkspaceEditRequested(WorkspaceEditRequestedEvent e)
+    {
+        if (!string.Equals(_viewModel?.ActiveDocumentPath, e.FilePath, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (Dispatcher.UIThread.CheckAccess())
+            ApplyWorkspaceEdits(e.Edits);
+        else
+            Dispatcher.UIThread.Post(() => ApplyWorkspaceEdits(e.Edits));
+    }
+
+    private void ApplyWorkspaceEdits(IReadOnlyList<LspTextEdit> edits)
+    {
+        var doc = Editor.Document;
+        if (doc is null) return;
+
+        var sorted = System.Linq.Enumerable.OrderByDescending(edits, e => (e.StartLine, e.StartCharacter)).ToArray();
+
+        doc.BeginUpdate();
+        try
+        {
+            foreach (var edit in sorted)
+            {
+                var startLineNum = Math.Clamp(edit.StartLine + 1, 1, doc.LineCount);
+                var endLineNum   = Math.Clamp(edit.EndLine   + 1, 1, doc.LineCount);
+                var startLine    = doc.GetLineByNumber(startLineNum);
+                var endLine      = doc.GetLineByNumber(endLineNum);
+                var startOffset  = Math.Min(startLine.Offset + edit.StartCharacter, startLine.EndOffset);
+                var endOffset    = Math.Min(endLine.Offset   + edit.EndCharacter,   endLine.EndOffset);
+                startOffset = Math.Max(0, Math.Min(startOffset, doc.TextLength));
+                endOffset   = Math.Max(startOffset, Math.Min(endOffset, doc.TextLength));
+                doc.Replace(startOffset, endOffset - startOffset, edit.NewText);
+            }
+        }
+        finally
+        {
+            doc.EndUpdate();
+        }
     }
 }

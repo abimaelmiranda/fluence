@@ -11,6 +11,7 @@ using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
+using Fluence.Core.Models.LanguageServer;
 using Fluence.Core.Services.Debugging;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
@@ -37,6 +38,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private readonly ICompletionService? _completionService;
     private readonly IHoverService? _hoverService;
     private readonly ISignatureHelpService? _signatureHelpService;
+    private readonly ICodeActionService? _codeActionService;
     private readonly DispatcherTimer _autoSaveTimer;
     private bool _isRefreshingFromWorkspace;
     private string? _pendingAutoSavePath;
@@ -54,7 +56,8 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         IShellEventBus events,
         ICompletionService? completionService = null,
         IHoverService? hoverService = null,
-        ISignatureHelpService? signatureHelpService = null)
+        ISignatureHelpService? signatureHelpService = null,
+        ICodeActionService? codeActionService = null)
     {
         _workspace = workspace;
         _saveHandler = saveHandler;
@@ -64,6 +67,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _completionService = completionService;
         _hoverService = hoverService;
         _signatureHelpService = signatureHelpService;
+        _codeActionService = codeActionService;
         _autoSaveTimer = new DispatcherTimer { Interval = AutoSaveDelay };
         _autoSaveTimer.Tick += OnAutoSaveTimerTick;
         RefreshFromWorkspace();
@@ -74,6 +78,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public ICompletionService? CompletionService => _completionService;
     public IHoverService? HoverService => _hoverService;
     public ISignatureHelpService? SignatureHelpService => _signatureHelpService;
+    public ICodeActionService? CodeActionService => _codeActionService;
     public IShellEventBus EventBus => _events;
 
     public bool HasActiveDocument => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument;
@@ -105,6 +110,57 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     public Task<DebugVariable?> EvaluateHoverAsync(string expression, CancellationToken cancellationToken) =>
         _debugService.EvaluateAsync(expression, cancellationToken);
+
+    public async Task ApplyCodeActionAsync(LspCodeAction action, CancellationToken cancellationToken = default)
+    {
+        System.Diagnostics.Debug.WriteLine($"[EditorVM] ApplyCodeAction: '{action.Title}' | service={_codeActionService is not null} | cmd={action.CommandIdentifier} | edit={action.Edit is not null} | hasRaw={action.RawJson is not null}");
+        if (_codeActionService is null) return;
+
+        // Lazy code action — resolve first to get edit or command
+        var resolved = action;
+        if (action.Edit is null && action.CommandIdentifier is null && action.RawJson is not null)
+        {
+            resolved = await _codeActionService.ResolveAsync(action, cancellationToken) ?? action;
+            System.Diagnostics.Debug.WriteLine($"[EditorVM] Resolved: cmd={resolved.CommandIdentifier} | edit={resolved.Edit is not null}");
+        }
+
+        if (resolved.Edit is not null)
+        {
+            var filePath = ActiveDocumentPath;
+            if (filePath is null) return;
+
+            var uriKey = new Uri(filePath).AbsoluteUri;
+            if (!resolved.Edit.Changes.TryGetValue(uriKey, out var edits)) return;
+
+            var sorted = edits.OrderByDescending(e => (e.StartLine, e.StartCharacter)).ToArray();
+            var text = ActiveText;
+            foreach (var edit in sorted)
+            {
+                var start = GetTextOffset(text, edit.StartLine, edit.StartCharacter);
+                var end   = GetTextOffset(text, edit.EndLine, edit.EndCharacter);
+                if (start < 0 || end < start || end > text.Length) continue;
+                text = string.Concat(text.AsSpan(0, start), edit.NewText, text.AsSpan(end));
+            }
+            ActiveText = text;
+        }
+        else if (resolved.CommandIdentifier is not null)
+        {
+            await _codeActionService.ExecuteCommandAsync(
+                resolved.CommandIdentifier, resolved.CommandArgumentsJson, cancellationToken);
+        }
+    }
+
+    private static int GetTextOffset(string text, int line, int character)
+    {
+        var currentLine = 0;
+        var i = 0;
+        while (i < text.Length && currentLine < line)
+        {
+            if (text[i] == '\n') currentLine++;
+            i++;
+        }
+        return Math.Min(i + character, text.Length);
+    }
 
     public Task<IReadOnlyList<DebugVariable>> GetChildVariablesAsync(int variablesReference, CancellationToken cancellationToken) =>
         _debugService.GetChildVariablesAsync(variablesReference, cancellationToken);
