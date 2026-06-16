@@ -93,5 +93,8 @@ public sealed record LspServerReadyEvent : IShellEvent;
 // LSP — sync control
 public sealed record FlushDocumentSyncEvent(string FilePath) : IShellEvent;
 
+// LSP — workspace edits (server → editor, e.g. from workspace/applyEdit)
+public sealed record WorkspaceEditRequestedEvent(string FilePath, System.Collections.Generic.IReadOnlyList<Core.Models.LanguageServer.LspTextEdit> Edits) : IShellEvent;
+
 // Git
 public sealed record GitCheckoutCompletedEvent(string BranchName) : IShellEvent;
