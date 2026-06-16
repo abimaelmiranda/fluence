@@ -14,8 +14,8 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://Fluence.Desktop/Themes/Colors.axaml"/>
-                <ResourceInclude Source="avares://Fluence.Desktop/Themes/Typography.axaml"/>
+                <ResourceInclude Source="avares://Fluence/Themes/Colors.axaml"/>
+                <ResourceInclude Source="avares://Fluence/Themes/Typography.axaml"/>
             </ResourceDictionary.MergedDictionaries>
             <converters:ActivityBarBgConverter x:Key="ActivityBarBgConverter"/>
             <converters:ActivityBarFgConverter x:Key="ActivityBarFgConverter"/>
