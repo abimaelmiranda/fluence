@@ -261,7 +261,9 @@
                     <ItemsControl ItemsSource="{Binding StagedChanges}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:GitFileChangeViewModel">
-                                <Border Classes="fileRow" Padding="4,2,4,2">
+                                <Border Classes="fileRow" Padding="4,2,4,2"
+                                        Tapped="OnChangeRowTapped"
+                                        Cursor="Hand">
                                     <Grid ColumnDefinitions="18,*,Auto">
                                         <TextBlock Grid.Column="0"
                                                    Text="{Binding StatusLabel}"
@@ -281,6 +283,9 @@
                                             <Button Classes="ghost" Content="~"
                                                     Command="{Binding OpenDiffCommand}"
                                                     ToolTip.Tip="View diff"/>
+                                            <Button Classes="ghost" Content="↺"
+                                                    Command="{Binding RevertCommand}"
+                                                    ToolTip.Tip="Revert changes"/>
                                             <Button Classes="ghost" Content="−"
                                                     Command="{Binding UnstageCommand}"
                                                     ToolTip.Tip="Unstage"/>
@@ -311,7 +316,9 @@
                     <ItemsControl ItemsSource="{Binding UnstagedChanges}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:GitFileChangeViewModel">
-                                <Border Classes="fileRow" Padding="4,2,4,2">
+                                <Border Classes="fileRow" Padding="4,2,4,2"
+                                        Tapped="OnChangeRowTapped"
+                                        Cursor="Hand">
                                     <Grid ColumnDefinitions="18,*,Auto">
                                         <TextBlock Grid.Column="0"
                                                    Text="{Binding StatusLabel}"
@@ -331,6 +338,9 @@
                                             <Button Classes="ghost" Content="~"
                                                     Command="{Binding OpenDiffCommand}"
                                                     ToolTip.Tip="View diff"/>
+                                            <Button Classes="ghost" Content="↺"
+                                                    Command="{Binding RevertCommand}"
+                                                    ToolTip.Tip="Revert changes"/>
                                             <Button Classes="ghost" Content="+"
                                                     Command="{Binding StageCommand}"
                                                     ToolTip.Tip="Stage"/>

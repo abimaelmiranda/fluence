@@ -6,6 +6,7 @@ using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Modules;
 using Fluence.Modules.SourceControl.Abstractions;
 using Fluence.Modules.SourceControl.Infrastructure;
+using Fluence.Modules.SourceControl.Services;
 using Fluence.Modules.SourceControl.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,6 +21,7 @@ public sealed class Entrypoint : IModule
     public void Register(IServiceCollection services)
     {
         services.AddSingleton<IGitService, GitCliService>();
+        services.AddSingleton<ISourceControlDialogService, AvaloniaSourceControlDialogService>();
         services.AddSingleton<SourceControlViewModel>();
     }
 

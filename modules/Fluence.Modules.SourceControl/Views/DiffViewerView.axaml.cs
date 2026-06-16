@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Avalonia.Controls;
 using AvaloniaEdit.TextMate;
 using Fluence.Modules.SourceControl.ViewModels;
@@ -20,8 +21,14 @@ public partial class DiffViewerView : UserControl
     {
         var registryOptions = new RegistryOptions(ThemeName.DarkPlus);
         _textMateInstallation = Editor.InstallTextMate(registryOptions);
-        try { _textMateInstallation.SetGrammar("source.diff"); }
-        catch { /* grammar not available in bundle — plain text fallback */ }
+        try
+        {
+            _textMateInstallation.SetGrammar("source.diff");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.WriteLine($"Diff grammar not available; using plain text fallback: {ex}");
+        }
     }
 
     private void OnDataContextChanged(object? sender, System.EventArgs e)
