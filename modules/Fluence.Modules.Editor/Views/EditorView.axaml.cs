@@ -255,7 +255,6 @@ public partial class EditorView : UserControl
         eventBus.SubscribeSync<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
         eventBus.SubscribeSync<NavigationResolvedEvent>(OnNavigationResolved);
         eventBus.SubscribeSync<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
-        eventBus.SubscribeSync<LspServerReadyEvent>(OnLspServerReady);
         eventBus.SubscribeSync<WorkspaceEditRequestedEvent>(OnWorkspaceEditRequested);
     }
 

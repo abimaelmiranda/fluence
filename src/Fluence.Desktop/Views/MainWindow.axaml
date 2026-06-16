@@ -249,6 +249,23 @@
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource FluenceBrushTextPrimary}"
                                    VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding IsSemanticTokensLoading}">
+                            <TextBlock Text="{Binding SemanticTokensStatusText}"
+                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                       Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                       VerticalAlignment="Center"/>
+                            <ProgressBar IsIndeterminate="True"
+                                         Width="120"
+                                         Height="3"
+                                         Foreground="{StaticResource FluenceBrushAccent}"
+                                         VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Grid>
                 </Border>
                 <Border Height="{Binding TerminalHeight}"

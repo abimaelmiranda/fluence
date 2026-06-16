@@ -42,12 +42,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly ICommandRegistry _commands;
     private readonly IKeybindingService _keybindings;
     private readonly ISettingsTool _settingsTool;
+    private readonly HashSet<string> _semanticTokensPendingFiles = new(StringComparer.OrdinalIgnoreCase);
 
     [ObservableProperty]
     private WorkspaceMode _workspaceMode;
 
     [ObservableProperty]
     private bool _isSavingWorkspace;
+
+    [ObservableProperty]
+    private bool _isSemanticTokensLoading;
+
+    [ObservableProperty]
+    private string _semanticTokensStatusText = string.Empty;
 
     [ObservableProperty]
     private bool _isTerminalExpanded;
@@ -93,6 +100,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _eventBus.SubscribeSync<ExpandPanelEvent>(OnExpandPanelRequested);
         _eventBus.SubscribeSync<DebuggerProvisioningRequiredEvent>(_ => SetProvisioning(true));
         _eventBus.SubscribeSync<DebuggerProvisioningFinishedEvent>(_ => SetProvisioning(false));
+        _eventBus.SubscribeSync<SemanticTokensRefreshStartedEvent>(OnSemanticTokensRefreshStarted);
+        _eventBus.SubscribeSync<SemanticTokensRefreshFinishedEvent>(OnSemanticTokensRefreshFinished);
+        _eventBus.SubscribeSync<SemanticTokensRefreshFailedEvent>(OnSemanticTokensRefreshFailed);
     }
 
     public ActivityBarViewModel ActivityBar { get; }
@@ -213,6 +223,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(EditorPlaceholder));
         OnPropertyChanged(nameof(SidebarPlaceholder));
         OnPropertyChanged(nameof(SidebarDetail));
+        RefreshSemanticTokensStatus();
         ActivityBar.RePublishActiveTab();
     }
 
@@ -238,6 +249,32 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SidebarTitle));
         OnPropertyChanged(nameof(BottomBarTitle));
         OnPropertyChanged(nameof(IsSidebarVisible));
+    }
+
+    private void OnSemanticTokensRefreshStarted(SemanticTokensRefreshStartedEvent e)
+    {
+        _semanticTokensPendingFiles.Add(e.FilePath);
+        RefreshSemanticTokensStatus();
+    }
+
+    private void OnSemanticTokensRefreshFinished(SemanticTokensRefreshFinishedEvent e)
+    {
+        _semanticTokensPendingFiles.Remove(e.FilePath);
+        RefreshSemanticTokensStatus();
+    }
+
+    private void OnSemanticTokensRefreshFailed(SemanticTokensRefreshFailedEvent e)
+    {
+        _semanticTokensPendingFiles.Remove(e.FilePath);
+        RefreshSemanticTokensStatus();
+    }
+
+    private void RefreshSemanticTokensStatus()
+    {
+        var activePath = ActiveDocumentPath;
+        IsSemanticTokensLoading = activePath is not null &&
+                                  _semanticTokensPendingFiles.Contains(activePath);
+        SemanticTokensStatusText = IsSemanticTokensLoading ? "Analyzing C#..." : string.Empty;
     }
 
     [RelayCommand]

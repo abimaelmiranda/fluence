@@ -14,15 +14,6 @@ namespace Fluence.Modules.Editor.Views;
 
 public partial class EditorView
 {
-    private void OnLspServerReady(LspServerReadyEvent _)
-    {
-        var path = _viewModel?.ActiveDocumentPath;
-        if (string.IsNullOrEmpty(path)) return;
-
-        var text = Editor.Document.Text;
-        _eventBus?.Publish(new DocumentOpenedEvent(path, text, "csharp"));
-    }
-
     private void OnSemanticTokensUpdated(SemanticTokensUpdatedEvent e)
     {
         var activePath = _viewModel?.ActiveDocumentPath;
