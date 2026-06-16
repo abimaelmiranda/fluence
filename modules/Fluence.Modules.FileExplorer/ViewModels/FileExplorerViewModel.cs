@@ -44,6 +44,7 @@ public sealed class FileExplorerViewModel : ViewModelBase
         _fileDialogs = fileDialogs;
         _fileService = fileService;
         _workspace.Changed += OnWorkspaceChanged;
+        _eventBus.Subscribe<GitCheckoutCompletedEvent>(OnGitCheckoutCompleted);
         RefreshRoot();
     }
 
@@ -60,6 +61,9 @@ public sealed class FileExplorerViewModel : ViewModelBase
         else
             UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
     }
+
+    private void OnGitCheckoutCompleted(GitCheckoutCompletedEvent _)
+        => Avalonia.Threading.Dispatcher.UIThread.Post(RefreshRoot);
 
     private void UpdateActiveItem(string? activePath) => UpdateActiveItemRecursive(RootItems, activePath);
 

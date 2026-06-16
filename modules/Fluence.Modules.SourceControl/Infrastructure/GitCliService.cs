@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Fluence.Modules.SourceControl.Abstractions;
 using Fluence.Modules.SourceControl.Models;
@@ -91,6 +92,115 @@ public sealed class GitCliService : IGitService
     public async Task<string> PushAsync(string repoRoot)
         => await RunGitWithStderrAsync("push", repoRoot);
 
+    public async Task<IReadOnlyList<GitBranch>> GetBranchesAsync(string repoRoot)
+    {
+        try
+        {
+            var output = await RunGitAsync("branch -a", repoRoot);
+            var branches = new List<GitBranch>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (line.Length < 2) continue;
+                var isCurrent = line[0] == '*';
+                var name = line[2..].Trim();
+
+                // skip detached HEAD and remote HEAD pointers
+                if (name.StartsWith("(HEAD", StringComparison.Ordinal)) continue;
+                if (name.Contains("HEAD ->", StringComparison.Ordinal)) continue;
+
+                var isRemote = name.StartsWith("remotes/", StringComparison.Ordinal);
+                if (isRemote)
+                    name = name["remotes/".Length..];
+
+                if (!seen.Add(name)) continue;
+
+                branches.Add(new GitBranch(name, isCurrent, !isRemote, isRemote));
+            }
+
+            // current branch first, then local alpha, then remote alpha
+            return branches
+                .OrderBy(b => b.IsCurrent ? 0 : b.IsLocal ? 1 : 2)
+                .ThenBy(b => b.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch
+        {
+            return Array.Empty<GitBranch>();
+        }
+    }
+
+    public async Task<CheckoutResult> CheckoutBranchAsync(string branchName, string repoRoot)
+    {
+        var (output, exitCode) = await RunGitWithExitCodeAsync($"checkout \"{EscapeArg(branchName)}\"", repoRoot);
+        if (exitCode == 0) return CheckoutResult.Success;
+        if (output.Contains("would be overwritten by checkout", StringComparison.OrdinalIgnoreCase))
+            return CheckoutResult.HasLocalChanges;
+        return CheckoutResult.Error;
+    }
+
+    public async Task<CheckoutResult> ForceCheckoutBranchAsync(string branchName, string repoRoot)
+    {
+        var (_, exitCode) = await RunGitWithExitCodeAsync($"checkout -f \"{EscapeArg(branchName)}\"", repoRoot);
+        return exitCode == 0 ? CheckoutResult.Success : CheckoutResult.Error;
+    }
+
+    public async Task StashAsync(string repoRoot)
+        => await RunGitAsync("stash", repoRoot);
+
+    public async Task DeleteBranchAsync(string branchName, bool force, string repoRoot)
+    {
+        var flag = force ? "-D" : "-d";
+        await RunGitAsync($"branch {flag} \"{EscapeArg(branchName)}\"", repoRoot);
+    }
+
+    public async Task FetchAsync(string repoRoot)
+        => await RunGitWithStderrAsync("fetch --all", repoRoot);
+
+    public async Task<IReadOnlyList<GitStash>> GetStashListAsync(string repoRoot)
+    {
+        try
+        {
+            var output = await RunGitAsync("stash list --format=%gd|%s|%cr", repoRoot);
+            var stashes = new List<GitStash>();
+            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = line.Split('|', 3);
+                if (parts.Length == 3)
+                    stashes.Add(new GitStash(parts[0].Trim(), parts[1].Trim(), parts[2].Trim()));
+            }
+            return stashes;
+        }
+        catch
+        {
+            return Array.Empty<GitStash>();
+        }
+    }
+
+    public async Task PopStashAsync(string stashRef, string repoRoot)
+        => await RunGitWithStderrAsync($"stash pop \"{EscapeArg(stashRef)}\"", repoRoot);
+
+    public async Task DropStashAsync(string stashRef, string repoRoot)
+        => await RunGitAsync($"stash drop \"{EscapeArg(stashRef)}\"", repoRoot);
+
+    public async Task<(int Ahead, int Behind)> GetAheadBehindAsync(string repoRoot)
+    {
+        try
+        {
+            var output = await RunGitAsync("rev-list --count --left-right @{u}...HEAD", repoRoot);
+            var parts = output.Split('\t');
+            if (parts.Length == 2
+                && int.TryParse(parts[0].Trim(), out var behind)
+                && int.TryParse(parts[1].Trim(), out var ahead))
+            {
+                return (ahead, behind);
+            }
+        }
+        catch { /* no upstream configured */ }
+        return (0, 0);
+    }
+
     private static async Task<string> RunGitAsync(string args, string workingDirectory)
     {
         using var process = CreateProcess(args, workingDirectory);
@@ -102,13 +212,19 @@ public sealed class GitCliService : IGitService
 
     private static async Task<string> RunGitWithStderrAsync(string args, string workingDirectory)
     {
+        var (output, _) = await RunGitWithExitCodeAsync(args, workingDirectory);
+        return output;
+    }
+
+    private static async Task<(string Output, int ExitCode)> RunGitWithExitCodeAsync(string args, string workingDirectory)
+    {
         using var process = CreateProcess(args, workingDirectory);
         process.Start();
         var stdout = process.StandardOutput.ReadToEndAsync();
         var stderr = process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
         var combined = (await stdout) + (await stderr);
-        return combined.Trim();
+        return (combined.Trim(), process.ExitCode);
     }
 
     private static Process CreateProcess(string args, string workingDirectory) => new()

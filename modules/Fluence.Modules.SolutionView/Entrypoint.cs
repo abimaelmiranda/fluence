@@ -51,6 +51,7 @@ public sealed class Entrypoint : IModule
         });
         host.Events.Subscribe<OpenSolutionRequestedEvent>(e => _ = OpenSolutionAsync(host, e.Path));
         host.Events.Subscribe<RefreshSolutionViewRequestedEvent>(_event => { _ = RefreshSolutionViewAsync(host); });
+        host.Events.Subscribe<GitCheckoutCompletedEvent>(e => { _ = RefreshSolutionViewAsync(host); });
         host.Workspace.Changed += (_, _) => UpdateSidebar(host);
         UpdateSidebar(host);
         host.SetModuleState(Name, ModuleState.Active);
