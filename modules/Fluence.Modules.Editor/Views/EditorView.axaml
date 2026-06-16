@@ -11,8 +11,8 @@
                                  ShowLineNumbers="True"
                                  FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
                                  FontSize="13"
-                                 Background="{StaticResource FluenceBrushShell}"
-                                 Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                 Background="{StaticResource FluenceBrushEditorBackground}"
+                                 Foreground="{StaticResource FluenceBrushEditorForeground}"
                                  HorizontalAlignment="Stretch"
                                  VerticalAlignment="Stretch">
             <avaloniaEdit:TextEditor.ContextMenu>
@@ -42,15 +42,15 @@
                Placement="AnchorAndGravity"
                PlacementAnchor="BottomLeft"
                PlacementGravity="BottomRight">
-            <Border Background="#1A1A2A"
-                    BorderBrush="#3A3A5A"
+            <Border Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
                     BorderThickness="1"
                     CornerRadius="4"
                     MinWidth="380"
                     MaxWidth="720">
                 <ListBox x:Name="CompletionListBox"
-                         Background="#1A1A2A"
-                         Foreground="#CCCCCC"
+                         Background="{StaticResource FluenceBrushSurfaceElevated}"
+                         Foreground="{StaticResource FluenceBrushTextPrimary}"
                          Height="240"
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
@@ -95,8 +95,8 @@
                PlacementAnchor="BottomLeft"
                PlacementGravity="BottomRight">
             <Border x:Name="LspHoverBorder"
-                    Background="#1A1A2A"
-                    BorderBrush="#3A3A5A"
+                    Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8"
@@ -105,7 +105,7 @@
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto">
                     <TextBlock x:Name="LspHoverText"
-                               Foreground="#CCCCCC"
+                               Foreground="{StaticResource FluenceBrushTextPrimary}"
                                TextWrapping="Wrap"
                                FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
                                FontSize="12"/>
@@ -118,7 +118,7 @@
                PlacementAnchor="BottomLeft"
                PlacementGravity="BottomRight">
             <Border x:Name="DiagnosticTooltipBorder"
-                    Background="#1A1A2A"
+                    Background="{StaticResource FluenceBrushSurfaceElevated}"
                     BorderBrush="#5A2020"
                     BorderThickness="1"
                     CornerRadius="4"
@@ -140,20 +140,20 @@
                PlacementAnchor="BottomLeft"
                PlacementGravity="BottomRight">
             <Border x:Name="CodeActionPopupBorder"
-                    Background="#1A1A2A"
-                    BorderBrush="#3A3A5A"
+                    Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8,6"
                     MaxWidth="480">
                 <StackPanel Spacing="4">
                     <TextBlock x:Name="CodeActionDiagnosticText"
-                               Foreground="#CCCCCC"
+                               Foreground="{StaticResource FluenceBrushTextPrimary}"
                                TextWrapping="Wrap"
                                FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
                                FontSize="12"/>
                     <Separator x:Name="CodeActionSeparator"
-                               Background="#3A3A5A"
+                               Background="{StaticResource FluenceBrushBorder}"
                                Height="1"
                                Margin="0,2"/>
                     <StackPanel x:Name="CodeActionsPanel" Spacing="2"/>
@@ -165,13 +165,13 @@
                Placement="AnchorAndGravity"
                PlacementAnchor="TopLeft"
                PlacementGravity="TopRight">
-            <Border Background="#1E1E30"
-                    BorderBrush="#3A3A5A"
+            <Border Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8,4">
                 <TextBlock x:Name="SignatureHelpText"
-                           Foreground="#AAAACC"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
                            FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
                            FontSize="12"/>
             </Border>

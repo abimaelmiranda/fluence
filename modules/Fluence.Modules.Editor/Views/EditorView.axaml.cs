@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
@@ -9,11 +10,13 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using AvaloniaEdit.TextMate;
-using System.Collections.Generic;
+using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Core.Models.Theming;
+using Fluence.Core.Services;
 using Fluence.Modules.Editor.Completion;
 using Fluence.Modules.Editor.Rendering;
 using Fluence.Modules.Editor.ViewModels;
@@ -84,6 +87,9 @@ public partial class EditorView : UserControl
 
     // ── Services ────────────────────────────────────────────────────────────
     private EditorViewModel?         _viewModel;
+    private EditorSettings           _editorSettings = new();
+    private IDisposable?             _editorSettingsSubscription;
+    private IDisposable?             _themeSubscription;
     private ICompletionService?      _completionService;
     private IHoverService?           _hoverService;
     private ISignatureHelpService?   _signatureHelpService;
@@ -179,6 +185,58 @@ public partial class EditorView : UserControl
             (data, _) => data is null ? new TextBlock() : (Control)data.Content,
             supportsRecycling: false);
         InitializeTextMate();
+    }
+
+    private TimeSpan CompletionDebounce => TimeSpan.FromMilliseconds(
+        Math.Clamp(_editorSettings.CompletionTriggerDelayMs, 20, 2_000));
+
+    private void ApplyEditorSettings(EditorSettings settings)
+    {
+        _editorSettings = settings;
+        Dispatcher.UIThread.Post(() =>
+        {
+            var fontFamily = new FontFamily(settings.FontFamily);
+            Editor.FontFamily = fontFamily;
+            Editor.FontSize = settings.FontSize;
+            Editor.ShowLineNumbers = settings.ShowLineNumbers;
+            Editor.TextArea.TextView.Redraw();
+            Editor.TextArea.TextView.InvalidateMeasure();
+            Editor.InvalidateVisual();
+            MenuItemIntelliSense.InputGesture = parseGesture("editor.triggerCompletion");
+            MenuItemGoToDefinition.InputGesture = parseGesture("editor.goToDefinition");
+            MenuItemGoToImplementation.InputGesture = parseGesture("editor.goToImplementation");
+            MenuItemGoToTypeDefinition.InputGesture = parseGesture("editor.goToTypeDefinition");
+        });
+
+        static KeyGesture? tryParse(string? gesture)
+        {
+            if (string.IsNullOrWhiteSpace(gesture))
+                return null;
+
+            try
+            {
+                return KeyGesture.Parse(gesture);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        KeyGesture? parseGesture(string commandId) => tryParse(_viewModel?.Keybindings.GetGesture(commandId));
+    }
+
+    private void ApplyTheme(IdeTheme theme)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            Editor.Background = new SolidColorBrush(Color.Parse(theme.Colors.EditorBackground));
+            Editor.Foreground = new SolidColorBrush(Color.Parse(theme.Colors.EditorForeground));
+            _semanticColorizer.ApplyTheme(theme.SemanticTokenColors);
+            ApplyTextMateThemeJson(theme.TextMateThemeJson);
+            Editor.TextArea.TextView.Redraw();
+            Editor.InvalidateVisual();
+        });
     }
 
     public void SetServices(

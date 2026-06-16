@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Linq;
 using Avalonia.Input;
+using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Abstractions.Modules;
 using AvaloniaEdit.Document;
 
@@ -78,6 +80,9 @@ public partial class EditorView
             if (!selection.IsEmpty || !AutoPairClosingChars.Contains(ch))
                 return;
 
+            if (!_editorSettings.AutoPairBrackets)
+                return;
+
             if (IsInsideComment(document, caretOffset))
                 return;
 
@@ -90,7 +95,7 @@ public partial class EditorView
             return;
         }
 
-        if (IsInsideComment(document, caretOffset))
+        if (!_editorSettings.AutoPairBrackets || IsInsideComment(document, caretOffset))
             return;
 
         if (!selection.IsEmpty)
@@ -173,27 +178,37 @@ public partial class EditorView
         var line      = caret.Line - 1;
         var character = caret.Column - 1;
 
-        if (e.Key == Key.Space && e.KeyModifiers == KeyModifiers.Control)
+        var gesture = EditorKeyGestureFormatter.FromEvent(e);
+        if (MatchesEditorCommand(CommandIds.EditorTriggerCompletion, gesture))
         {
             _ = TriggerCompletionAsync(immediate: true);
             e.Handled = true;
         }
-        else if (e.Key == Key.F12 && e.KeyModifiers == KeyModifiers.None)
+        else if (MatchesEditorCommand(CommandIds.EditorGoToDefinition, gesture))
         {
             _viewModel.PublishGoToDefinition(line, character);
             e.Handled = true;
         }
-        else if (e.Key == Key.F12 && e.KeyModifiers == KeyModifiers.Control)
+        else if (MatchesEditorCommand(CommandIds.EditorGoToImplementation, gesture))
         {
             _viewModel.PublishGoToImplementation(line, character);
             e.Handled = true;
         }
-        else if (e.Key == Key.F12 && e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift))
+        else if (MatchesEditorCommand(CommandIds.EditorGoToTypeDefinition, gesture))
         {
             _viewModel.PublishGoToTypeDefinition(line, character);
             e.Handled = true;
         }
     }
+
+    private bool MatchesEditorCommand(string commandId, string gesture) =>
+        _viewModel?.Keybindings.GetKeybindings().Any(binding =>
+            string.Equals(binding.Command, commandId, StringComparison.Ordinal)
+            && string.Equals(binding.Scope, KeybindingScope.Editor, StringComparison.Ordinal)
+            && string.Equals(
+                EditorKeyGestureFormatter.Normalize(binding.Key),
+                EditorKeyGestureFormatter.Normalize(gesture),
+                StringComparison.Ordinal)) == true;
 
     private bool TryHandleAcceleratedUndo(KeyEventArgs e)
     {

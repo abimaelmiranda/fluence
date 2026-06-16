@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using AvaloniaEdit.Editing;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Core.Services;
 using Fluence.Modules.Editor.ViewModels;
 
 namespace Fluence.Modules.Editor.Views;
@@ -104,13 +105,30 @@ public partial class EditorView
         }
 
         if (_viewModel is not null)
+        {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _editorSettingsSubscription?.Dispose();
+            _editorSettingsSubscription = null;
+            _themeSubscription?.Dispose();
+            _themeSubscription = null;
+        }
 
         _viewModel = DataContext as EditorViewModel;
         if (_viewModel is not null)
         {
             _lastKnownDocumentPath = _viewModel.ActiveDocumentPath;
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _editorSettingsSubscription = _viewModel.Settings
+                .Watch<EditorSettings>()
+                .Subscribe(new ActionObserver<EditorSettings>(ApplyEditorSettings));
+            if (_viewModel.ThemeLoader is not null)
+            {
+                _themeSubscription = _viewModel.ThemeLoader
+                    .Watch()
+                    .Subscribe(new ActionObserver<Fluence.Core.Models.Theming.IdeTheme>(ApplyTheme));
+                ApplyTheme(_viewModel.ThemeLoader.CurrentTheme);
+            }
+            ApplyEditorSettings(_viewModel.Settings.Get<EditorSettings>());
             SetEditorText(_viewModel.ActiveText);
             ApplyGrammarForPath(_viewModel.ActiveDocumentPath);
             UpdateDebugRendering();
