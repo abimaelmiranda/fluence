@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
@@ -25,6 +26,17 @@ public sealed class AvaloniaLaunchSetupDialogService : ILaunchSetupDialogService
     {
         if (projectPaths.Count == 0)
             return Task.FromResult<string?>(null);
+
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Dispatcher.UIThread.Post(async () =>
+            {
+                try { tcs.TrySetResult(await SelectStartupProjectAsync(workspaceRoot, projectPaths, cancellationToken)); }
+                catch (Exception ex) { tcs.TrySetException(ex); }
+            });
+            return tcs.Task;
+        }
 
         var choices = projectPaths
             .Select(path => new ProjectChoice(
