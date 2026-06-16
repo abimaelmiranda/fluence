@@ -40,8 +40,8 @@ public sealed class Entrypoint : IModule
             Name,
             "Editor",
             host.Services.GetRequiredService<EditorViewModel>());
-        host.Events.Subscribe<OpenFileRequestedEvent>(e => { _ = OpenFileAsync(host, e.Path); });
-        host.Events.Subscribe<SaveActiveDocumentRequestedEvent>(_event => { _ = SaveActiveDocumentAsync(host); });
+        host.Events.SubscribeSync<OpenFileRequestedEvent>(e => { _ = OpenFileAsync(host, e.Path); });
+        host.Events.SubscribeSync<SaveActiveDocumentRequestedEvent>(_event => { _ = SaveActiveDocumentAsync(host); });
         host.SetModuleState(Name, ModuleState.Active);
     }
 

@@ -27,12 +27,12 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.Subscribe<ActivityBarTabChangedEvent>(e =>
+        host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
         {
             _activeTabId = e.TabId;
             UpdateSidebar(host);
         });
-        host.Events.Subscribe<OpenFolderRequestedEvent>(e => _ = OpenFolderAsync(host, e.Path));
+        host.Events.SubscribeSync<OpenFolderRequestedEvent>(e => { _ = OpenFolderAsync(host, e.Path); });
         host.Workspace.Changed += (_, _) => UpdateSidebar(host);
         UpdateSidebar(host);
         host.SetModuleState(Name, ModuleState.Active);

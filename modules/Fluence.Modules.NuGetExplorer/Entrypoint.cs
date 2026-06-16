@@ -27,7 +27,7 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.Subscribe<ManageNuGetPackagesRequestedEvent>(e =>
+        host.Events.SubscribeSync<ManageNuGetPackagesRequestedEvent>(e =>
         {
             host.Services.GetRequiredService<NuGetExplorerViewModel>().OpenForSolution(e.SolutionPath);
         });

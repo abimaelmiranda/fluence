@@ -46,22 +46,22 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.Subscribe<BuildWorkspaceRequestedEvent>(_event => { _ = HandleAsync(host, new BuildWorkspaceCommand()); });
-        host.Events.Subscribe<RunProjectRequestedEvent>(_event => { _ = RunAsync(host); });
-        host.Events.Subscribe<TestWorkspaceRequestedEvent>(_event => { _ = HandleAsync(host, new TestWorkspaceCommand()); });
-        host.Events.Subscribe<RestoreWorkspaceRequestedEvent>(_event => { _ = HandleAsync(host, new RestoreWorkspaceCommand()); });
-        host.Events.Subscribe<CleanWorkspaceRequestedEvent>(_event => { _ = HandleAsync(host, new CleanWorkspaceCommand()); });
-        host.Events.Subscribe<BuildProjectRequestedEvent>(e => { _ = HandleAsync(host, new BuildProjectCommand(e.ProjectPath)); });
-        host.Events.Subscribe<RunSpecificProjectRequestedEvent>(e => { _ = HandleAsync(host, new RunSpecificProjectCommand(e.ProjectPath)); });
-        host.Events.Subscribe<TestProjectRequestedEvent>(e => { _ = HandleAsync(host, new TestProjectCommand(e.ProjectPath)); });
-        host.Events.Subscribe<RestoreProjectRequestedEvent>(e => { _ = HandleAsync(host, new RestoreProjectCommand(e.ProjectPath)); });
-        host.Events.Subscribe<CleanProjectRequestedEvent>(e => { _ = HandleAsync(host, new CleanProjectCommand(e.ProjectPath)); });
+        host.Events.SubscribeAsync<BuildWorkspaceRequestedEvent>(_event => HandleAsync(host, new BuildWorkspaceCommand()));
+        host.Events.SubscribeAsync<RunProjectRequestedEvent>(_event => RunAsync(host));
+        host.Events.SubscribeAsync<TestWorkspaceRequestedEvent>(_event => HandleAsync(host, new TestWorkspaceCommand()));
+        host.Events.SubscribeAsync<RestoreWorkspaceRequestedEvent>(_event => HandleAsync(host, new RestoreWorkspaceCommand()));
+        host.Events.SubscribeAsync<CleanWorkspaceRequestedEvent>(_event => HandleAsync(host, new CleanWorkspaceCommand()));
+        host.Events.SubscribeAsync<BuildProjectRequestedEvent>(e => HandleAsync(host, new BuildProjectCommand(e.ProjectPath)));
+        host.Events.SubscribeAsync<RunSpecificProjectRequestedEvent>(e => HandleAsync(host, new RunSpecificProjectCommand(e.ProjectPath)));
+        host.Events.SubscribeAsync<TestProjectRequestedEvent>(e => HandleAsync(host, new TestProjectCommand(e.ProjectPath)));
+        host.Events.SubscribeAsync<RestoreProjectRequestedEvent>(e => HandleAsync(host, new RestoreProjectCommand(e.ProjectPath)));
+        host.Events.SubscribeAsync<CleanProjectRequestedEvent>(e => HandleAsync(host, new CleanProjectCommand(e.ProjectPath)));
         host.SetModuleState(Name, ModuleState.Active);
     }
 
     private static async Task HandleAsync<TCommand>(IModuleHost host, TCommand command)
     {
-        host.ShellRegions.Expand(ShellRegion.BottomBar);
+        host.Events.Publish(new ExpandPanelEvent("Terminal"));
         var handler = host.Services.GetRequiredService<ICommandHandler<TCommand>>();
         await handler.HandleAsync(command);
     }

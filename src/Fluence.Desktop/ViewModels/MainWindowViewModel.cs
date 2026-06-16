@@ -66,9 +66,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _workspace.Changed += OnWorkspaceChanged;
         _regions.Changed += OnShellRegionsChanged;
         _regions.RegionExpanded += OnShellRegionExpanded;
-        _eventBus.Subscribe<ExpandPanelEvent>(OnExpandPanelRequested);
-        _eventBus.Subscribe<DebuggerProvisioningRequiredEvent>(_ => SetProvisioning(true));
-        _eventBus.Subscribe<DebuggerProvisioningFinishedEvent>(_ => SetProvisioning(false));
+        _eventBus.SubscribeSync<ExpandPanelEvent>(OnExpandPanelRequested);
+        _eventBus.SubscribeSync<DebuggerProvisioningRequiredEvent>(_ => SetProvisioning(true));
+        _eventBus.SubscribeSync<DebuggerProvisioningFinishedEvent>(_ => SetProvisioning(false));
     }
 
     public ActivityBarViewModel ActivityBar { get; }

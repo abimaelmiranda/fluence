@@ -25,7 +25,7 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.Subscribe<ActivityBarTabChangedEvent>(e =>
+        host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
         {
             _activeTabId = e.TabId;
             UpdateSidebar(host);
