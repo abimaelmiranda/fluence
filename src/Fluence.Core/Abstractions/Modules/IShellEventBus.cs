@@ -84,6 +84,9 @@ public sealed record GoToTypeDefinitionRequestedEvent(string FilePath, int Line,
 public sealed record DiagnosticsUpdatedEvent(string FilePath, System.Collections.Generic.IReadOnlyList<Core.Models.LanguageServer.LspDiagnostic> Diagnostics) : IShellEvent;
 public sealed record NavigationResolvedEvent(string FilePath, int Line, int Character) : IShellEvent;
 public sealed record SemanticTokensUpdatedEvent(string FilePath, Core.Models.LanguageServer.SemanticToken[] Tokens) : IShellEvent;
+public sealed record SemanticTokensRefreshStartedEvent(string FilePath) : IShellEvent;
+public sealed record SemanticTokensRefreshFinishedEvent(string FilePath) : IShellEvent;
+public sealed record SemanticTokensRefreshFailedEvent(string FilePath) : IShellEvent;
 
 // LSP — provisioning lifecycle
 public sealed record LspProvisioningRequiredEvent : IShellEvent;
