@@ -47,7 +47,7 @@ public sealed class Entrypoint : IModule
     public void Initialize(IModuleHost host)
     {
         host.Events.SubscribeAsync<BuildWorkspaceRequestedEvent>(_event => HandleAsync(host, new BuildWorkspaceCommand()));
-        host.Events.SubscribeAsync<RunProjectRequestedEvent>(_event => RunAsync(host));
+        host.Events.SubscribeSync<RunProjectRequestedEvent>(_event => { _ = RunAsync(host); });
         host.Events.SubscribeAsync<TestWorkspaceRequestedEvent>(_event => HandleAsync(host, new TestWorkspaceCommand()));
         host.Events.SubscribeAsync<RestoreWorkspaceRequestedEvent>(_event => HandleAsync(host, new RestoreWorkspaceCommand()));
         host.Events.SubscribeAsync<CleanWorkspaceRequestedEvent>(_event => HandleAsync(host, new CleanWorkspaceCommand()));

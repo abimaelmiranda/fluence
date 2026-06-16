@@ -35,7 +35,7 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.SubscribeAsync<DebugProjectRequestedEvent>(_event => HandleAsync(host));
+        host.Events.SubscribeSync<DebugProjectRequestedEvent>(_event => { _ = HandleAsync(host); });
         host.Events.SubscribeAsync<StopDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().StopAsync());
         host.Events.SubscribeAsync<ReloadDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().RestartAsync());
         host.Events.SubscribeAsync<ContinueDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().ContinueAsync());
