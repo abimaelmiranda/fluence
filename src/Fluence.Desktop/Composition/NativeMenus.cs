@@ -1,26 +1,28 @@
 using Avalonia.Controls;
+using Fluence.Core.Abstractions.Keybindings;
+using Fluence.Core.Models.Keybindings;
 using Fluence.Desktop.ViewModels;
 
 namespace Fluence.Desktop.Composition;
 
 internal static class NativeMenus
 {
-    public static NativeMenu CreateMainMenu(MainWindowViewModel mainWindow)
+    public static NativeMenu CreateMainMenu(MainWindowViewModel mainWindow, IKeybindingService keybindings)
     {
         return new NativeMenu
         {
             Items =
             {
-                CreateFileMenu(mainWindow),
+                CreateFileMenu(mainWindow, keybindings),
                 CreateMenu("Edit", "Undo", "Redo"),
-                CreateViewMenu(mainWindow),
-                CreateRunMenu(mainWindow),
+                CreateViewMenu(mainWindow, keybindings),
+                CreateRunMenu(mainWindow, keybindings),
                 CreateDebugMenu(mainWindow),
             },
         };
     }
 
-    private static NativeMenuItem CreateFileMenu(MainWindowViewModel mainWindow)
+    private static NativeMenuItem CreateFileMenu(MainWindowViewModel mainWindow, IKeybindingService keybindings)
     {
         var welcome = mainWindow.Welcome;
 
@@ -48,15 +50,35 @@ internal static class NativeMenus
                     },
                     new NativeMenuItem
                     {
-                        Header = "Save",
+                        Header = WithGesture("Save", keybindings.GetGesture(CommandIds.SaveActiveDocument)),
                         Command = mainWindow.SaveActiveDocumentCommand,
+                    },
+                    new NativeMenuItem
+                    {
+                        Header = "Preferences",
+                        Menu = new NativeMenu
+                        {
+                            Items =
+                            {
+                                new NativeMenuItem
+                                {
+                                    Header = WithGesture("Settings", keybindings.GetGesture(CommandIds.OpenSettings)),
+                                    Command = mainWindow.OpenSettingsCommand,
+                                },
+                                new NativeMenuItem
+                                {
+                                    Header = WithGesture("Keyboard Shortcuts", keybindings.GetGesture(CommandIds.OpenKeybindings)),
+                                    Command = mainWindow.OpenKeybindingsCommand,
+                                },
+                            },
+                        },
                     },
                 },
             },
         };
     }
 
-    private static NativeMenuItem CreateRunMenu(MainWindowViewModel mainWindow)
+    private static NativeMenuItem CreateRunMenu(MainWindowViewModel mainWindow, IKeybindingService keybindings)
     {
         return new NativeMenuItem
         {
@@ -67,7 +89,7 @@ internal static class NativeMenus
                 {
                     new NativeMenuItem
                     {
-                        Header = "Build",
+                        Header = WithGesture("Build", keybindings.GetGesture(CommandIds.Build)),
                         Command = mainWindow.BuildCommand,
                     },
                     new NativeMenuItem
@@ -77,17 +99,17 @@ internal static class NativeMenus
                     },
                     new NativeMenuItem
                     {
-                        Header = "Run",
+                        Header = WithGesture("Run", keybindings.GetGesture(CommandIds.Run)),
                         Command = mainWindow.RunCommand,
                     },
                     new NativeMenuItem
                     {
-                        Header = "Debug",
+                        Header = WithGesture("Debug", keybindings.GetGesture(CommandIds.Debug)),
                         Command = mainWindow.DebugCommand,
                     },
                     new NativeMenuItem
                     {
-                        Header = "Stop Debugging",
+                        Header = WithGesture("Stop Debugging", keybindings.GetGesture(CommandIds.StopDebug)),
                         Command = mainWindow.StopDebugCommand,
                     },
                     new NativeMenuItem
@@ -105,7 +127,7 @@ internal static class NativeMenus
         };
     }
 
-    private static NativeMenuItem CreateViewMenu(MainWindowViewModel mainWindow)
+    private static NativeMenuItem CreateViewMenu(MainWindowViewModel mainWindow, IKeybindingService keybindings)
     {
         return new NativeMenuItem
         {
@@ -116,13 +138,16 @@ internal static class NativeMenus
                 {
                     new NativeMenuItem
                     {
-                        Header = "Toggle Terminal",
+                        Header = WithGesture("Toggle Terminal", keybindings.GetGesture(CommandIds.ToggleTerminal)),
                         Command = mainWindow.ToggleTerminalCommand,
                     },
                 },
             },
         };
     }
+
+    private static string WithGesture(string label, string? gesture) =>
+        string.IsNullOrWhiteSpace(gesture) ? label : $"{label} ({gesture})";
 
     private static NativeMenuItem CreateDebugMenu(MainWindowViewModel mainWindow)
     {

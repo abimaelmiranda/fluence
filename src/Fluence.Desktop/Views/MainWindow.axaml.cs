@@ -1,6 +1,8 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
+using Fluence.Modules.Settings.Services;
 using Fluence.Desktop.ViewModels;
 
 namespace Fluence.Desktop.Views;
@@ -17,6 +19,20 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Bubble);
+    }
+
+    private async void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        var gesture = KeyGestureFormatter.FromEvent(e);
+        if (string.IsNullOrWhiteSpace(gesture))
+            return;
+
+        if (await viewModel.TryHandleKeybindingAsync("global", gesture))
+            e.Handled = true;
     }
 
     private void OnTerminalResizeHandlePointerPressed(object? sender, PointerPressedEventArgs e)
@@ -60,6 +76,8 @@ public partial class MainWindow : Window
         _isTerminalResizePointerDown = false;
         _isTerminalResizeDragging = false;
         e.Pointer.Capture(null);
+        if (DataContext is MainWindowViewModel viewModel)
+            viewModel.PersistShellLayout();
         e.Handled = true;
     }
 

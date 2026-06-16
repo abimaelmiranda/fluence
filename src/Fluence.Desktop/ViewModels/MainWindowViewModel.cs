@@ -8,9 +8,14 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Exceptions;
+using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Keybindings;
+using Fluence.Core.Models.Settings;
+using Fluence.Core.Services;
 using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
@@ -33,6 +38,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly IUserNotificationService _notifications;
     private readonly IShellEventBus _eventBus;
     private readonly IShellRegionHost _regions;
+    private readonly ISettingsService _settings;
+    private readonly ICommandRegistry _commands;
+    private readonly IKeybindingService _keybindings;
+    private readonly ISettingsTool _settingsTool;
 
     [ObservableProperty]
     private WorkspaceMode _workspaceMode;
@@ -44,9 +53,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private bool _isTerminalExpanded;
 
     private bool _isProvisioning;
+    private bool _isSidebarExpanded = true;
 
     [ObservableProperty]
     private double _terminalHeight = DefaultTerminalHeight;
+
+    [ObservableProperty]
+    private double _sidebarWidth = 300;
 
     public MainWindowViewModel(
         IWorkspaceContext workspace,
@@ -54,15 +67,26 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         IUserNotificationService notifications,
         IShellEventBus eventBus,
         IShellRegionHost regions,
-        ActivityBarViewModel activityBar)
+        ActivityBarViewModel activityBar,
+        ISettingsService settings,
+        ICommandRegistry commands,
+        IKeybindingService keybindings,
+        ISettingsTool settingsTool)
     {
         _workspace = workspace;
         _notifications = notifications;
         _eventBus = eventBus;
         _regions = regions;
+        _settings = settings;
+        _commands = commands;
+        _keybindings = keybindings;
+        _settingsTool = settingsTool;
         ActivityBar = activityBar;
         Welcome = welcome;
         _workspaceMode = workspace.Current.Mode;
+        ApplyShellSettings(_settings.Get<ShellSettings>());
+        RegisterCommands();
+        _settings.Watch<ShellSettings>().Subscribe(new ActionObserver<ShellSettings>(ApplyShellSettings));
         _workspace.Changed += OnWorkspaceChanged;
         _regions.Changed += OnShellRegionsChanged;
         _regions.RegionExpanded += OnShellRegionExpanded;
@@ -91,7 +115,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     public bool IsWorkspaceVisible => WorkspaceMode != WorkspaceMode.Empty;
 
-    public bool IsSidebarVisible => _regions.SidebarContent is not null;
+    public bool IsSidebarVisible => _regions.SidebarContent is not null && _isSidebarExpanded;
 
     public bool IsFolderMode => WorkspaceMode == WorkspaceMode.Folder;
 
@@ -206,6 +230,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     private void OnShellRegionsChanged(object? sender, EventArgs e)
     {
+        if (_regions.SidebarContent is not null)
+            _isSidebarExpanded = true;
         OnPropertyChanged(nameof(ActiveSidebarContent));
         OnPropertyChanged(nameof(MainEditorContent));
         OnPropertyChanged(nameof(TerminalContent));
@@ -224,6 +250,127 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         var upperBound = Math.Max(MinimumTerminalHeight, maximumHeight);
         TerminalHeight = Math.Clamp(height, MinimumTerminalHeight, upperBound);
+    }
+
+    public void PersistShellLayout()
+    {
+        _settings.Update<ShellSettings>(settings =>
+        {
+            settings.TerminalHeight = TerminalHeight;
+            settings.SidebarWidth = SidebarWidth;
+        });
+    }
+
+    public Task<bool> TryHandleKeybindingAsync(string scope, string key) =>
+        _keybindings.TryExecuteAsync(scope, key);
+
+    private void ApplyShellSettings(ShellSettings settings)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            SidebarWidth = Math.Max(220, settings.SidebarWidth);
+            TerminalHeight = Math.Max(MinimumTerminalHeight, settings.TerminalHeight);
+        });
+    }
+
+    private void RegisterCommands()
+    {
+        var primary = OperatingSystem.IsMacOS() ? "Meta" : "Ctrl";
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.SaveActiveDocument,
+            "Save",
+            KeybindingScope.Global,
+            $"{primary}+S",
+            SaveActiveDocumentAsync));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.ToggleTerminal,
+            "Toggle Terminal",
+            KeybindingScope.Global,
+            $"{primary}+J",
+            ct =>
+            {
+                ToggleTerminal();
+                return Task.CompletedTask;
+            }));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.Build,
+            "Build",
+            KeybindingScope.Global,
+            $"{primary}+Shift+B",
+            BuildAsync));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.Restore,
+            "Restore",
+            KeybindingScope.Global,
+            null,
+            RestoreAsync));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.Run,
+            "Run",
+            KeybindingScope.Global,
+            "F5",
+            RunAsync));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.Debug,
+            "Debug",
+            KeybindingScope.Global,
+            "Shift+F5",
+            DebugAsync));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.StopDebug,
+            "Stop Debugging",
+            KeybindingScope.Global,
+            "Ctrl+F5",
+            StopDebugAsync));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.Test,
+            "Test",
+            KeybindingScope.Global,
+            null,
+            TestAsync));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.Clean,
+            "Clean",
+            KeybindingScope.Global,
+            null,
+            CleanAsync));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.OpenSettings,
+            "Open Settings",
+            KeybindingScope.Global,
+            $"{primary}+Shift+Comma",
+            ct =>
+            {
+                OpenSettings();
+                return Task.CompletedTask;
+            }));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.OpenKeybindings,
+            "Open Keyboard Shortcuts",
+            KeybindingScope.Global,
+            $"{primary}+K",
+            ct =>
+            {
+                OpenKeybindings();
+                return Task.CompletedTask;
+            }));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.NextTab,
+            "Next Tab",
+            KeybindingScope.Global,
+            "Ctrl+Tab",
+            NextTabAsync));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.ToggleSidebar,
+            "Toggle Sidebar",
+            KeybindingScope.Global,
+            $"{primary}+B",
+            ct =>
+            {
+                _isSidebarExpanded = !_isSidebarExpanded;
+                OnPropertyChanged(nameof(IsSidebarVisible));
+                return Task.CompletedTask;
+            }));
     }
 
     [RelayCommand]
@@ -281,6 +428,20 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void OpenSettings()
+    {
+        _settingsTool.ShowSettings();
+        _workspace.OpenToolTab(ToolTabIds.Settings, ToolTabIds.SettingsTitle, _settingsTool);
+    }
+
+    [RelayCommand]
+    private void OpenKeybindings()
+    {
+        _settingsTool.ShowKeybindings();
+        _workspace.OpenToolTab(ToolTabIds.Settings, ToolTabIds.SettingsTitle, _settingsTool);
+    }
+
+    [RelayCommand]
     private async Task SaveActiveDocumentAsync(CancellationToken cancellationToken)
     {
         _eventBus.Publish(new SaveActiveDocumentRequestedEvent());
@@ -290,6 +451,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(HasWorkspace))]
     private async Task BuildAsync(CancellationToken cancellationToken)
     {
+        if (!HasWorkspace())
+            return;
+
         IsTerminalExpanded = true;
         _eventBus.Publish(new BuildWorkspaceRequestedEvent());
         await Task.CompletedTask;
@@ -298,6 +462,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRunOrDebug))]
     private async Task RunAsync(CancellationToken cancellationToken)
     {
+        if (!CanRunOrDebug())
+            return;
+
         IsTerminalExpanded = true;
         _eventBus.Publish(new RunProjectRequestedEvent());
         await Task.CompletedTask;
@@ -306,6 +473,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRunOrDebug))]
     private async Task DebugAsync(CancellationToken cancellationToken)
     {
+        if (!CanRunOrDebug())
+            return;
+
         IsTerminalExpanded = true;
         _eventBus.Publish(new DebugProjectRequestedEvent());
         await Task.CompletedTask;
@@ -314,6 +484,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(IsDebugging))]
     private async Task StopDebugAsync(CancellationToken cancellationToken)
     {
+        if (!IsDebugging)
+            return;
+
         _eventBus.Publish(new StopDebugRequestedEvent());
         await Task.CompletedTask;
     }
@@ -321,6 +494,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(HasWorkspace))]
     private async Task TestAsync(CancellationToken cancellationToken)
     {
+        if (!HasWorkspace())
+            return;
+
         IsTerminalExpanded = true;
         _eventBus.Publish(new TestWorkspaceRequestedEvent());
         await Task.CompletedTask;
@@ -329,6 +505,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(HasWorkspace))]
     private async Task RestoreAsync(CancellationToken cancellationToken)
     {
+        if (!HasWorkspace())
+            return;
+
         IsTerminalExpanded = true;
         _eventBus.Publish(new RestoreWorkspaceRequestedEvent());
         await Task.CompletedTask;
@@ -337,6 +516,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(HasWorkspace))]
     private async Task CleanAsync(CancellationToken cancellationToken)
     {
+        if (!HasWorkspace())
+            return;
+
         IsTerminalExpanded = true;
         _eventBus.Publish(new CleanWorkspaceRequestedEvent());
         await Task.CompletedTask;
@@ -367,6 +549,28 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     private void ActivateDocument(string path) => _workspace.ActivateDocument(path);
+
+    private Task NextTabAsync(CancellationToken cancellationToken)
+    {
+        var tabSession = _workspace.Current.TabSession;
+        var documents = tabSession.Documents;
+        if (documents.Count <= 1)
+            return Task.CompletedTask;
+
+        var activeIndex = -1;
+        for (var i = 0; i < documents.Count; i++)
+        {
+            if (string.Equals(documents[i].Path, tabSession.ActiveDocument?.Path, StringComparison.Ordinal))
+            {
+                activeIndex = i;
+                break;
+            }
+        }
+
+        var nextIndex = (activeIndex + 1) % documents.Count;
+        _workspace.ActivateDocument(documents[nextIndex].Path);
+        return Task.CompletedTask;
+    }
 
     private void CloseDocument(string path) => _workspace.CloseDocument(path);
 
