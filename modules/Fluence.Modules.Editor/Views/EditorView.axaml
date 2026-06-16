@@ -112,6 +112,28 @@
                 </ScrollViewer>
             </Border>
         </Popup>
+        <Popup x:Name="DiagnosticTooltipPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight">
+            <Border x:Name="DiagnosticTooltipBorder"
+                    Background="#1A1A2A"
+                    BorderBrush="#5A2020"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8,6"
+                    MaxWidth="520"
+                    MaxHeight="200">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="DiagnosticTooltipText"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"/>
+                </ScrollViewer>
+            </Border>
+        </Popup>
         <Popup x:Name="SignatureHelpPopup"
                IsLightDismissEnabled="False"
                Placement="AnchorAndGravity"

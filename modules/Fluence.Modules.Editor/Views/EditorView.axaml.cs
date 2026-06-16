@@ -15,7 +15,9 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using AvaloniaEdit;
 using AvaloniaEdit.Document;
+using AvaloniaEdit.Editing;
 using AvaloniaEdit.Rendering;
 using AvaloniaEdit.TextMate;
 using Fluence.Core.Abstractions.Debugging;
@@ -59,6 +61,7 @@ public partial class EditorView : UserControl
     private TextMate.Installation? _textMateInstallation;
     private readonly DebugLineRenderer _debugLineRenderer = new();
     private readonly DiagnosticRenderer _diagnosticRenderer = new();
+    private BreakpointMargin? _breakpointMargin;
     private bool _mouseInPopup;
     private ICompletionService? _completionService;
     private IHoverService? _hoverService;
@@ -105,7 +108,16 @@ public partial class EditorView : UserControl
         AttachedToVisualTree += OnAttachedToVisualTree;
         Editor.TextChanged += OnEditorTextChanged;
         Editor.LostFocus += OnEditorLostFocus;
-        Editor.PointerPressed += OnEditorPointerPressed;
+        _breakpointMargin = new BreakpointMargin(line => _viewModel?.ToggleBreakpoint(line));
+        Editor.TextArea.LeftMargins.Insert(0, _breakpointMargin);
+        Editor.TextArea.AddHandler(
+            InputElement.PointerPressedEvent,
+            OnBreakpointAreaPressed,
+            RoutingStrategies.Tunnel);
+        Editor.TextArea.AddHandler(
+            InputElement.PointerMovedEvent,
+            OnBreakpointAreaPointerMoved,
+            RoutingStrategies.Tunnel);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_debugLineRenderer);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_diagnosticRenderer);
         Editor.TextArea.TextView.PointerHover += OnPointerHover;
@@ -965,7 +977,18 @@ public partial class EditorView : UserControl
         return language is null ? null : _registryOptions.GetScopeByLanguageId(language.Id);
     }
 
-    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e) => BindViewModel();
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        BindViewModel();
+        var lnm = Editor.TextArea.LeftMargins.OfType<LineNumberMargin>().FirstOrDefault();
+        if (lnm is not null)
+        {
+            var idx = Editor.TextArea.LeftMargins.IndexOf(lnm);
+            if (idx + 1 >= Editor.TextArea.LeftMargins.Count ||
+                Editor.TextArea.LeftMargins[idx + 1] is not Border)
+                Editor.TextArea.LeftMargins.Insert(idx + 1, new Border { Width = 6 });
+        }
+    }
 
     private void OnDataContextChanged(object? sender, System.EventArgs e) => BindViewModel();
 
@@ -1062,28 +1085,6 @@ public partial class EditorView : UserControl
         _isUpdatingEditorText = false;
     }
 
-    private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (_viewModel is null)
-            return;
-
-        var textView = Editor.TextArea.TextView;
-        var position = e.GetPosition(textView);
-        if (position.X > 34)
-            return;
-
-        textView.EnsureVisualLines();
-        var visualTop = position.Y + textView.ScrollOffset.Y;
-        var visualLine = textView.VisualLines.FirstOrDefault(line =>
-            visualTop >= line.VisualTop &&
-            visualTop <= line.VisualTop + line.Height);
-        if (visualLine is null)
-            return;
-
-        _viewModel.ToggleBreakpoint(visualLine.FirstDocumentLine.LineNumber);
-        e.Handled = true;
-    }
-
     private void OnPointerHover(object? sender, PointerEventArgs e)
     {
         if (_viewModel is null)
@@ -1110,11 +1111,31 @@ public partial class EditorView : UserControl
             CancelPopupClose();
             ScheduleHoverRequest(word, hoverPoint);
         }
-        else if (_hoverService is not null)
+        else
         {
-            var line = textPosition.Value.Line - 1;
-            var character = textPosition.Value.Column - 1;
-            ScheduleLspHoverRequest(line, character, hoverPoint);
+            var hoveredLine = textPosition.Value.Line - 1;
+            var hoveredChar = textPosition.Value.Column - 1;
+            var diag = _diagnosticRenderer.FindDiagnosticAt(hoveredLine, hoveredChar);
+            if (diag is not null)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    var isError = diag.Severity == LspDiagnosticSeverity.Error;
+                    var prefix = isError ? "Error" : "Warning";
+                    DiagnosticTooltipText.Text = $"[{prefix}] {diag.Message}";
+                    DiagnosticTooltipText.Foreground = new SolidColorBrush(
+                        isError ? Color.FromRgb(255, 144, 144) : Color.FromRgb(255, 208, 100));
+                    DiagnosticTooltipBorder.BorderBrush = new SolidColorBrush(
+                        isError ? Color.FromRgb(90, 32, 32) : Color.FromRgb(90, 74, 0));
+                    DiagnosticTooltipPopup.PlacementTarget = EditorSurface;
+                    DiagnosticTooltipPopup.PlacementRect = new Rect(hoverPoint.X + 12, hoverPoint.Y + 18, 1, 1);
+                    DiagnosticTooltipPopup.IsOpen = true;
+                });
+                return;
+            }
+
+            if (_hoverService is not null)
+                ScheduleLspHoverRequest(hoveredLine, hoveredChar, hoverPoint);
         }
     }
 
@@ -1221,6 +1242,7 @@ public partial class EditorView : UserControl
         {
             _pendingLspHoverRequest = null;
         }
+        DiagnosticTooltipPopup.IsOpen = false;
         ClosePopupDelayed();
     }
 
@@ -1262,6 +1284,7 @@ public partial class EditorView : UserControl
             {
                 HoverPopup.IsOpen = false;
                 LspHoverPopup.IsOpen = false;
+                DiagnosticTooltipPopup.IsOpen = false;
             }
         });
     }
@@ -1565,10 +1588,46 @@ public partial class EditorView : UserControl
 
     private void UpdateDebugRendering()
     {
-        _debugLineRenderer.Update(
-            _viewModel?.ActiveDocumentBreakpoints ?? Array.Empty<DebugBreakpoint>(),
-            _viewModel?.ActiveExecutionLine);
+        var bps = _viewModel?.ActiveDocumentBreakpoints ?? Array.Empty<DebugBreakpoint>();
+        _breakpointMargin?.Update(bps);
+        _debugLineRenderer.Update(_viewModel?.ActiveExecutionLine);
         Editor.TextArea.TextView.InvalidateLayer(KnownLayer.Background);
+    }
+
+    private void OnBreakpointAreaPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_breakpointMargin is null) return;
+        var posInMargin = e.GetPosition(_breakpointMargin);
+        if (posInMargin.X < 0 || posInMargin.X > _breakpointMargin.Bounds.Width || posInMargin.Y < 0)
+        {
+            _breakpointMargin.SetHoveredLine(-1);
+            return;
+        }
+        var textView = Editor.TextArea.TextView;
+        if (!textView.VisualLinesValid) return;
+        var vt = posInMargin.Y + textView.ScrollOffset.Y;
+        var vl = textView.VisualLines.FirstOrDefault(l =>
+            vt >= l.VisualTop && vt <= l.VisualTop + l.Height);
+        _breakpointMargin.SetHoveredLine(vl?.FirstDocumentLine.LineNumber ?? -1);
+    }
+
+    private void OnBreakpointAreaPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_viewModel is null || _breakpointMargin is null) return;
+        var posInMargin = e.GetPosition(_breakpointMargin);
+        if (posInMargin.X < 0 || posInMargin.X > _breakpointMargin.Bounds.Width ||
+            posInMargin.Y < 0)
+            return;
+
+        var textView = Editor.TextArea.TextView;
+        textView.EnsureVisualLines();
+        var scrollY = textView.ScrollOffset.Y;
+        if (_breakpointMargin.TryToggleAtY(posInMargin.Y, scrollY, line =>
+            {
+                _viewModel.ToggleBreakpoint(line);
+                return true;
+            }))
+            e.Handled = true;
     }
 
     private sealed class LspCompletionData
@@ -1698,6 +1757,72 @@ public partial class EditorView : UserControl
             };
     }
 
+    private sealed class BreakpointMargin : AbstractMargin
+    {
+        private IReadOnlyList<DebugBreakpoint> _breakpoints = [];
+        private readonly Action<int> _toggleBreakpoint;
+        private int _hoveredLine = -1;
+
+        private static readonly IBrush GhostBrush = Brushes.DarkRed;
+
+        public BreakpointMargin(Action<int> toggleBreakpoint)
+        {
+            _toggleBreakpoint = toggleBreakpoint;
+            Width = 22;
+            Cursor = new Cursor(StandardCursorType.Arrow);
+        }
+
+        public void Update(IReadOnlyList<DebugBreakpoint> breakpoints)
+        {
+            _breakpoints = breakpoints;
+            InvalidateVisual();
+        }
+
+        public override void Render(DrawingContext context)
+        {
+            base.Render(context);
+            if (TextView is null || !TextView.VisualLinesValid) return;
+
+            foreach (var vl in TextView.VisualLines)
+            {
+                var lineNumber = vl.FirstDocumentLine.LineNumber;
+                var y = vl.VisualTop - TextView.ScrollOffset.Y + vl.Height / 2;
+                var bp = _breakpoints.FirstOrDefault(b => b.Line == lineNumber);
+
+                if (bp is not null)
+                {
+                    var brush = bp.IsVerified ? Brushes.IndianRed : Brushes.DarkRed;
+                    context.DrawEllipse(brush, null, new Point(11, y), 6, 6);
+                }
+                else if (lineNumber == _hoveredLine)
+                {
+                    context.DrawEllipse(GhostBrush, null, new Point(11, y), 6, 6);
+                }
+            }
+        }
+
+        public void SetHoveredLine(int lineNumber)
+        {
+            if (_hoveredLine == lineNumber) return;
+            _hoveredLine = lineNumber;
+            InvalidateVisual();
+            if (lineNumber == -1) return;
+            var hasBreakpoint = _breakpoints.Any(b => b.Line == lineNumber);
+            ToolTip.SetTip(this, hasBreakpoint ? "Click to remove breakpoint" : "Click to add a breakpoint");
+        }
+
+        public bool TryToggleAtY(double y, double scrollOffsetY, Func<int, bool> toggleBreakpoint)
+        {
+            if (TextView is null || !TextView.VisualLinesValid) return false;
+            var vt = y + scrollOffsetY;
+            var vl = TextView.VisualLines.FirstOrDefault(l =>
+                vt >= l.VisualTop && vt <= l.VisualTop + l.Height);
+            if (vl is null) return false;
+            toggleBreakpoint(vl.FirstDocumentLine.LineNumber);
+            return true;
+        }
+    }
+
     private sealed class DiagnosticRenderer : IBackgroundRenderer
     {
         private IReadOnlyList<LspDiagnostic> _diagnostics = [];
@@ -1710,6 +1835,12 @@ public partial class EditorView : UserControl
             _document = document;
             _diagnostics = diagnostics;
         }
+
+        public LspDiagnostic? FindDiagnosticAt(int line, int character) =>
+            _diagnostics.FirstOrDefault(d =>
+                d.StartLine == line &&
+                character >= d.StartCharacter &&
+                character <= d.EndCharacter);
 
         public void Draw(TextView textView, DrawingContext drawingContext)
         {
@@ -1733,11 +1864,27 @@ public partial class EditorView : UserControl
 
                 var pen = new Pen(new SolidColorBrush(color), 1.5, new DashStyle([2, 2], 0));
 
-                // Draw squiggle at the bottom of the diagnostic line
-                var y = visualLine.VisualTop + visualLine.Height - textView.ScrollOffset.Y - 1;
-                var x0 = textView.Bounds.Left + 34; // skip gutter
-                var x1 = textView.Bounds.Right;
+                // Compute x span from actual start/end character positions
+                var startCol = diag.StartCharacter + 1;
+                var endLine = diag.EndLine + 1;
+                var endCol = endLine != startLine
+                    ? _document.GetLineByNumber(startLine).Length + 1
+                    : diag.EndCharacter + 1;
 
+                var startPos = new TextViewPosition(startLine, startCol);
+                var endPos   = new TextViewPosition(startLine, endCol);
+
+                var x0 = textView.GetVisualPosition(startPos, VisualYPosition.LineBottom).X
+                         - textView.ScrollOffset.X;
+                var x1 = textView.GetVisualPosition(endPos, VisualYPosition.LineBottom).X
+                         - textView.ScrollOffset.X;
+
+                if (x1 <= x0) x1 = x0 + 4;
+                x0 = Math.Max(x0, 0);
+                x1 = Math.Min(x1, textView.Bounds.Width);
+                if (x1 <= 0) continue;
+
+                var y = visualLine.VisualTop + visualLine.Height - textView.ScrollOffset.Y - 1;
                 drawingContext.DrawLine(pen, new Point(x0, y), new Point(x1, y));
             }
         }
@@ -1745,14 +1892,12 @@ public partial class EditorView : UserControl
 
     private sealed class DebugLineRenderer : IBackgroundRenderer
     {
-        private IReadOnlyList<DebugBreakpoint> _breakpoints = Array.Empty<DebugBreakpoint>();
         private DebugExecutionLine? _executionLine;
 
         public KnownLayer Layer => KnownLayer.Background;
 
-        public void Update(IReadOnlyList<DebugBreakpoint> breakpoints, DebugExecutionLine? executionLine)
+        public void Update(DebugExecutionLine? executionLine)
         {
-            _breakpoints = breakpoints;
             _executionLine = executionLine;
         }
 
@@ -1763,21 +1908,10 @@ public partial class EditorView : UserControl
 
             foreach (var line in textView.VisualLines)
             {
-                var lineNumber = line.FirstDocumentLine.LineNumber;
-                if (_executionLine?.Line == lineNumber)
+                if (_executionLine?.Line == line.FirstDocumentLine.LineNumber)
                 {
                     var rect = new Rect(0, line.VisualTop - textView.ScrollOffset.Y, textView.Bounds.Width, line.Height);
                     drawingContext.FillRectangle(new SolidColorBrush(Color.FromArgb(42, 122, 92, 255)), rect);
-                }
-
-                var breakpoint = _breakpoints.FirstOrDefault(b => b.Line == lineNumber);
-                if (breakpoint is not null)
-                {
-                    var center = new Point(18, line.VisualTop - textView.ScrollOffset.Y + line.Height / 2);
-                    var brush = breakpoint.IsVerified
-                        ? Brushes.IndianRed
-                        : Brushes.DarkRed;
-                    drawingContext.DrawEllipse(brush, null, center, 5, 5);
                 }
             }
         }
