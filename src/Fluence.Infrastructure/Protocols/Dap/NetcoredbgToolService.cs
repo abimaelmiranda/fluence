@@ -7,10 +7,11 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Storage;
 
 namespace Fluence.Infrastructure.Protocols.Dap;
 
-public sealed class NetcoredbgToolService
+public sealed class NetcoredbgToolService(IFluenceStorageService storage)
 {
     private const string LatestReleaseApiUrl = "https://api.github.com/repos/Samsung/netcoredbg/releases/latest";
 
@@ -27,7 +28,7 @@ public sealed class NetcoredbgToolService
     public async Task<string> ResolveAsync(string workspaceRoot, CancellationToken cancellationToken = default)
     {
         // Check the global Fluence installation first so a provisioned debugger is always preferred.
-        var globalPath = Path.Combine(DebuggerProvisioningService.ResolveGlobalInstallDir(), ResolveExecutableName());
+        var globalPath = Path.Combine(storage.GetUserPath("debuggers/csharp"), ResolveExecutableName());
         if (File.Exists(globalPath) && await ValidateAsync(globalPath, cancellationToken).ConfigureAwait(false))
             return globalPath;
 
@@ -62,9 +63,9 @@ public sealed class NetcoredbgToolService
             "or netcoredbg and make sure it is on PATH.");
     }
 
-    private static string? FindBundledTool(string workspaceRoot)
+    private string? FindBundledTool(string workspaceRoot)
     {
-        var toolsRoot = Path.Combine(workspaceRoot, ".fluence", "tools", "netcoredbg");
+        var toolsRoot = storage.GetProjectPath(workspaceRoot, "tools/netcoredbg");
         if (!Directory.Exists(toolsRoot))
             return null;
 
@@ -130,7 +131,7 @@ public sealed class NetcoredbgToolService
         return null;
     }
 
-    private static async Task<string?> DownloadLatestAsync(string workspaceRoot, CancellationToken cancellationToken)
+    private async Task<string?> DownloadLatestAsync(string workspaceRoot, CancellationToken cancellationToken)
     {
         using var response = await Http.GetAsync(LatestReleaseApiUrl, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
@@ -143,7 +144,7 @@ public sealed class NetcoredbgToolService
         if (asset is null)
             return null;
 
-        var installRoot = Path.Combine(workspaceRoot, ".fluence", "tools", "netcoredbg", tag, ResolveRuntimeId());
+        var installRoot = storage.GetProjectPath(workspaceRoot, $"tools/netcoredbg/{tag}/{ResolveRuntimeId()}");
         if (Directory.Exists(installRoot))
             Directory.Delete(installRoot, recursive: true);
         Directory.CreateDirectory(installRoot);

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -11,7 +12,7 @@ using Fluence.Core.Services.Workspace;
 
 namespace Fluence.Infrastructure;
 
-public sealed class LaunchSettingsService : ILaunchSettingsService
+public sealed class LaunchSettingsService(IFluenceStorageService storage) : ILaunchSettingsService
 {
     private static readonly HashSet<string> IgnoredDirectories = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -38,34 +39,14 @@ public sealed class LaunchSettingsService : ILaunchSettingsService
     public string GetSettingsPath(string workspaceRoot)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
-        return Path.Combine(workspaceRoot, ".fluence", "launch.json");
+        return storage.GetProjectPath(workspaceRoot, "launch.json");
     }
 
-    public async Task<LaunchSettings?> LoadAsync(string workspaceRoot, CancellationToken cancellationToken = default)
-    {
-        var settingsPath = GetSettingsPath(workspaceRoot);
-        if (!File.Exists(settingsPath))
-            return null;
+    public Task<LaunchSettings?> LoadAsync(string workspaceRoot, CancellationToken cancellationToken = default) =>
+        storage.ReadProjectAsync(workspaceRoot, "launch.json", LaunchSettingsJsonContext.Default.LaunchSettings, cancellationToken);
 
-        await using var stream = File.OpenRead(settingsPath);
-        return await System.Text.Json.JsonSerializer.DeserializeAsync(
-            stream,
-            LaunchSettingsJsonContext.Default.LaunchSettings,
-            cancellationToken);
-    }
-
-    public async Task SaveAsync(string workspaceRoot, LaunchSettings settings, CancellationToken cancellationToken = default)
-    {
-        var settingsPath = GetSettingsPath(workspaceRoot);
-        Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
-
-        await using var stream = File.Create(settingsPath);
-        await System.Text.Json.JsonSerializer.SerializeAsync(
-            stream,
-            settings,
-            LaunchSettingsJsonContext.Default.LaunchSettings,
-            cancellationToken);
-    }
+    public Task SaveAsync(string workspaceRoot, LaunchSettings settings, CancellationToken cancellationToken = default) =>
+        storage.WriteProjectAsync(workspaceRoot, "launch.json", settings, LaunchSettingsJsonContext.Default.LaunchSettings, cancellationToken);
 
     public Task<IReadOnlyList<string>> DiscoverProjectPathsAsync(string workspaceRoot, CancellationToken cancellationToken = default)
     {

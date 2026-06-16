@@ -31,7 +31,7 @@ public sealed partial class OmniSharpProvisioningService
 
         onOutput($"[Fluence] Downloading {asset.Value.Name}...");
 
-        var installDir = ResolveGlobalInstallDir();
+        var installDir = InstallDir;
         if (Directory.Exists(installDir))
             Directory.Delete(installDir, recursive: true);
         Directory.CreateDirectory(installDir);

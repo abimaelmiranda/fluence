@@ -14,6 +14,7 @@ using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Services.File;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
@@ -64,13 +65,14 @@ internal static class Bootstrapper
         services.AddSingleton<IFileClipboardService, FileClipboardService>();
         services.AddSingleton<IFileOperationDialogService, AvaloniaFileOperationDialogService>();
         services.AddSingleton<IFileService, FileService>();
+        services.AddSingleton<IFluenceStorageService, FluenceStorageService>();
         services.AddSingleton<IProcessHost, ProcessHost>();
         services.AddSingleton<ILaunchSettingsService, LaunchSettingsService>();
         services.AddSingleton<ILaunchSettingsCoordinator, LaunchSettingsCoordinator>();
         services.AddSingleton<NetcoredbgToolService>();
         services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
         services.AddSingleton<IDebuggerProvisioningService, DebuggerProvisioningService>();
-        services.AddSingleton<ILspProvisioningService>(new OmniSharpProvisioningService());
+        services.AddSingleton<ILspProvisioningService, OmniSharpProvisioningService>();
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new PortaMacOsPtyHost()

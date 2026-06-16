@@ -6,12 +6,6 @@ namespace Fluence.Infrastructure.Protocols.Lsp;
 
 public sealed partial class OmniSharpProvisioningService
 {
-    internal static string ResolveGlobalInstallDir()
-    {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, ".fluence", "LanguageServer");
-    }
-
     private static string ResolveExecutableName() =>
         RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "OmniSharp.exe" : "OmniSharp";
 

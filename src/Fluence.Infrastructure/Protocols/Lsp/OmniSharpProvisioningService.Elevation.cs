@@ -9,9 +9,8 @@ namespace Fluence.Infrastructure.Protocols.Lsp;
 
 public sealed partial class OmniSharpProvisioningService
 {
-    private static async Task EnsureInstallDirectoryAsync(Action<string> onOutput, CancellationToken cancellationToken)
+    private static async Task EnsureInstallDirectoryAsync(string installDir, Action<string> onOutput, CancellationToken cancellationToken)
     {
-        var installDir = ResolveGlobalInstallDir();
 
         if (Directory.Exists(installDir))
             return;

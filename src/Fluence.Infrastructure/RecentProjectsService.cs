@@ -1,24 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 
 namespace Fluence.Infrastructure;
 
-public sealed class RecentProjectsService : IRecentProjectsService
+public sealed class RecentProjectsService(IFluenceStorageService storage) : IRecentProjectsService
 {
     private const int MaxRecents = 10;
-
-    private static readonly string StorePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".fluence",
-        "recents.json");
+    private const string FileName = "recents.json";
 
     private readonly SemaphoreSlim _lock = new(1, 1);
     private List<RecentProject>? _cache;
@@ -28,7 +23,8 @@ public sealed class RecentProjectsService : IRecentProjectsService
         if (_cache is not null)
             return _cache;
 
-        if (!File.Exists(StorePath))
+        var path = storage.GetUserPath(FileName);
+        if (!File.Exists(path))
         {
             _cache = [];
             return _cache;
@@ -36,8 +32,8 @@ public sealed class RecentProjectsService : IRecentProjectsService
 
         try
         {
-            using var stream = File.OpenRead(StorePath);
-            var data = JsonSerializer.Deserialize(stream, RecentProjectsJsonContext.Default.RecentProjectsData);
+            using var stream = File.OpenRead(path);
+            var data = System.Text.Json.JsonSerializer.Deserialize(stream, RecentProjectsJsonContext.Default.RecentProjectsData);
             _cache = data?.Recents ?? [];
         }
         catch
@@ -50,10 +46,11 @@ public sealed class RecentProjectsService : IRecentProjectsService
 
     public async Task AddAsync(string path, RecentProjectKind kind, CancellationToken cancellationToken = default)
     {
-        await _lock.WaitAsync(cancellationToken);
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var recents = await ReadStoreAsync(cancellationToken);
+            var data = await storage.ReadUserAsync(FileName, RecentProjectsJsonContext.Default.RecentProjectsData, cancellationToken).ConfigureAwait(false);
+            var recents = data?.Recents ?? [];
 
             recents.RemoveAll(r => string.Equals(r.Path, path, StringComparison.Ordinal));
 
@@ -73,42 +70,11 @@ public sealed class RecentProjectsService : IRecentProjectsService
                 recents.RemoveRange(MaxRecents, recents.Count - MaxRecents);
 
             _cache = recents;
-            await WriteStoreAsync(new RecentProjectsData { Recents = recents }, cancellationToken);
+            await storage.WriteUserAsync(FileName, new RecentProjectsData { Recents = recents }, RecentProjectsJsonContext.Default.RecentProjectsData, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             _lock.Release();
         }
-    }
-
-    private static async Task<List<RecentProject>> ReadStoreAsync(CancellationToken cancellationToken)
-    {
-        if (!File.Exists(StorePath))
-            return [];
-
-        try
-        {
-            await using var stream = File.OpenRead(StorePath);
-            var data = await JsonSerializer.DeserializeAsync(
-                stream,
-                RecentProjectsJsonContext.Default.RecentProjectsData,
-                cancellationToken);
-            return data?.Recents ?? [];
-        }
-        catch
-        {
-            return [];
-        }
-    }
-
-    private static async Task WriteStoreAsync(RecentProjectsData data, CancellationToken cancellationToken)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
-        await using var stream = File.Create(StorePath);
-        await JsonSerializer.SerializeAsync(
-            stream,
-            data,
-            RecentProjectsJsonContext.Default.RecentProjectsData,
-            cancellationToken);
     }
 }

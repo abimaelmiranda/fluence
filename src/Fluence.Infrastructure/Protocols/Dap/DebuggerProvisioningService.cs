@@ -13,11 +13,12 @@ using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Models.Infrastructure;
 
 namespace Fluence.Infrastructure.Protocols.Dap;
 
-public sealed class DebuggerProvisioningService(IProcessHost processHost) : IDebuggerProvisioningService
+public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluenceStorageService storage) : IDebuggerProvisioningService
 {
     private const string NetcoredbgApiUrl = "https://api.github.com/repos/Samsung/netcoredbg/releases/latest";
     private const string CmakeApiUrl = "https://api.github.com/repos/Kitware/CMake/releases/latest";
@@ -431,10 +432,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost) : IDeb
         }
     }
 
-    internal static string ResolveGlobalInstallDir() =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".fluence", "debuggers", "csharp");
+    internal string ResolveGlobalInstallDir() => storage.GetUserPath("debuggers/csharp");
 
     private static string ResolveExecutableName() =>
         RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "netcoredbg.exe" : "netcoredbg";
