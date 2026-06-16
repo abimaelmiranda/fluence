@@ -127,6 +127,10 @@ public partial class EditorView : UserControl
     // ── Document path tracking ──────────────────────────────────────────────
     private string? _lastKnownDocumentPath;
 
+    // ── Undo acceleration ──────────────────────────────────────────────────
+    private DateTime _lastUndoShortcutAt = DateTime.MinValue;
+    private int      _undoShortcutRepeatCount;
+
     // ── Request record types ────────────────────────────────────────────────
     private sealed record CompletionRequest(string FilePath, int Line, int Character, int CaretOffset, int Version);
     private sealed record HoverRequest(string FilePath, string Expression, Point HoverPoint, int Version);
