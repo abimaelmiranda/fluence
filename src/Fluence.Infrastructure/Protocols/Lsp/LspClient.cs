@@ -22,7 +22,7 @@ public sealed class LspClient : IAsyncDisposable
     private Stream? _stdout;
     private int _nextId;
 
-    public event Action<string, JsonNode?>? NotificationReceived;
+    public event Action<string, JsonNode?, int?>? NotificationReceived;
     public event Action? Disconnected;
 
     public async Task StartAsync(
@@ -193,14 +193,28 @@ public sealed class LspClient : IAsyncDisposable
         return 0;
     }
 
+    public async Task SendResponseAsync(int id, JsonNode? result, CancellationToken cancellationToken = default)
+    {
+        var message = new JsonObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"]      = id,
+            ["result"]  = result,
+        };
+        await WriteMessageAsync(message, cancellationToken).ConfigureAwait(false);
+    }
+
     private void DispatchMessage(JsonNode? node)
     {
         if (node is null)
             return;
 
-        // Response to a prior request
-        var id = node["id"];
-        if (id is not null && _pending.TryRemove(id.GetValue<int>(), out var tcs))
+        var idNode = node["id"];
+        var method = node["method"]?.GetValue<string>();
+
+        // Response to a prior request (our pending TCS holds it)
+        if (idNode is not null && TryGetIntId(idNode, out var numericId) &&
+            _pending.TryRemove(numericId, out var tcs))
         {
             var error = node["error"];
             if (error is not null)
@@ -210,10 +224,26 @@ public sealed class LspClient : IAsyncDisposable
             return;
         }
 
-        // Notification or server-initiated request (no id)
-        var method = node["method"]?.GetValue<string>();
+        // Notification or server-initiated request
         if (method is not null)
-            NotificationReceived?.Invoke(method, node["params"]);
+        {
+            int? requestId = idNode is not null && TryGetIntId(idNode, out var rid) ? rid : null;
+            NotificationReceived?.Invoke(method, node["params"], requestId);
+        }
+    }
+
+    private static bool TryGetIntId(JsonNode idNode, out int id)
+    {
+        try
+        {
+            id = idNode.GetValue<int>();
+            return true;
+        }
+        catch
+        {
+            id = 0;
+            return false;
+        }
     }
 
     private void CancelAllPendingRequests()
