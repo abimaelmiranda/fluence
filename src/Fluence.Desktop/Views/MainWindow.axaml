@@ -53,38 +53,63 @@
                                             <Border MinWidth="160"
                                                     MaxWidth="260"
                                                     Height="38"
-                                                    Padding="6,0,8,0"
-                                                    Background="{StaticResource FluenceBrushShell}"
                                                     BorderBrush="{StaticResource FluenceBrushBorder}"
-                                                    BorderThickness="0,0,1,0">
-                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                                                    <Button Grid.Column="0"
-                                                            Command="{Binding ActivateCommand}"
-                                                            Background="Transparent"
-                                                            BorderThickness="0"
-                                                            Padding="8,0"
-                                                            HorizontalAlignment="Stretch"
-                                                            HorizontalContentAlignment="Stretch"
-                                                            ToolTip.Tip="{Binding Path}">
-                                                        <TextBlock Text="{Binding DisplayTitle}"
-                                                                   FontFamily="{StaticResource FluenceFontFamily}"
-                                                                   FontSize="{StaticResource FluenceFontSizeSmall}"
-                                                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
-                                                                   TextTrimming="CharacterEllipsis"
-                                                                   VerticalAlignment="Center"/>
-                                                    </Button>
-                                                    <Button Grid.Column="1"
-                                                            Content="X"
-                                                            Command="{Binding CloseCommand}"
-                                                            Width="24"
-                                                            Height="24"
-                                                            Padding="0"
-                                                            Background="Transparent"
-                                                            BorderThickness="0"
-                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"
-                                                            FontFamily="{StaticResource FluenceFontFamily}"
-                                                            FontSize="{StaticResource FluenceFontSizeSmall}"
-                                                            ToolTip.Tip="Close tab"/>
+                                                    BorderThickness="0,0,1,0"
+                                                    Classes="tab-border"
+                                                    Classes.active="{Binding IsActive}">
+                                                <Border.Styles>
+                                                    <Style Selector="Border.tab-border.active">
+                                                        <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+                                                    </Style>
+                                                    <Style Selector="Border.tab-border:not(.active)">
+                                                        <Setter Property="Background" Value="{StaticResource FluenceBrushShell}"/>
+                                                    </Style>
+                                                </Border.Styles>
+                                                <Grid RowDefinitions="*,2" Margin="6,0,8,0">
+                                                    <Grid Grid.Row="0"
+                                                          ColumnDefinitions="*,Auto"
+                                                          ColumnSpacing="6">
+                                                        <Button Grid.Column="0"
+                                                                Command="{Binding ActivateCommand}"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Padding="8,0"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Stretch"
+                                                                ToolTip.Tip="{Binding Path}">
+                                                            <TextBlock Text="{Binding DisplayTitle}"
+                                                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       VerticalAlignment="Center"
+                                                                       Classes.active="{Binding IsActive}">
+                                                                <TextBlock.Styles>
+                                                                    <Style Selector="TextBlock.active">
+                                                                        <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextPrimary}"/>
+                                                                    </Style>
+                                                                    <Style Selector="TextBlock:not(.active)">
+                                                                        <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextSecondary}"/>
+                                                                    </Style>
+                                                                </TextBlock.Styles>
+                                                            </TextBlock>
+                                                        </Button>
+                                                        <Button Grid.Column="1"
+                                                                Content="X"
+                                                                Command="{Binding CloseCommand}"
+                                                                Width="24"
+                                                                Height="24"
+                                                                Padding="0"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                                FontFamily="{StaticResource FluenceFontFamily}"
+                                                                FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                                ToolTip.Tip="Close tab"/>
+                                                    </Grid>
+                                                    <Rectangle Grid.Row="1"
+                                                               Margin="-6,0,-8,0"
+                                                               IsVisible="{Binding IsActive}"
+                                                               Fill="{StaticResource FluenceBrushAccent}"/>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>

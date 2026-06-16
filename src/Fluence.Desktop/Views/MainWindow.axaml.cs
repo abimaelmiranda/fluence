@@ -19,7 +19,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Bubble);
+        AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel);
     }
 
     private async void OnWindowKeyDown(object? sender, KeyEventArgs e)
