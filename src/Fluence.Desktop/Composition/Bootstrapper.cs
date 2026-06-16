@@ -51,7 +51,8 @@ internal static class Bootstrapper
         var viewRegistry = new ViewRegistry();
         viewRegistry.Register<WelcomeViewModel, WelcomeView>();
         services.AddSingleton<IViewRegistry>(viewRegistry);
-        services.AddSingleton<IShellEventBus, ShellEventBus>();
+        services.AddSingleton<IShellEventBus>(
+            _ => new ShellEventBus(a => Avalonia.Threading.Dispatcher.UIThread.Post(a, Avalonia.Threading.DispatcherPriority.Background)));
         services.AddSingleton<ShellRegionHost>();
         services.AddSingleton<IShellRegionHost>(provider => provider.GetRequiredService<ShellRegionHost>());
         services.AddSingleton<IWorkspaceContext, WorkspaceContext>();
