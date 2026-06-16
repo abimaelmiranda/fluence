@@ -50,6 +50,10 @@ public sealed partial class Entrypoint : IModule, IDisposable
             new SignatureHelpService(
                 provider.GetRequiredService<ILanguageServerService>(),
                 provider.GetRequiredService<LspClientHolder>()));
+        services.AddSingleton<ICodeActionService>(provider =>
+            new CodeActionService(
+                provider.GetRequiredService<ILanguageServerService>(),
+                provider.GetRequiredService<LspClientHolder>()));
         services.AddSingleton<SemanticTokensService>(provider =>
             new SemanticTokensService(
                 (LanguageServerService)provider.GetRequiredService<ILanguageServerService>(),

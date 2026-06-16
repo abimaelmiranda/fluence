@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.LanguageServer;
 using Fluence.Modules.LanguageServer.Protocol;
@@ -34,10 +36,91 @@ internal sealed partial class LanguageServerService
             client.NotificationReceived -= OnNotificationReceived;
     }
 
-    private void OnNotificationReceived(string method, JsonNode? parameters)
+    private void OnNotificationReceived(string method, JsonNode? parameters, int? requestId)
     {
         if (method == "textDocument/publishDiagnostics")
             HandlePublishDiagnostics(parameters);
+        else if (method == "workspace/applyEdit" && requestId.HasValue)
+            HandleApplyEdit(parameters, requestId.Value);
+    }
+
+    private void HandleApplyEdit(JsonNode? parameters, int requestId)
+    {
+        try
+        {
+            Debug.WriteLine($"[LS] workspace/applyEdit received, requestId={requestId}");
+
+            if (parameters?["edit"] is not JsonObject editObj)
+            {
+                Debug.WriteLine("[LS] workspace/applyEdit: missing 'edit' node");
+                SafeSendApplyEditResponse(requestId, applied: false);
+                return;
+            }
+
+            // LSP spec allows both "changes" (dict) and "documentChanges" (array) formats.
+            // OmniSharp typically uses documentChanges.
+            if (editObj["changes"] is JsonObject changesObj)
+            {
+                foreach (var (uri, editsNode) in changesObj)
+                {
+                    if (editsNode is JsonArray arr)
+                        PublishEditsForFile(UriToFilePath(uri), arr);
+                }
+            }
+            else if (editObj["documentChanges"] is JsonArray docChanges)
+            {
+                foreach (var change in docChanges)
+                {
+                    if (change is not JsonObject changeObj) continue;
+                    var uri      = changeObj["textDocument"]?["uri"]?.GetValue<string>();
+                    var editsArr = changeObj["edits"] as JsonArray;
+                    if (uri is not null && editsArr is not null)
+                        PublishEditsForFile(UriToFilePath(uri), editsArr);
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"[LS] workspace/applyEdit: neither 'changes' nor 'documentChanges' found. edit keys: {string.Join(", ", editObj.Select(kv => kv.Key))}");
+                SafeSendApplyEditResponse(requestId, applied: false);
+                return;
+            }
+
+            SafeSendApplyEditResponse(requestId, applied: true);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[LS] HandleApplyEdit failed: {ex.Message}");
+            SafeSendApplyEditResponse(requestId, applied: false);
+        }
+    }
+
+    private void PublishEditsForFile(string filePath, JsonArray editsArr)
+    {
+        var edits = new List<LspTextEdit>(editsArr.Count);
+        foreach (var e in editsArr)
+        {
+            if (e is not JsonObject editItem) continue;
+            var newText = editItem["newText"]?.GetValue<string>() ?? string.Empty;
+            if (editItem["range"] is not JsonObject range) continue;
+            var start = range["start"] as JsonObject;
+            var end   = range["end"]   as JsonObject;
+            if (start is null || end is null) continue;
+            edits.Add(new LspTextEdit(
+                newText,
+                start["line"]?.GetValue<int>() ?? 0,
+                start["character"]?.GetValue<int>() ?? 0,
+                end["line"]?.GetValue<int>() ?? 0,
+                end["character"]?.GetValue<int>() ?? 0));
+        }
+        Debug.WriteLine($"[LS] workspace/applyEdit: publishing {edits.Count} edits for {filePath}");
+        _events.Publish(new WorkspaceEditRequestedEvent(filePath, edits));
+    }
+
+    private void SafeSendApplyEditResponse(int requestId, bool applied)
+    {
+        var client = _holder.Client;
+        if (client is null) return;
+        _ = client.SendResponseAsync(requestId, new JsonObject { ["applied"] = applied }, CancellationToken.None);
     }
 
     private void HandlePublishDiagnostics(JsonNode? parameters)
