@@ -1,0 +1,73 @@
+{
+  "name": "Ocean Dark",
+  "font": {
+    "family": "JetBrains Mono, Cascadia Code, monospace",
+    "size": 14
+  },
+  "colors": {
+    "shell.background":           "#0D1B2A",
+    "surface.background":         "#1B2A3B",
+    "surface.elevated":           "#243447",
+    "input.background":           "#1B2A3B",
+    "border":                     "#2E4057",
+    "text.primary":               "#CDD6F4",
+    "text.secondary":             "#7F849C",
+    "accent":                     "#89DCEB",
+    "error":                      "#F38BA8",
+    "editor.background":          "#0D1B2A",
+    "editor.foreground":          "#CDD6F4",
+    "editor.selection":           "#2E4057",
+    "activityBar.background":     "#0D1B2A",
+    "activityBar.activeBg":       "#1B2A3B",
+    "activityBar.foreground":     "#89DCEB",
+    "activityBar.inactiveFg":     "#7F849C",
+    "bottomBar.background":       "#137A7F"
+  },
+  "semanticTokenColors": {
+    "class":          "#89DCEB",
+    "delegateName":   "#89DCEB",
+    "record":         "#89DCEB",
+    "interface":      "#A6E3A1",
+    "struct":         "#94E2D5",
+    "recordStruct":   "#94E2D5",
+    "enum":           "#A6E3A1",
+    "enumMember":     "#74C7EC",
+    "typeParameter":  "#A6E3A1",
+    "method":         "#F9E2AF",
+    "extensionMethod": "#F9E2AF",
+    "event":          "#F9E2AF",
+    "property":       "#89B4FA",
+    "field":          "#CDD6F4",
+    "staticSymbol":   "#74C7EC",
+    "local":          "#89B4FA",
+    "parameter":      "#89B4FA"
+  },
+  "textMate": {
+    "name": "Ocean Dark TextMate",
+    "settings": [
+      {
+        "settings": {
+          "background": "#0D1B2A",
+          "foreground": "#CDD6F4",
+          "selection":  "#2E4057"
+        }
+      },
+      {
+        "scope": "comment",
+        "settings": { "foreground": "#585B70", "fontStyle": "italic" }
+      },
+      {
+        "scope": "string",
+        "settings": { "foreground": "#A6E3A1" }
+      },
+      {
+        "scope": "keyword",
+        "settings": { "foreground": "#CBA6F7" }
+      },
+      {
+        "scope": "constant.numeric",
+        "settings": { "foreground": "#FAB387" }
+      }
+    ]
+  }
+}
