@@ -15,6 +15,7 @@ using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Storage;
+using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Services.File;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
@@ -28,6 +29,7 @@ using Fluence.Infrastructure.Pty;
 using Fluence.Infrastructure.Protocols.Dap;
 using Fluence.Infrastructure.Protocols.Lsp;
 using Fluence.Core.Abstractions.LanguageServer;
+using SettingsEntrypoint = Fluence.Modules.Settings.Entrypoint;
 using FileExplorerEntrypoint = Fluence.Modules.FileExplorer.Entrypoint;
 using SolutionViewEntrypoint = Fluence.Modules.SolutionView.Entrypoint;
 using EditorEntrypoint = Fluence.Modules.Editor.Entrypoint;
@@ -40,6 +42,7 @@ using SourceControlEntrypoint = Fluence.Modules.SourceControl.Entrypoint;
 using LspSetupEntrypoint = Fluence.Modules.LspSetup.Entrypoint;
 using LanguageServerEntrypoint = Fluence.Modules.LanguageServer.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Fluence.Desktop.Composition;
 
@@ -48,6 +51,8 @@ internal static class Bootstrapper
     public static ServiceProvider BuildServices()
     {
         var services = new ServiceCollection();
+
+        services.AddLogging(logging => logging.SetMinimumLevel(LogLevel.Debug));
 
         var viewRegistry = new ViewRegistry();
         viewRegistry.Register<WelcomeViewModel, WelcomeView>();
@@ -87,6 +92,7 @@ internal static class Bootstrapper
 
         var modules = new IModule[]
         {
+            new SettingsEntrypoint(),
             new FileExplorerEntrypoint(),
             new SolutionViewEntrypoint(),
             new EditorEntrypoint(),
