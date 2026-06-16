@@ -134,6 +134,32 @@
                 </ScrollViewer>
             </Border>
         </Popup>
+        <Popup x:Name="CodeActionPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight">
+            <Border x:Name="CodeActionPopupBorder"
+                    Background="#1A1A2A"
+                    BorderBrush="#3A3A5A"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8,6"
+                    MaxWidth="480">
+                <StackPanel Spacing="4">
+                    <TextBlock x:Name="CodeActionDiagnosticText"
+                               Foreground="#CCCCCC"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"/>
+                    <Separator x:Name="CodeActionSeparator"
+                               Background="#3A3A5A"
+                               Height="1"
+                               Margin="0,2"/>
+                    <StackPanel x:Name="CodeActionsPanel" Spacing="2"/>
+                </StackPanel>
+            </Border>
+        </Popup>
         <Popup x:Name="SignatureHelpPopup"
                IsLightDismissEnabled="False"
                Placement="AnchorAndGravity"

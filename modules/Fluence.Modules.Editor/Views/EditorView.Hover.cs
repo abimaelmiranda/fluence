@@ -39,17 +39,25 @@ public partial class EditorView
         var diag = _diagnosticRenderer.FindDiagnosticAt(hoveredLine, hoveredChar);
         if (diag is not null)
         {
-            var isError = diag.Severity == LspDiagnosticSeverity.Error;
-            var prefix  = isError ? "Error" : "Warning";
-            Dispatcher.UIThread.Post(() =>
+            if (_codeActionService is not null)
             {
-                DiagnosticTooltipText.Text          = $"[{prefix}] {diag.Message}";
-                DiagnosticTooltipText.Foreground    = isError ? DiagErrorForeground   : DiagWarningForeground;
-                DiagnosticTooltipBorder.BorderBrush = isError ? DiagErrorBorder       : DiagWarningBorder;
-                DiagnosticTooltipPopup.PlacementTarget = EditorSurface;
-                DiagnosticTooltipPopup.PlacementRect   = new Rect(hoverPoint.X + 12, hoverPoint.Y + 18, 1, 1);
-                DiagnosticTooltipPopup.IsOpen = true;
-            });
+                CancelPopupClose();
+                ScheduleCodeActionRequest(diag, hoverPoint);
+            }
+            else
+            {
+                var isError = diag.Severity == LspDiagnosticSeverity.Error;
+                var prefix  = isError ? "Error" : "Warning";
+                Dispatcher.UIThread.Post(() =>
+                {
+                    DiagnosticTooltipText.Text             = $"[{prefix}] {diag.Message}";
+                    DiagnosticTooltipText.Foreground       = isError ? DiagErrorForeground   : DiagWarningForeground;
+                    DiagnosticTooltipBorder.BorderBrush    = isError ? DiagErrorBorder       : DiagWarningBorder;
+                    DiagnosticTooltipPopup.PlacementTarget = EditorSurface;
+                    DiagnosticTooltipPopup.PlacementRect   = new Rect(hoverPoint.X + 12, hoverPoint.Y + 18, 1, 1);
+                    DiagnosticTooltipPopup.IsOpen          = true;
+                });
+            }
             return;
         }
 
@@ -60,6 +68,7 @@ public partial class EditorView
     private void OnPointerHoverStopped(object? sender, PointerEventArgs e)
     {
         InvalidateHoverRequests();
+        InvalidateCodeActionRequests();
         Interlocked.Increment(ref _lspHoverRequestVersion);
         lock (_lspHoverGate)
         {
@@ -199,9 +208,10 @@ public partial class EditorView
         {
             if (!_mouseInPopup)
             {
-                HoverPopup.IsOpen = false;
-                LspHoverPopup.IsOpen = false;
+                HoverPopup.IsOpen             = false;
+                LspHoverPopup.IsOpen          = false;
                 DiagnosticTooltipPopup.IsOpen = false;
+                CodeActionPopup.IsOpen        = false;
             }
         });
     }
