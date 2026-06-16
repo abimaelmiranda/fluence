@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Workspace;
@@ -73,50 +74,56 @@ public sealed partial class Entrypoint : IModule, IDisposable
         host.Workspace.Changed += (_, _) => TryStartOrRestart(host, lsp, provisioning, fromProvisioning: false);
 
         // Respond to document lifecycle events from the editor
-        host.Events.Subscribe<DocumentOpenedEvent>(e =>
+        host.Events.SubscribeAsync<DocumentOpenedEvent>(e =>
         {
-            if (!lsp.IsRunning) return;
+            if (!lsp.IsRunning) return Task.CompletedTask;
             SafeSend(lsp.SendDidOpenAsync(e.FilePath, e.LanguageId, e.Content, CancellationToken.None));
             QueueSemanticTokens(e.FilePath);
+            return Task.CompletedTask;
         });
 
-        host.Events.Subscribe<DocumentChangedEvent>(e =>
+        host.Events.SubscribeAsync<DocumentChangedEvent>(e =>
         {
-            if (!lsp.IsRunning) return;
+            if (!lsp.IsRunning) return Task.CompletedTask;
             QueueDidChange(e.FilePath, e.Version, e.Content);
             QueueSemanticTokens(e.FilePath);
+            return Task.CompletedTask;
         });
 
-        host.Events.Subscribe<DocumentClosedEvent>(e =>
+        host.Events.SubscribeAsync<DocumentClosedEvent>(e =>
         {
-            if (!lsp.IsRunning) return;
+            if (!lsp.IsRunning) return Task.CompletedTask;
             SafeSend(FlushPendingDidChangeAndCloseAsync(lsp, e.FilePath));
+            return Task.CompletedTask;
         });
 
         // Use diagnostics as a signal that OmniSharp finished analyzing — safe moment to fetch semantic tokens.
         // This also covers the startup case where the LSP wasn't running when DocumentOpenedEvent fired.
-        host.Events.Subscribe<DiagnosticsUpdatedEvent>(e =>
+        host.Events.SubscribeAsync<DiagnosticsUpdatedEvent>(e =>
         {
-            if (!lsp.IsRunning) return;
+            if (!lsp.IsRunning) return Task.CompletedTask;
             QueueSemanticTokens(e.FilePath);
+            return Task.CompletedTask;
         });
 
-        host.Events.Subscribe<FlushDocumentSyncEvent>(e =>
+        host.Events.SubscribeAsync<FlushDocumentSyncEvent>(e =>
         {
-            if (!lsp.IsRunning) return;
+            if (!lsp.IsRunning) return Task.CompletedTask;
             SafeSend(FlushPendingDidChangeImmediatelyAsync(lsp, e.FilePath));
+            return Task.CompletedTask;
         });
 
         // Navigation requests — resolve and open destination
-        host.Events.Subscribe<GoToDefinitionRequestedEvent>(e => HandleNavigation(host, lsp, "definition", e.FilePath, e.Line, e.Character));
-        host.Events.Subscribe<GoToImplementationRequestedEvent>(e => HandleNavigation(host, lsp, "implementation", e.FilePath, e.Line, e.Character));
-        host.Events.Subscribe<GoToTypeDefinitionRequestedEvent>(e => HandleNavigation(host, lsp, "typeDefinition", e.FilePath, e.Line, e.Character));
+        host.Events.SubscribeAsync<GoToDefinitionRequestedEvent>(e => HandleNavigation(host, lsp, "definition", e.FilePath, e.Line, e.Character));
+        host.Events.SubscribeAsync<GoToImplementationRequestedEvent>(e => HandleNavigation(host, lsp, "implementation", e.FilePath, e.Line, e.Character));
+        host.Events.SubscribeAsync<GoToTypeDefinitionRequestedEvent>(e => HandleNavigation(host, lsp, "typeDefinition", e.FilePath, e.Line, e.Character));
 
         // Provisioning completed — start the server (or reset guard if it failed)
-        host.Events.Subscribe<LspProvisioningCompletedEvent>(_ =>
+        host.Events.SubscribeAsync<LspProvisioningCompletedEvent>(_ =>
         {
             _provisioningPending = false;
             TryStartOrRestart(host, lsp, provisioning, fromProvisioning: true);
+            return Task.CompletedTask;
         });
 
         host.SetModuleState(Name, ModuleState.Active);

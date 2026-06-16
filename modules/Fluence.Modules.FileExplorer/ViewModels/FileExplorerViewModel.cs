@@ -44,7 +44,7 @@ public sealed class FileExplorerViewModel : ViewModelBase
         _fileDialogs = fileDialogs;
         _fileService = fileService;
         _workspace.Changed += OnWorkspaceChanged;
-        _eventBus.Subscribe<GitCheckoutCompletedEvent>(OnGitCheckoutCompleted);
+        _eventBus.SubscribeSync<GitCheckoutCompletedEvent>(OnGitCheckoutCompleted);
         RefreshRoot();
     }
 

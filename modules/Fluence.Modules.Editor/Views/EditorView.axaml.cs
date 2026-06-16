@@ -184,9 +184,9 @@ public partial class EditorView : UserControl
         _hoverService           = hoverService;
         _signatureHelpService   = signatureHelpService;
 
-        eventBus.Subscribe<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
-        eventBus.Subscribe<NavigationResolvedEvent>(OnNavigationResolved);
-        eventBus.Subscribe<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
-        eventBus.Subscribe<LspServerReadyEvent>(OnLspServerReady);
+        eventBus.SubscribeSync<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
+        eventBus.SubscribeSync<NavigationResolvedEvent>(OnNavigationResolved);
+        eventBus.SubscribeSync<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
+        eventBus.SubscribeSync<LspServerReadyEvent>(OnLspServerReady);
     }
 }

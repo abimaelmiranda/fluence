@@ -1,5 +1,4 @@
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using AvaloniaEdit.Rendering;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.LanguageServer;
@@ -14,11 +13,8 @@ public partial class EditorView
         if (!string.Equals(activePath, e.FilePath, StringComparison.OrdinalIgnoreCase))
             return;
 
-        Dispatcher.UIThread.Post(() =>
-        {
-            _diagnosticRenderer.Update(Editor.Document, e.Diagnostics);
-            Editor.TextArea.TextView.InvalidateLayer(KnownLayer.Background);
-        }, DispatcherPriority.Background);
+        _diagnosticRenderer.Update(Editor.Document, e.Diagnostics);
+        Editor.TextArea.TextView.InvalidateLayer(KnownLayer.Background);
     }
 
     private void OnContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)

@@ -22,7 +22,7 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.Subscribe<DebuggerProvisioningRequiredEvent>(e =>
+        host.Events.SubscribeSync<DebuggerProvisioningRequiredEvent>(e =>
         {
             var vm = host.Services.GetRequiredService<DebuggerSetupViewModel>();
             host.Workspace.OpenToolTab("tool://fluence/debugger-setup", "Debugger Setup", vm);

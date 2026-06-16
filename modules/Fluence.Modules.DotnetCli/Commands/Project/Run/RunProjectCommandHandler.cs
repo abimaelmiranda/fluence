@@ -1,10 +1,7 @@
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Infrastructure;
-using Fluence.Core.Models.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
-using Fluence.Core.Models.Modules;
-using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
+using Fluence.Core.Models.Infrastructure;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
@@ -23,7 +20,7 @@ public sealed class RunProjectCommandHandler(
     ILaunchSettingsCoordinator launchSettings,
     IWorkspaceContext workspace,
     IUserNotificationService notifications,
-    IShellRegionHost shellRegions)
+    IShellEventBus events)
     : ICommandHandler<RunProjectCommand>
 {
     public async Task HandleAsync(RunProjectCommand command, CancellationToken cancellationToken = default)
@@ -46,7 +43,7 @@ public sealed class RunProjectCommandHandler(
             return;
         }
 
-        shellRegions.Expand(ShellRegion.BottomBar);
+        events.Publish(new ExpandPanelEvent("Terminal"));
         await terminal.ExecuteAsync(target.Command, target.WorkingDirectory, cancellationToken);
     }
 }

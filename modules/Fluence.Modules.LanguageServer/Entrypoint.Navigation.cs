@@ -9,10 +9,10 @@ namespace Fluence.Modules.LanguageServer;
 
 public sealed partial class Entrypoint
 {
-    private static void HandleNavigation(IModuleHost host, ILanguageServerService lsp, string kind, string filePath, int line, int character)
+    private static Task HandleNavigation(IModuleHost host, ILanguageServerService lsp, string kind, string filePath, int line, int character)
     {
         var nav = host.Services.GetRequiredService<INavigationService>();
-        _ = ResolveAndPublishNavigation(host, nav, kind, filePath, line, character);
+        return ResolveAndPublishNavigation(host, nav, kind, filePath, line, character);
     }
 
     private static async Task ResolveAndPublishNavigation(

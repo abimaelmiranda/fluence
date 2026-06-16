@@ -15,14 +15,11 @@ public partial class EditorView
 {
     private void OnLspServerReady(LspServerReadyEvent _)
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            var path = _viewModel?.ActiveDocumentPath;
-            if (string.IsNullOrEmpty(path)) return;
+        var path = _viewModel?.ActiveDocumentPath;
+        if (string.IsNullOrEmpty(path)) return;
 
-            var text = Editor.Document.Text;
-            _eventBus?.Publish(new DocumentOpenedEvent(path, text, "csharp"));
-        }, DispatcherPriority.Background);
+        var text = Editor.Document.Text;
+        _eventBus?.Publish(new DocumentOpenedEvent(path, text, "csharp"));
     }
 
     private void OnSemanticTokensUpdated(SemanticTokensUpdatedEvent e)
@@ -53,30 +50,33 @@ public partial class EditorView
 
     private void NavigateToLocation(NavigationResolvedEvent e, int retries)
     {
-        Dispatcher.UIThread.Post(() =>
+        if (!Dispatcher.UIThread.CheckAccess())
         {
-            var doc = Editor.Document;
-            if (doc is null) return;
+            Dispatcher.UIThread.Post(() => NavigateToLocation(e, retries), DispatcherPriority.Background);
+            return;
+        }
 
-            // Cross-file navigation: wait for the correct document to be loaded
-            var loadedPath = _viewModel?.ActiveDocumentPath;
-            if (!string.Equals(loadedPath, e.FilePath, StringComparison.OrdinalIgnoreCase))
-            {
-                if (retries < 10)
-                    Task.Delay(50).ContinueWith(_ => NavigateToLocation(e, retries + 1));
-                return;
-            }
+        var doc = Editor.Document;
+        if (doc is null) return;
 
-            // LSP lines are 0-based; clamp final offset against doc length
-            var targetLine = Math.Clamp(e.Line + 1, 1, doc.LineCount);
-            var docLine    = doc.GetLineByNumber(targetLine);
-            var offset     = Math.Clamp(
-                docLine.Offset + Math.Clamp(e.Character, 0, docLine.Length),
-                0, doc.TextLength);
+        // Cross-file navigation: wait for the correct document to be loaded.
+        var loadedPath = _viewModel?.ActiveDocumentPath;
+        if (!string.Equals(loadedPath, e.FilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            if (retries < 10)
+                Task.Delay(50).ContinueWith(_ => NavigateToLocation(e, retries + 1));
+            return;
+        }
 
-            SetCaretOffset(offset);
-            Editor.ScrollToLine(targetLine);
-        }, DispatcherPriority.Background);
+        // LSP lines are 0-based; clamp final offset against doc length.
+        var targetLine = Math.Clamp(e.Line + 1, 1, doc.LineCount);
+        var docLine    = doc.GetLineByNumber(targetLine);
+        var offset     = Math.Clamp(
+            docLine.Offset + Math.Clamp(e.Character, 0, docLine.Length),
+            0, doc.TextLength);
+
+        SetCaretOffset(offset);
+        Editor.ScrollToLine(targetLine);
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

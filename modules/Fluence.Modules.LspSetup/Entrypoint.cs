@@ -16,7 +16,7 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.Subscribe<LspProvisioningRequiredEvent>(e =>
+        host.Events.SubscribeSync<LspProvisioningRequiredEvent>(e =>
         {
             var vm = host.Services.GetRequiredService<LspSetupViewModel>();
             host.Workspace.OpenToolTab("tool://fluence/lsp-setup", "Language Server Setup", vm);

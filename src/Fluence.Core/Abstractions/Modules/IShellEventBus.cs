@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Fluence.Core.Abstractions.Modules;
 
@@ -7,15 +8,10 @@ public interface IShellEvent { }
 public interface IShellEventBus
 {
     void Publish(IShellEvent shellEvent);
-    void Subscribe<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent;
-    void Unsubscribe<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent;
-
-    // TODO: split into two subscribe contracts:
-    //   SubscribeSync<TEvent>(Action<TEvent>)     — deferred, runs on UI thread (current behavior)
-    //   SubscribeAsync<TEvent>(Func<TEvent,Task>) — runs on thread pool via Task.Run
-    // Migrate: UI-touching handlers (MainWindowViewModel, FileExplorer, SolutionView, SourceControl)
-    // stay sync; LanguageServer, Debug, DotnetCli, Editor entrypoints move to async.
-    // EditorView handlers can drop their internal Dispatcher.UIThread.Post once on sync path.
+    void SubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent;
+    void SubscribeAsync<TEvent>(Func<TEvent, Task> handler) where TEvent : IShellEvent;
+    void UnsubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent;
+    void UnsubscribeAsync<TEvent>(Func<TEvent, Task> handler) where TEvent : IShellEvent;
 }
 
 public sealed class ExpandPanelEvent(string panelId) : IShellEvent
