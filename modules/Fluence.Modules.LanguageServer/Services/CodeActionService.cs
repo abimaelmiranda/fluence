@@ -137,8 +137,6 @@ internal sealed class CodeActionService(ILanguageServerService lsp, LspClientHol
         {
             if (item is not JsonObject obj) continue;
 
-            System.Diagnostics.Debug.WriteLine($"[LSP/CodeAction] item: {obj.ToJsonString()}");
-
             var title = obj["title"]?.GetValue<string>() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(title)) continue;
 
