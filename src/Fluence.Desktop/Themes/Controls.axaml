@@ -1,0 +1,132 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <Style Selector="TextBlock.ideLabel">
+        <Setter Property="FontFamily" Value="{StaticResource FluenceFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource FluenceFontSizeSmall}"/>
+        <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextSecondary}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBlock.ideValue">
+        <Setter Property="FontFamily" Value="{StaticResource FluenceFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource FluenceFontSizeSmall}"/>
+        <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextPrimary}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="{DynamicResource FluenceBrushInputBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FluenceBrushBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FluenceFontFamily}"/>
+        <Setter Property="FontSize" Value="{DynamicResource FluenceFontSizeSmall}"/>
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Padding" Value="8,4"/>
+    </Style>
+
+    <Style Selector="TextBox.ideCompact">
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="Height" Value="26"/>
+        <Setter Property="Padding" Value="8,3"/>
+    </Style>
+
+    <Style Selector="ComboBox">
+        <Setter Property="Background" Value="{DynamicResource FluenceBrushInputBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FluenceBrushBorder}"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FluenceFontFamily}"/>
+        <Setter Property="FontSize" Value="{DynamicResource FluenceFontSizeSmall}"/>
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Padding" Value="8,3"/>
+    </Style>
+
+    <Style Selector="ComboBox.ideCompact">
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="Height" Value="26"/>
+    </Style>
+
+    <Style Selector="CheckBox">
+        <Setter Property="FontFamily" Value="{DynamicResource FluenceFontFamily}"/>
+        <Setter Property="FontSize" Value="{DynamicResource FluenceFontSizeSmall}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+    </Style>
+
+    <Style Selector="Button">
+        <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextPrimary}"/>
+        <Setter Property="Background" Value="{DynamicResource FluenceBrushSurfaceElevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FluenceBrushBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FluenceFontFamily}"/>
+        <Setter Property="FontSize" Value="{DynamicResource FluenceFontSizeSmall}"/>
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Padding" Value="10,4"/>
+    </Style>
+
+    <Style Selector="Button:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FluenceBrushBorder}"/>
+    </Style>
+
+    <Style Selector="Button.ideAccent">
+        <Setter Property="Foreground" Value="{DynamicResource FluenceBrushAccent}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Button.ideGhost">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="Padding" Value="7,3"/>
+    </Style>
+
+    <Style Selector="Button.ideGhost:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FluenceBrushSurfaceElevated}"/>
+    </Style>
+
+    <Style Selector="Button.ideIcon">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Button.ideIcon:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FluenceBrushSurfaceElevated}"/>
+    </Style>
+
+    <Style Selector="Button.ideToolbar">
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="Height" Value="26"/>
+        <Setter Property="Padding" Value="9,3"/>
+    </Style>
+
+    <Style Selector="Border.idePanel">
+        <Setter Property="Background" Value="{StaticResource FluenceBrushShell}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource FluenceBrushBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+    </Style>
+
+    <Style Selector="Border.ideRow">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <Style Selector="Border.ideRow:pointerover">
+        <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+    </Style>
+
+    <Style Selector="TabControl">
+        <Setter Property="FontFamily" Value="{DynamicResource FluenceFontFamily}"/>
+        <Setter Property="FontSize" Value="{DynamicResource FluenceFontSizeSmall}"/>
+    </Style>
+</Styles>

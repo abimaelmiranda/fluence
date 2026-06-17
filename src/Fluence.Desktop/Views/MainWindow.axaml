@@ -4,6 +4,7 @@
         xmlns:views="using:Fluence.Desktop.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="760"
         x:Class="Fluence.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -94,17 +95,14 @@
                                                             </TextBlock>
                                                         </Button>
                                                         <Button Grid.Column="1"
-                                                                Content="X"
+                                                                Classes="ideIcon"
                                                                 Command="{Binding CloseCommand}"
-                                                                Width="24"
-                                                                Height="24"
-                                                                Padding="0"
-                                                                Background="Transparent"
-                                                                BorderThickness="0"
-                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"
-                                                                FontFamily="{StaticResource FluenceFontFamily}"
-                                                                FontSize="{StaticResource FluenceFontSizeSmall}"
-                                                                ToolTip.Tip="Close tab"/>
+                                                                ToolTip.Tip="Close tab">
+                                                            <materialIcons:MaterialIcon Width="13"
+                                                                                        Height="13"
+                                                                                        Kind="Close"
+                                                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                        </Button>
                                                     </Grid>
                                                     <Rectangle Grid.Row="1"
                                                                Margin="-6,0,-8,0"
@@ -122,31 +120,31 @@
                                         Margin="8,0"
                                         Spacing="4"
                                         VerticalAlignment="Center">
-                                <Button Content="Run"
+                                <Button Classes="ideIcon"
                                         Command="{Binding RunCommand}"
-                                        Height="26"
-                                        MinWidth="58"
-                                        Padding="10,0"
-                                        FontFamily="{StaticResource FluenceFontFamily}"
-                                        FontSize="{StaticResource FluenceFontSizeSmall}"
-                                        ToolTip.Tip="Run"/>
-                                <Button Content="Debug"
+                                        ToolTip.Tip="Run">
+                                    <materialIcons:MaterialIcon Width="22"
+                                                                Height="22"
+                                                                Kind="Play"
+                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                </Button>
+                                <Button Classes="ideIcon"
                                         Command="{Binding DebugCommand}"
-                                        Height="26"
-                                        MinWidth="66"
-                                        Padding="10,0"
-                                        FontFamily="{StaticResource FluenceFontFamily}"
-                                        FontSize="{StaticResource FluenceFontSizeSmall}"
-                                        ToolTip.Tip="Debug"/>
-                                <Button Content="Stop"
+                                        ToolTip.Tip="Debug">
+                                    <materialIcons:MaterialIcon Width="22"
+                                                                Height="22"
+                                                                Kind="Bug"
+                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                </Button>
+                                <Button Classes="ideIcon"
                                         Command="{Binding StopDebugCommand}"
                                         IsVisible="{Binding IsDebugging}"
-                                        Height="26"
-                                        MinWidth="56"
-                                        Padding="10,0"
-                                        FontFamily="{StaticResource FluenceFontFamily}"
-                                        FontSize="{StaticResource FluenceFontSizeSmall}"
-                                        ToolTip.Tip="Stop debug"/>
+                                        ToolTip.Tip="Stop debug">
+                                    <materialIcons:MaterialIcon Width="22"
+                                                                Height="22"
+                                                                Kind="Stop"
+                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                </Button>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -214,11 +212,11 @@
                             BorderThickness="0"
                             CornerRadius="6"
                             ToolTip.Tip="Files">
-                        <PathIcon Width="20" Height="20"
-                                  Foreground="{Binding ActivityBar.ActiveTabId,
-                                      Converter={StaticResource ActivityBarFgConverter},
-                                      ConverterParameter=Files}"
-                                  Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                        <materialIcons:MaterialIcon Width="24" Height="24"
+                                                    Kind="Folder"
+                                                    Foreground="{Binding ActivityBar.ActiveTabId,
+                                                        Converter={StaticResource ActivityBarFgConverter},
+                                                        ConverterParameter=Files}"/>
                     </Button>
 
                     <!-- Source Control -->
@@ -232,11 +230,11 @@
                             BorderThickness="0"
                             CornerRadius="6"
                             ToolTip.Tip="Source Control">
-                        <PathIcon Width="20" Height="20"
-                                  Foreground="{Binding ActivityBar.ActiveTabId,
-                                      Converter={StaticResource ActivityBarFgConverter},
-                                      ConverterParameter=SourceControl}"
-                                  Data="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25z"/>
+                        <materialIcons:MaterialIcon Width="24" Height="24"
+                                                    Kind="SourceBranch"
+                                                    Foreground="{Binding ActivityBar.ActiveTabId,
+                                                        Converter={StaticResource ActivityBarFgConverter},
+                                                        ConverterParameter=SourceControl}"/>
                     </Button>
 
                 </StackPanel>

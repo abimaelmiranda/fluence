@@ -2,81 +2,117 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Fluence.Modules.Settings.ViewModels"
              xmlns:theming="using:Fluence.Core.Models.Theming"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Fluence.Modules.Settings.Views.SettingsToolView"
              x:DataType="vm:SettingsToolViewModel">
-    <Grid RowDefinitions="Auto,*"
+    <Grid RowDefinitions="Auto,Auto,*"
           Background="{StaticResource FluenceBrushShell}">
+        <Grid.Styles>
+            <Style Selector="Button.settingsToolbarIcon">
+                <Setter Property="Width" Value="30"/>
+                <Setter Property="Height" Value="30"/>
+                <Setter Property="MinHeight" Value="30"/>
+            </Style>
+        </Grid.Styles>
         <Border Grid.Row="0"
-                Padding="12,8"
+                Padding="12,4"
                 Background="{StaticResource FluenceBrushSurface}"
                 BorderBrush="{StaticResource FluenceBrushBorder}"
                 BorderThickness="0,0,0,1">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <Button Grid.Column="0"
-                        Content="Restore defaults"
+                        Classes="ideIcon settingsToolbarIcon"
                         Command="{Binding RestoreDefaultsCommand}"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Foreground="{StaticResource FluenceBrushTextSecondary}"
-                        FontFamily="{StaticResource FluenceFontFamily}"
-                        FontSize="{StaticResource FluenceFontSizeSmall}"
-                        Padding="4,0"
-                        VerticalAlignment="Center"/>
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Restore defaults">
+                    <materialIcons:MaterialIcon Width="18"
+                                                Height="18"
+                                                Kind="Restore"
+                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                </Button>
                 <TextBlock Grid.Column="1"
+                           Classes="ideLabel"
                            Text="{Binding Status}"
                            Margin="12,0"
-                           FontFamily="{StaticResource FluenceFontFamily}"
-                           FontSize="{StaticResource FluenceFontSizeSmall}"
-                           Foreground="{StaticResource FluenceBrushTextSecondary}"
                            VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="2"
                             Orientation="Horizontal"
-                            Spacing="8">
-                    <Button Content="Install theme"
-                            Command="{Binding InstallThemeCommand}"/>
-                    <Button Content="Save and apply"
-                            Command="{Binding SaveCommand}"/>
+                            Spacing="6">
+                    <Button Classes="ideIcon settingsToolbarIcon"
+                            Command="{Binding InstallThemeCommand}"
+                            ToolTip.Tip="Install theme">
+                        <materialIcons:MaterialIcon Width="18"
+                                                    Height="18"
+                                                    Kind="Download"
+                                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                    </Button>
+                    <Button Classes="ideIcon ideAccent settingsToolbarIcon"
+                            Command="{Binding SaveCommand}"
+                            ToolTip.Tip="Save and apply">
+                        <materialIcons:MaterialIcon Width="18"
+                                                    Height="18"
+                                                    Kind="Check"
+                                                    Foreground="{StaticResource FluenceBrushAccent}"/>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
-        <TabControl Grid.Row="1"
+        <Border Grid.Row="1"
+                Padding="12,6"
+                Background="{StaticResource FluenceBrushShell}">
+            <Grid ColumnDefinitions="Auto,320,*"
+                  ColumnSpacing="8"
+                  HorizontalAlignment="Left">
+                <materialIcons:MaterialIcon Grid.Column="0"
+                                            Width="18"
+                                            Height="18"
+                                            Kind="Magnify"
+                                            Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                            VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1"
+                         Classes="ideCompact"
+                         PlaceholderText="Search settings and keybindings"
+                         Text="{Binding SearchQuery, Mode=TwoWay}"/>
+            </Grid>
+        </Border>
+        <TabControl Grid.Row="2"
+                    Margin="0,4,0,0"
                     SelectedIndex="{Binding SelectedTabIndex}">
             <TabItem Header="Settings">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Sections}"
-                                  Margin="18">
+                    <ItemsControl ItemsSource="{Binding FilteredSections}"
+                                  Margin="18,14"
+                                  MaxWidth="760"
+                                  HorizontalAlignment="Left">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:SettingsSectionViewModel">
-                                <StackPanel Spacing="8"
-                                            Margin="0,0,0,22">
+                                <StackPanel Spacing="7"
+                                            Margin="0,0,0,20">
                                     <TextBlock Text="{Binding Name}"
                                                FontFamily="{StaticResource FluenceFontFamily}"
                                                FontSize="{StaticResource FluenceFontSizeBody}"
                                                FontWeight="SemiBold"
                                                Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                                    <ItemsControl ItemsSource="{Binding Properties}">
+                                    <ItemsControl ItemsSource="{Binding FilteredProperties}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:SettingsPropertyViewModel">
-                                                <Grid ColumnDefinitions="240,*"
-                                                      Margin="0,3">
+                                                <Grid ColumnDefinitions="200,360"
+                                                      ColumnSpacing="16"
+                                                      Margin="0,2">
                                                     <TextBlock Grid.Column="0"
+                                                               Classes="ideLabel"
                                                                Text="{Binding Name}"
-                                                               FontFamily="{StaticResource FluenceFontFamily}"
-                                                               FontSize="{StaticResource FluenceFontSizeSmall}"
-                                                               Foreground="{StaticResource FluenceBrushTextSecondary}"
                                                                VerticalAlignment="Center"/>
                                                     <TextBox Grid.Column="1"
+                                                             Classes="ideCompact"
                                                              Text="{Binding TextValue, Mode=TwoWay}"
-                                                             IsVisible="{Binding IsText}"
-                                                             FontFamily="{StaticResource FluenceFontFamily}"
-                                                             FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                                                             IsVisible="{Binding IsText}"/>
                                                     <ComboBox Grid.Column="1"
+                                                              Classes="ideCompact"
                                                               ItemsSource="{Binding ThemeOptions}"
                                                               SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
-                                                              IsVisible="{Binding IsThemeSelector}"
-                                                              FontFamily="{StaticResource FluenceFontFamily}"
-                                                              FontSize="{StaticResource FluenceFontSizeSmall}">
+                                                              IsVisible="{Binding IsThemeSelector}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate x:DataType="theming:ThemeDescriptor">
                                                                 <TextBlock Text="{Binding DisplayName}"/>
@@ -85,7 +121,8 @@
                                                     </ComboBox>
                                                     <CheckBox Grid.Column="1"
                                                               IsChecked="{Binding BoolValue, Mode=TwoWay}"
-                                                              IsVisible="{Binding IsBoolean}"/>
+                                                              IsVisible="{Binding IsBoolean}"
+                                                              VerticalAlignment="Center"/>
                                                 </Grid>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -99,46 +136,70 @@
             <TabItem Header="Keybindings">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Keybindings}"
-                                  Margin="18">
+                    <ItemsControl ItemsSource="{Binding FilteredKeybindings}"
+                                  Margin="18,14">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:KeybindingRowViewModel">
-                                <Grid ColumnDefinitions="2*,Auto,180,Auto"
-                                      ColumnSpacing="12"
-                                      Margin="0,3">
+                                <Grid ColumnDefinitions="2*,90,160,116"
+                                      ColumnSpacing="10"
+                                      Margin="0,2">
                                     <StackPanel Grid.Column="0"
                                                 Spacing="1">
                                         <TextBlock Text="{Binding Title}"
+                                                   Classes="ideValue"
                                                    FontFamily="{StaticResource FluenceFontFamily}"
                                                    FontSize="{StaticResource FluenceFontSizeSmall}"
-                                                   Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                   TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{Binding CommandId}"
+                                                   Classes="ideLabel"
                                                    FontFamily="{StaticResource FluenceFontFamily}"
                                                    FontSize="{StaticResource FluenceFontSizeSmall}"
-                                                   Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                   TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <TextBlock Grid.Column="1"
+                                               Classes="ideLabel"
                                                Text="{Binding Scope}"
-                                               Foreground="{StaticResource FluenceBrushTextSecondary}"
                                                VerticalAlignment="Center"/>
                                     <TextBox Grid.Column="2"
+                                             Classes="ideCompact"
+                                             Width="160"
                                              Text="{Binding Key, Mode=TwoWay}"
-                                             KeyDown="OnKeybindingTextBoxKeyDown"
-                                             FontFamily="{StaticResource FluenceFontFamily}"
-                                             FontSize="{StaticResource FluenceFontSizeSmall}"/>
-                                    <StackPanel Grid.Column="3"
-                                                Orientation="Horizontal"
-                                                Spacing="8"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding ConflictLabel}"
-                                                   Foreground="{StaticResource FluenceBrushError}"
-                                                   VerticalAlignment="Center"/>
-                                        <Button Content="{Binding RecordButtonText}"
+                                             KeyDown="OnKeybindingTextBoxKeyDown"/>
+                                    <Grid Grid.Column="3"
+                                          ColumnDefinitions="32,36,36"
+                                          ColumnSpacing="6"
+                                          VerticalAlignment="Center">
+                                        <materialIcons:MaterialIcon Grid.Column="0"
+                                                                    Width="20"
+                                                                    Height="20"
+                                                                    Kind="AlertCircleOutline"
+                                                                    Foreground="{StaticResource FluenceBrushError}"
+                                                                    IsVisible="{Binding HasConflict}"
+                                                                    ToolTip.Tip="Conflicting keybinding"
+                                                                    VerticalAlignment="Center"
+                                                                    HorizontalAlignment="Center"/>
+                                        <Button Classes="ideIcon"
+                                                Grid.Column="1"
                                                 Command="{Binding StartRecordingCommand}"
-                                                KeyDown="OnKeybindingRecordKeyDown"/>
-                                        <Button Content="Reset"
-                                                Command="{Binding ResetCommand}"/>
-                                    </StackPanel>
+                                                KeyDown="OnKeybindingRecordKeyDown"
+                                                ToolTip.Tip="{Binding RecordButtonText}">
+                                            <materialIcons:MaterialIcon Width="20"
+                                                                        Height="20"
+                                                                        Kind="RecordCircle"
+                                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                        </Button>
+                                        <Button Classes="ideIcon"
+                                                Grid.Column="2"
+                                                Command="{Binding ResetCommand}"
+                                                ToolTip.Tip="Reset">
+                                            <materialIcons:MaterialIcon Width="20"
+                                                                        Height="20"
+                                                                        Kind="Restore"
+                                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                        </Button>
+                                    </Grid>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
