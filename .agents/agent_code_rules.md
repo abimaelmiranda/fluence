@@ -9,12 +9,12 @@ The goal is to preserve a strict architecture, maintainability, and performance 
 ## 1. Core Architectural Style
 
 The solution follows:
-- **Modular Monolith — Level 2**
+- **Modular Monolith**
 - **Ports and Adapters / Hexagonal Architecture**
 - **MVVM** in the desktop layer
 - **DDD-light** in the domain layer
 
-Level 2 means: modules are logically isolated assemblies or well-bounded namespaces running in the **same process**.
+Modules are logically isolated assemblies or well-bounded namespaces running in the **same process**.
 There are no out-of-process modules, no IPC, no separate runtimes.
 
 ---
@@ -33,7 +33,7 @@ Each module is a self-contained unit that:
 Every module must implement `IIdeModule`:
 
 ```csharp
-public interface IIdeModule
+public interface IModule
 {
     string Name { get; }
     void Register(IServiceCollection services);
@@ -114,21 +114,23 @@ catch (Exception ex)
 
 Never let an unhandled module exception propagate to the main shell uncontrolled.
 
-### 2.7 MVP Modules
-The following modules are in scope for the MVP:
+### 2.7 Active Modules
+All of the following modules are implemented and registered:
 - `Core` — workspace, DI contracts, shell, module host
 - `FileExplorer` — filesystem tree navigation
-- `SolutionView` — .sln and .csproj parsing and display
-- `Editor` — AvaloniaEdit, tabs, auto-save, syntax highlighting
-- `Terminal` — integrated OS terminal
+- `SolutionView` — .sln and .csproj parsing, project tree, context menus
+- `Editor` — AvaloniaEdit, tabs, auto-save, syntax highlighting, LSP overlay, debug overlay
+- `Terminal` — integrated OS terminal (XTerm.NET + PTY)
 - `DotnetCli` — build, run, test, restore, clean
+- `LanguageServer` — OmniSharp lifecycle, LSP bridge, completion, diagnostics, navigation
+- `Debug` — DAP session, breakpoints, variable evaluation, call stack
+- `SourceControl` — Git CLI integration, staging, commit, diff
+- `NuGetExplorer` — NuGet package browsing and management
+- `LspSetup` — OmniSharp binary provisioning
+- `DebuggerSetup` — netcoredbg binary provisioning
+- `Settings` — application preferences
 
-### 2.8 Post-MVP Modules
-The following modules are out of scope for the MVP but the architecture must accommodate them:
-- `Git` — version control integration
-- `Lsp` — Roslyn language server integration
-- `Debug` — DAP debug adapter integration
-- `Agent` — AI agent with native workspace access
+See `.agents/module_catalog.md` for full details on each module's responsibilities and key files.
 
 ---
 
@@ -237,7 +239,7 @@ Do not throw `NotImplementedException` for supported flows.
 
 ### 4.4 Interface Segregation
 Keep interfaces small and explicit:
-- `IIdeModule`
+- `IModule`
 - `IModuleHost`
 - `IWorkspaceContext`
 - `ICommandHandler<TCommand>`
@@ -463,8 +465,8 @@ Use this checklist on every meaningful PR or agent delivery:
 - [ ] Theme values are tokenized instead of hardcoded.
 - [ ] Module errors are caught at the boundary and reflected in ModuleState.
 - [ ] New modules implement IIdeModule and are registered at startup in Bootstrapper.
-- [ ] New module ViewModel→View pairs are registered via `IIdeModule.RegisterViews`.
-- [ ] New module panels are declared via `IIdeModule.GetPanelDescriptors`.
+- [ ] New module ViewModel→View pairs are registered via `IModule.RegisterViews`.
+- [ ] New module panels are declared via `Iodule.GetPanelDescriptors`.
 - [ ] Modules do not reference Infrastructure directly — they use Core contracts via DI.
 - [ ] Raw LSP/DAP DTOs are not leaking through unrelated layers.
 - [ ] CLI commands are explicit and safely constructed.
@@ -490,4 +492,4 @@ When in doubt, prefer the simpler design that preserves the architecture and mod
 
 ---
 
-> ⚠️ **This architecture is subject to future changes.** The `IIdeModule` contract and the three-layer structure (Core / Infrastructure / Desktop + modules) are stable. Details such as `IViewRegistry`, `IPanelDescriptor`, and `IShellEventBus` may evolve as new modules (Git, Lsp, Debug, Agent) are introduced and their requirements become clear.
+> ⚠️ **This architecture is subject to future changes.** The `IModule` contract and the three-layer structure (Core / Infrastructure / Desktop + modules) are stable. Details such as `IViewRegistry`, `IPanelDescriptor`, and `IShellEventBus` may evolve as new modules (Git, Lsp, Debug, Agent) are introduced and their requirements become clear.

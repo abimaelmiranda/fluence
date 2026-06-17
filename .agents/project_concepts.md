@@ -94,18 +94,25 @@ Level 2 provides logical isolation with contained error handling at module bound
 ```
 Core                  ← workspace, DI contracts, module host, shell contracts
                         IViewRegistry, IShellEventBus, IPanelDescriptor
-Infrastructure        ← OS/platform adapters: ProcessHost, Pty, TerminalService
+Infrastructure        ← OS/platform adapters: ProcessHost, Pty, TerminalService,
+                        LSP/DAP protocol utilities, DotnetSdkProvisioningService
 Desktop               ← Avalonia shell, Bootstrapper, WelcomeScreen, UI adapters
-├── FileExplorer      ← filesystem tree navigation + OpenFolderWorkspaceCommandHandler
-├── SolutionView      ← .sln / .csproj parsing + Buildalyzer + ProjectReferenceService + handlers
-├── Editor            ← AvaloniaEdit, tabs, TextFileService + OpenFile/Save handlers
-├── Terminal          ← integrated OS terminal (uses ITerminalService from Core via DI)
-├── DotnetCli         ← build, run, test, restore, clean — all dotnet CLI command handlers
-├── Git               ← (post-MVP)
-├── Lsp               ← (post-MVP)
-├── Debug             ← (post-MVP)
-└── Agent             ← (post-MVP)
+├── FileExplorer      ← filesystem tree navigation
+├── SolutionView      ← .sln / .csproj parsing + Buildalyzer + ProjectReferenceService
+├── Editor            ← AvaloniaEdit, tabs, TextFileService, LSP overlay, debug overlay
+├── Terminal          ← integrated OS terminal (XTerm.NET + PTY via ITerminalService)
+├── DotnetCli         ← build, run, test, restore, clean — dotnet CLI command handlers
+├── LanguageServer    ← OmniSharp lifecycle, LSP bridge, completion, diagnostics, navigation
+├── Debug             ← DAP session, breakpoints, variable evaluation, call stack
+├── SourceControl     ← Git CLI integration, staging, commit, diff, branch management
+├── NuGetExplorer     ← NuGet package browsing and management
+├── LspSetup          ← OmniSharp binary provisioning
+├── DebuggerSetup     ← netcoredbg binary provisioning
+├── Settings          ← application preferences
+└── Agent             ← (planned) AI agent with native workspace access
 ```
+
+For full module details see `.agents/module_catalog.md`.
 
 Each module registers its own services, views, and panels. The shell knows only `IIdeModule` — no module concrete types leak into `Desktop`.
 
@@ -357,27 +364,32 @@ Keep workspace and application state explicit and accessible through `IWorkspace
 
 ---
 
-## 16. MVP Boundary
+## 16. Implementation Status
 
-### 16.1 In Scope
+### 16.1 Implemented
 - Welcome Screen
 - Open File / Folder / Solution
 - File Explorer module
-- Solution View module
-- file editing and saving
-- syntax highlighting
-- integrated terminal module
-- dotnet CLI integration module
-- tab management
-- auto-save on focus lost
+- Solution View module (Buildalyzer, project references, NuGet packages)
+- File editing and saving with dirty state tracking
+- TextMate syntax highlighting
+- Integrated terminal module (XTerm.NET + PTY, TUI-capable)
+- dotnet CLI integration module (build/run/test/restore/clean)
+- Tab management
+- Auto-save on focus lost
+- Language Server / OmniSharp (completion, hover, diagnostics, go-to-definition, signature help, code actions)
+- Debugger / netcoredbg (DAP integration, breakpoints, variable evaluation)
+- Source Control (Git CLI, staging, commit, diff, branch management)
+- NuGet Explorer
+- LspSetup and DebuggerSetup provisioning modules
+- Settings module
+- Theming system (design tokens, JSON themes)
 
-### 16.2 Out of Scope for MVP
-- full IntelliSense integration
-- full debug implementation
-- Git features
-- plugin marketplace
-- heavy extensibility system
-- excessive settings surface
+### 16.2 Planned
+- Agent module with native workspace access
+- Plugin marketplace / extensibility system
+- Windows terminal (ConPTY) full validation
+- Linux support
 
 ---
 
