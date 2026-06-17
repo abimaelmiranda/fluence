@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
@@ -72,6 +73,7 @@ internal static class Bootstrapper
         services.AddSingleton<IFileService, FileService>();
         services.AddSingleton<IFluenceStorageService, FluenceStorageService>();
         services.AddSingleton<IProcessHost, ProcessHost>();
+        services.AddSingleton<IDotnetSdkProvisioningService, DotnetSdkProvisioningService>();
         services.AddSingleton<ILaunchSettingsService, LaunchSettingsService>();
         services.AddSingleton<ILaunchSettingsCoordinator, LaunchSettingsCoordinator>();
         services.AddSingleton<NetcoredbgToolService>();

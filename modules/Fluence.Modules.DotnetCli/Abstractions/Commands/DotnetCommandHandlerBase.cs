@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Models.Infrastructure;
 using Fluence.Core.Abstractions.Workspace;
@@ -10,7 +11,10 @@ using Fluence.Core.Services.Workspace;
 
 namespace Fluence.Modules.DotnetCli.Abstractions.Commands;
 
-public abstract class DotnetCommandHandlerBase(IWorkspaceContext workspace, ITerminalService terminal)
+public abstract class DotnetCommandHandlerBase(
+    IWorkspaceContext workspace,
+    ITerminalService terminal,
+    IDotnetSdkProvisioningService sdk)
 {
     protected IWorkspaceContext Workspace { get; } = workspace;
 
@@ -27,6 +31,10 @@ public abstract class DotnetCommandHandlerBase(IWorkspaceContext workspace, ITer
         }
 
         var targetPath = Workspace.Current.CurrentSolutionPath ?? workingDirectory;
-        await Terminal.ExecuteAsync($"dotnet {subcommand} \"{targetPath}\"", workingDirectory, cancellationToken);
+        var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
+        await Terminal.ExecuteAsync($"{Quote(dotnet)} {subcommand} \"{targetPath}\"", workingDirectory, cancellationToken);
     }
+
+    private static string Quote(string value) =>
+        "\"" + value.Replace("\"", "\\\"", System.StringComparison.Ordinal) + "\"";
 }

@@ -80,6 +80,9 @@
                                 <MenuItem Header="Clean"
                                           Command="{Binding CleanCommand}"
                                           IsVisible="{Binding HasCleanCommand}"/>
+                                <MenuItem Header="Publish"
+                                          Command="{Binding PublishCommand}"
+                                          IsVisible="{Binding HasPublishCommand}"/>
                                 <MenuItem Header="Run"
                                           Command="{Binding RunCommand}"
                                           IsVisible="{Binding HasRunCommand}"/>

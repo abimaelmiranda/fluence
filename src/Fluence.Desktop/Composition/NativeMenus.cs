@@ -16,6 +16,7 @@ internal static class NativeMenus
                 CreateFileMenu(mainWindow, keybindings),
                 CreateMenu("Edit", "Undo", "Redo"),
                 CreateViewMenu(mainWindow, keybindings),
+                CreateToolsMenu(mainWindow, keybindings),
                 CreateRunMenu(mainWindow, keybindings),
                 CreateDebugMenu(mainWindow),
             },
@@ -33,6 +34,11 @@ internal static class NativeMenus
             {
                 Items =
                 {
+                    new NativeMenuItem
+                    {
+                        Header = "New Project",
+                        Command = mainWindow.NewProjectCommand,
+                    },
                     new NativeMenuItem
                     {
                         Header = "Open File",
@@ -60,6 +66,11 @@ internal static class NativeMenus
                         {
                             Items =
                             {
+                                new NativeMenuItem
+                                {
+                                    Header = ".NET SDK",
+                                    Command = mainWindow.OpenDotnetSdkSetupCommand,
+                                },
                                 new NativeMenuItem
                                 {
                                     Header = WithGesture("Settings", keybindings.GetGesture(CommandIds.OpenSettings)),
@@ -99,6 +110,11 @@ internal static class NativeMenus
                     },
                     new NativeMenuItem
                     {
+                        Header = WithGesture("Publish", keybindings.GetGesture(CommandIds.Publish)),
+                        Command = mainWindow.PublishProjectCommand,
+                    },
+                    new NativeMenuItem
+                    {
                         Header = WithGesture("Run", keybindings.GetGesture(CommandIds.Run)),
                         Command = mainWindow.RunCommand,
                     },
@@ -121,6 +137,45 @@ internal static class NativeMenus
                     {
                         Header = "Clean",
                         Command = mainWindow.CleanCommand,
+                    },
+                },
+            },
+        };
+    }
+
+    private static NativeMenuItem CreateToolsMenu(MainWindowViewModel mainWindow, IKeybindingService keybindings)
+    {
+        return new NativeMenuItem
+        {
+            Header = "Tools",
+            Menu = new NativeMenu
+            {
+                Items =
+                {
+                    new NativeMenuItem
+                    {
+                        Header = WithGesture(".NET SDK", keybindings.GetGesture(CommandIds.OpenDotnetSdkSetup)),
+                        Command = mainWindow.OpenDotnetSdkSetupCommand,
+                    },
+                    new NativeMenuItem
+                    {
+                        Header = WithGesture("Publish", keybindings.GetGesture(CommandIds.Publish)),
+                        Command = mainWindow.PublishProjectCommand,
+                    },
+                    new NativeMenuItem
+                    {
+                        Header = WithGesture("NuGet Package Manager", keybindings.GetGesture(CommandIds.ManageNuGetPackages)),
+                        Command = mainWindow.ManageNuGetPackagesCommand,
+                    },
+                    new NativeMenuItem
+                    {
+                        Header = WithGesture("Settings", keybindings.GetGesture(CommandIds.OpenSettings)),
+                        Command = mainWindow.OpenSettingsCommand,
+                    },
+                    new NativeMenuItem
+                    {
+                        Header = WithGesture("Keyboard Shortcuts", keybindings.GetGesture(CommandIds.OpenKeybindings)),
+                        Command = mainWindow.OpenKeybindingsCommand,
                     },
                 },
             },
