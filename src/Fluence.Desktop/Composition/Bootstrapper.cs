@@ -62,7 +62,7 @@ internal static class Bootstrapper
             _ => new ShellEventBus(a => Avalonia.Threading.Dispatcher.UIThread.Post(a, Avalonia.Threading.DispatcherPriority.Background)));
         services.AddSingleton<ShellRegionHost>();
         services.AddSingleton<IShellRegionHost>(provider => provider.GetRequiredService<ShellRegionHost>());
-        services.AddSingleton<IWorkspaceContext, WorkspaceContext>();
+        services.AddSingleton<IWorkspaceContext>(_ => new WorkspaceContext(a => Avalonia.Threading.Dispatcher.UIThread.Post(a, Avalonia.Threading.DispatcherPriority.Background)));
         services.AddSingleton<IModuleHost, ModuleHost>();
         services.AddSingleton<IWorkspaceDialogService, AvaloniaWorkspaceDialogService>();
         services.AddSingleton<ILaunchSetupDialogService, AvaloniaLaunchSetupDialogService>();
