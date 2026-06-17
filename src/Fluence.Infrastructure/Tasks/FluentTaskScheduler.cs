@@ -54,7 +54,7 @@ public sealed class FluentTaskScheduler : ITaskScheduler, IDisposable
             try
             {
                 if (delay > TimeSpan.Zero)
-                    await Task.Delay(delay, token).ConfigureAwait(false);
+                    await Task.Delay(delay).ConfigureAwait(false);
 
                 if (!token.IsCancellationRequested)
                     Enqueue(new ScheduledWork(priority, work, token));
