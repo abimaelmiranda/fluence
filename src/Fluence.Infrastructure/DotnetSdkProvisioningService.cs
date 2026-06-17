@@ -46,31 +46,7 @@ public sealed class DotnetSdkProvisioningService(
     }
 
     private static IEnumerable<string> GetWellKnownDotnetPaths()
-    {
-        var exe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "dotnet.exe" : "dotnet";
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            yield return "/usr/local/share/dotnet/dotnet";
-            yield return "/opt/homebrew/opt/dotnet/libexec/dotnet";
-            yield return Path.Combine(home, ".dotnet", exe);
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            yield return "/usr/share/dotnet/dotnet";
-            yield return "/usr/bin/dotnet";
-            yield return Path.Combine(home, ".dotnet", exe);
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            yield return Path.Combine(programFiles, "dotnet", exe);
-            var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            yield return Path.Combine(programFilesX86, "dotnet", exe);
-            yield return Path.Combine(home, ".dotnet", exe);
-        }
-    }
+        => ProcessEnvironment.GetWellKnownDotnetPaths();
 
     public async Task<string> ResolveDotnetExecutableAsync(CancellationToken cancellationToken = default)
     {

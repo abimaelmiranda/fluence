@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Fluence.Modules.SourceControl.Abstractions;
 using Fluence.Modules.SourceControl.Models;
@@ -8,6 +11,34 @@ namespace Fluence.Modules.SourceControl.Infrastructure;
 
 public sealed partial class GitCliService : IGitService
 {
+    /// <summary>
+    /// Resolves <c>git</c> to an absolute path once at class-load time.
+    /// On macOS <c>/usr/bin/git</c> always exists on the minimal PATH,
+    /// but scanning also picks up Homebrew installs when present.
+    /// Falls back to the bare name <c>"git"</c> so the OS can still
+    /// locate it through any mechanism not covered by our PATH scan.
+    /// </summary>
+    private static readonly string GitExecutable = ResolveGitExecutable();
+
+    private static string ResolveGitExecutable()
+    {
+        try
+        {
+            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            foreach (var dir in path.Split(Path.PathSeparator))
+            {
+                var candidate = Path.Combine(dir.Trim(), "git");
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+        }
+        catch
+        {
+            // Best-effort; fall back to bare name.
+        }
+
+        return "git";
+    }
     public async Task<string?> GetRepositoryRootAsync(string workingDirectory)
     {
         try
@@ -54,7 +85,7 @@ public sealed partial class GitCliService : IGitService
 
     private static Process CreateProcess(string workingDirectory, IReadOnlyList<string> args)
     {
-        var startInfo = new ProcessStartInfo("git")
+        var startInfo = new ProcessStartInfo(GitExecutable)
         {
             WorkingDirectory = workingDirectory,
             RedirectStandardOutput = true,

@@ -129,16 +129,7 @@ internal sealed class DapClient : IDebugAdapterClient
 
     public async Task CompleteConfigurationAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await SendRequestAsync("configurationDone", new JsonObject(), cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
-        {
-            // Non-fatal: netcoredbg may not respond to configurationDone if the debuggee
-            // exits quickly (e.g. a CLI with no args) or due to adapter timing behavior.
-            // The session may still emit stopped/terminated events correctly.
-        }
+        await SendRequestAsync("configurationDone", new JsonObject(), cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyDictionary<string, IReadOnlyList<DebugBreakpoint>>> SetBreakpointsAsync(
@@ -465,7 +456,19 @@ internal sealed class DapClient : IDebugAdapterClient
         {
             var requestSeq = message["request_seq"]?.GetValue<int>() ?? 0;
             if (_pending.TryRemove(requestSeq, out var pending))
-                pending.TrySetResult(message["body"]?.AsObject());
+            {
+                var success = message["success"]?.GetValue<bool>() ?? false;
+                if (success)
+                {
+                    pending.TrySetResult(message["body"]?.AsObject());
+                }
+                else
+                {
+                    var command = message["command"]?.GetValue<string>() ?? "unknown";
+                    var error = message["message"]?.GetValue<string>() ?? "DAP request failed.";
+                    pending.TrySetException(new InvalidOperationException($"DAP command '{command}' failed: {error}"));
+                }
+            }
             return;
         }
 
@@ -521,8 +524,29 @@ internal sealed class DapClient : IDebugAdapterClient
     private static JsonObject CreateEnvironmentObject(IReadOnlyDictionary<string, string> values)
     {
         var obj = new JsonObject();
+
+        // Forward the user's explicit environment first; these take precedence.
         foreach (var pair in values)
             obj[pair.Key] = pair.Value;
+
+        // The debuggee is launched by netcoredbg, which inherits this environment.
+        // In a macOS .app the inherited PATH is minimal and omits the dotnet muxer,
+        // so framework-dependent debuggees fail with 0x80070002 (E_FILE_NOT_FOUND).
+        // Inject an augmented PATH and DOTNET_ROOT unless the user overrode them.
+        if (!obj.ContainsKey("PATH"))
+        {
+            var augmented = ProcessEnvironment.GetAugmentedPath();
+            if (!string.IsNullOrWhiteSpace(augmented))
+                obj["PATH"] = augmented;
+        }
+
+        if (!obj.ContainsKey("DOTNET_ROOT"))
+        {
+            var dotnetRoot = ProcessEnvironment.ResolveDotnetRoot();
+            if (dotnetRoot is not null)
+                obj["DOTNET_ROOT"] = dotnetRoot;
+        }
+
         return obj;
     }
 

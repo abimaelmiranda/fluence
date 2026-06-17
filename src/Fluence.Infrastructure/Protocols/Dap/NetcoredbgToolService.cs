@@ -27,26 +27,9 @@ public sealed class NetcoredbgToolService(IFluenceStorageService storage)
 
     public async Task<string> ResolveAsync(string workspaceRoot, CancellationToken cancellationToken = default)
     {
-        // Check the global Fluence installation first so a provisioned debugger is always preferred.
         var globalPath = Path.Combine(storage.GetUserPath("debuggers/csharp"), ResolveExecutableName());
         if (File.Exists(globalPath) && await ValidateAsync(globalPath, cancellationToken).ConfigureAwait(false))
             return globalPath;
-
-        var bundled = FindBundledTool(workspaceRoot);
-        if (bundled is not null)
-            return bundled;
-
-        var appBundled = FindAppBundledTool();
-        if (appBundled is not null)
-            return appBundled;
-
-        var pathTool = await FindOnPathAsync(cancellationToken).ConfigureAwait(false);
-        if (pathTool is not null)
-            return pathTool;
-
-        var vsdbg = await FindVsdbgAsync(cancellationToken).ConfigureAwait(false);
-        if (vsdbg is not null)
-            return vsdbg;
 
         try
         {
@@ -59,76 +42,8 @@ public sealed class NetcoredbgToolService(IFluenceStorageService storage)
         }
 
         throw new FileNotFoundException(
-            "No .NET debugger found. Install vsdbg (`curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l ~/.vsdbg`) " +
-            "or netcoredbg and make sure it is on PATH.");
-    }
-
-    private string? FindBundledTool(string workspaceRoot)
-    {
-        var toolsRoot = storage.GetProjectPath(workspaceRoot, "tools/netcoredbg");
-        if (!Directory.Exists(toolsRoot))
-            return null;
-
-        foreach (var file in Directory.EnumerateFiles(toolsRoot, ResolveExecutableName(), SearchOption.AllDirectories))
-        {
-            if (File.Exists(file))
-                return file;
-        }
-
-        return null;
-    }
-
-    // Looks for netcoredbg shipped alongside the IDE itself under tools/netcoredbg/<rid>/
-    private static string? FindAppBundledTool()
-    {
-        var appDir = AppContext.BaseDirectory;
-        var rid = ResolveRuntimeId();
-        var candidate = Path.Combine(appDir, "tools", "netcoredbg", rid, ResolveExecutableName());
-        return File.Exists(candidate) ? candidate : null;
-    }
-
-    private static async Task<string?> FindOnPathAsync(CancellationToken cancellationToken)
-    {
-        var path = Environment.GetEnvironmentVariable("PATH");
-        if (string.IsNullOrWhiteSpace(path))
-            return null;
-
-        foreach (var executable in new[] { ResolveExecutableName(), ResolveVsdbgName() })
-        {
-            foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var candidate = Path.Combine(directory, executable);
-                if (!File.Exists(candidate))
-                    continue;
-
-                if (await ValidateAsync(candidate, cancellationToken).ConfigureAwait(false))
-                    return candidate;
-            }
-        }
-
-        return null;
-    }
-
-    private static async Task<string?> FindVsdbgAsync(CancellationToken cancellationToken)
-    {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var candidates = new[]
-        {
-            Path.Combine(home, ".vsdbg", ResolveVsdbgName()),
-            Path.Combine(home, ".vs-debugger", ResolveVsdbgName()),
-            "/usr/local/share/vsdbg/vsdbg",
-        };
-
-        foreach (var candidate in candidates)
-        {
-            if (!File.Exists(candidate))
-                continue;
-
-            if (await ValidateAsync(candidate, cancellationToken).ConfigureAwait(false))
-                return candidate;
-        }
-
-        return null;
+            "No global .NET debugger was found at ~/.fluence/debuggers/csharp/netcoredbg. " +
+            "Use the debugger provisioning flow to install it before debugging.");
     }
 
     private async Task<string?> DownloadLatestAsync(string workspaceRoot, CancellationToken cancellationToken)

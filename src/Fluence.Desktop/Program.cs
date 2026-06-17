@@ -1,5 +1,6 @@
 using Avalonia;
 using System;
+using Fluence.Infrastructure;
 
 namespace Fluence.Desktop;
 
@@ -11,6 +12,11 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // A macOS .app launched from Finder/Dock inherits a minimal PATH that omits
+        // Homebrew/dotnet locations, which breaks spawning dotnet/netcoredbg/git/cmake.
+        // Restore a shell-like environment before any child process is started.
+        ProcessEnvironment.ApplyToCurrentProcess();
+
         AppDomain.CurrentDomain.AssemblyResolve += ResolveModuleAssembly;
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
