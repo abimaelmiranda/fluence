@@ -1,6 +1,8 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
@@ -27,12 +29,17 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
+        var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
+
         host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
         {
             _activeTabId = e.TabId;
             UpdateSidebar(host);
         });
-        host.Events.SubscribeSync<OpenFolderRequestedEvent>(e => { _ = OpenFolderAsync(host, e.Path); });
+        host.Events.SubscribeSync<OpenFolderRequestedEvent>(e =>
+            scheduler.Schedule("workspace.open-folder", TaskPriority.Interactive,
+                ct => OpenFolderAsync(host, e.Path, ct),
+                correlationId: e.Path));
         host.Workspace.Changed += (_, _) => UpdateSidebar(host);
         UpdateSidebar(host);
         host.SetModuleState(Name, ModuleState.Active);
@@ -56,9 +63,9 @@ public sealed class Entrypoint : IModule
         host.ShellRegions.ClearContent(ShellRegion.Sidebar, "FileExplorer");
     }
 
-    private static async Task OpenFolderAsync(IModuleHost host, string path)
+    private static async Task OpenFolderAsync(IModuleHost host, string path, CancellationToken ct)
     {
         var handler = host.Services.GetRequiredService<ICommandHandler<OpenFolderWorkspaceCommand>>();
-        await handler.HandleAsync(new OpenFolderWorkspaceCommand(path));
+        await handler.HandleAsync(new OpenFolderWorkspaceCommand(path), ct);
     }
 }

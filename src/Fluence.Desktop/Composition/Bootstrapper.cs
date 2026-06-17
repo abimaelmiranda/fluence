@@ -22,10 +22,12 @@ using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Desktop.Services;
 using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
+using Fluence.Infrastructure.Tasks;
 using Fluence.Infrastructure.Pty;
 using Fluence.Infrastructure.Protocols.Dap;
 using Fluence.Infrastructure.Protocols.Lsp;
@@ -58,11 +60,12 @@ internal static class Bootstrapper
         var viewRegistry = new ViewRegistry();
         viewRegistry.Register<WelcomeViewModel, WelcomeView>();
         services.AddSingleton<IViewRegistry>(viewRegistry);
-        services.AddSingleton<IShellEventBus>(
-            _ => new ShellEventBus(a => Avalonia.Threading.Dispatcher.UIThread.Post(a, Avalonia.Threading.DispatcherPriority.Background)));
+        services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
+        services.AddSingleton<ITaskScheduler, FluentTaskScheduler>();
+        services.AddSingleton<IShellEventBus>(provider => new ShellEventBus(provider.GetRequiredService<IUiDispatcher>()));
         services.AddSingleton<ShellRegionHost>();
         services.AddSingleton<IShellRegionHost>(provider => provider.GetRequiredService<ShellRegionHost>());
-        services.AddSingleton<IWorkspaceContext>(_ => new WorkspaceContext(a => Avalonia.Threading.Dispatcher.UIThread.Post(a, Avalonia.Threading.DispatcherPriority.Background)));
+        services.AddSingleton<IWorkspaceContext>(provider => new WorkspaceContext(provider.GetRequiredService<IUiDispatcher>()));
         services.AddSingleton<IModuleHost, ModuleHost>();
         services.AddSingleton<IWorkspaceDialogService, AvaloniaWorkspaceDialogService>();
         services.AddSingleton<ILaunchSetupDialogService, AvaloniaLaunchSetupDialogService>();
