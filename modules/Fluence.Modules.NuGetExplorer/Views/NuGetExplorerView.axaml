@@ -126,7 +126,8 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:NuGetProjectSelection">
                                                 <CheckBox Content="{Binding Name}"
-                                                          IsChecked="{Binding IsSelected}"
+                                                          IsChecked="{Binding DisplayIsChecked}"
+                                                          IsEnabled="{Binding !IsAlreadyInstalled}"
                                                           Margin="6,2"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

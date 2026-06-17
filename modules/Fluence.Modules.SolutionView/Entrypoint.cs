@@ -59,10 +59,12 @@ public sealed class Entrypoint : IModule
                 correlationId: e.Path));
         host.Events.SubscribeSync<RefreshSolutionViewRequestedEvent>(_ =>
             scheduler.Schedule("solution.refresh", TaskPriority.Maintenance,
-                ct => RefreshSolutionViewAsync(host, ct)));
+                ct => RefreshSolutionViewAsync(host, ct),
+                correlationId: "solution.refresh"));
         host.Events.SubscribeSync<GitCheckoutCompletedEvent>(_ =>
             scheduler.Schedule("solution.refresh", TaskPriority.Maintenance,
-                ct => RefreshSolutionViewAsync(host, ct)));
+                ct => RefreshSolutionViewAsync(host, ct),
+                correlationId: "solution.refresh"));
         host.Workspace.Changed += (_, _) => UpdateSidebar(host);
         UpdateSidebar(host);
         host.SetModuleState(Name, ModuleState.Active);

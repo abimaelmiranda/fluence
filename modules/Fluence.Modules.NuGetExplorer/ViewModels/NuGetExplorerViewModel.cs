@@ -117,8 +117,10 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(HasSelectedBrowsePackage));
         OnPropertyChanged(nameof(SelectedBrowsePackageTitle));
+        
         _ = LoadVersionsForSelectedPackageAsync();
     }
+
 
     partial void OnUsesCentralPackageManagementChanged(bool value)
     {
@@ -175,6 +177,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             await LoadProjectsAsync(innerToken);
             await LoadInstalledPackagesAsync(innerToken);
             await LoadUpdatesAsync(innerToken);
+            UpdateAlreadyInstalledFlags();
 
             StatusMessage = UsesCentralPackageManagement
                 ? "Central Package Management detected. Editing is disabled for this milestone."
@@ -213,6 +216,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             NotifySolutionChanged();
             await LoadInstalledPackagesAsync(token);
             await LoadUpdatesAsync(token);
+            UpdateAlreadyInstalledFlags();
             StatusMessage = $"Installed {SelectedBrowsePackage.Id} {SelectedVersion}.";
         }, cancellationToken);
     }
@@ -344,6 +348,8 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         SelectedVersion = null;
         if (SelectedBrowsePackage is null)
         {
+            foreach (var project in TargetProjects)
+                project.IsAlreadyInstalled = false;
             return;
         }
 
@@ -356,6 +362,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             }
 
             SelectedVersion = AvailableVersions.FirstOrDefault();
+            UpdateAlreadyInstalledFlags();
         }, CancellationToken.None);
     }
 
@@ -400,6 +407,18 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         }
         catch
         {
+        }
+    }
+
+    private void UpdateAlreadyInstalledFlags()
+    {
+        var packageId = SelectedBrowsePackage?.Id;
+        foreach (var project in TargetProjects)
+        {
+            project.IsAlreadyInstalled = packageId is not null &&
+                InstalledPackages.Any(p =>
+                    string.Equals(p.Id, packageId, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(p.ProjectPath, project.ProjectPath, StringComparison.OrdinalIgnoreCase));
         }
     }
 
