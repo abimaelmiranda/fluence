@@ -1,4 +1,5 @@
 using System;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using WorkspaceEntity = Fluence.Core.Models.Workspace.Workspace;
@@ -7,11 +8,11 @@ namespace Fluence.Core.Services.Workspace;
 
 public sealed class WorkspaceContext : IWorkspaceContext
 {
-    private readonly Action<Action>? _dispatch;
+    private readonly IUiDispatcher? _dispatcher;
 
     public WorkspaceContext() { }
 
-    public WorkspaceContext(Action<Action> dispatch) { _dispatch = dispatch; }
+    public WorkspaceContext(IUiDispatcher dispatcher) { _dispatcher = dispatcher; }
 
     public WorkspaceEntity Current { get; } = new();
 
@@ -19,8 +20,8 @@ public sealed class WorkspaceContext : IWorkspaceContext
 
     private void FireChanged()
     {
-        if (_dispatch is not null)
-            _dispatch(() => Changed?.Invoke(this, EventArgs.Empty));
+        if (_dispatcher is not null)
+            _dispatcher.Post(() => Changed?.Invoke(this, EventArgs.Empty));
         else
             Changed?.Invoke(this, EventArgs.Empty);
     }

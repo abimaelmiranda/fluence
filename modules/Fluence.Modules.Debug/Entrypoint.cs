@@ -1,7 +1,9 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.Keybindings;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Models.Keybindings;
@@ -37,17 +39,37 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.SubscribeSync<DebugProjectRequestedEvent>(_event => { _ = HandleAsync(host); });
-        host.Events.SubscribeAsync<StopDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().StopAsync());
-        host.Events.SubscribeAsync<ReloadDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().RestartAsync());
-        host.Events.SubscribeAsync<ContinueDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().ContinueAsync());
-        host.Events.SubscribeAsync<StepOverDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().StepOverAsync());
-        host.Events.SubscribeAsync<StepIntoDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().StepIntoAsync());
-        host.Events.SubscribeAsync<StepOutDebugRequestedEvent>(_event => host.Services.GetRequiredService<IDebugService>().StepOutAsync());
-        host.Events.SubscribeAsync<ToggleBreakpointRequestedEvent>(e => host.Services.GetRequiredService<IDebugService>().ToggleBreakpointAsync(e.FilePath, e.Line));
-
-        var commands = host.Services.GetRequiredService<ICommandRegistry>();
+        var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
         var debug = host.Services.GetRequiredService<IDebugService>();
+        var commands = host.Services.GetRequiredService<ICommandRegistry>();
+
+        // Iniciar sessão — Interactive: usuário espera resposta imediata
+        host.Events.SubscribeSync<DebugProjectRequestedEvent>(_ =>
+            scheduler.Schedule("debug.start", TaskPriority.Interactive,
+                ct => HandleAsync(host, ct)));
+
+        // Controles de sessão — Critical: inputs diretos do usuário no debugger
+        host.Events.SubscribeSync<StopDebugRequestedEvent>(_ =>
+            scheduler.Schedule("debug.stop", TaskPriority.Critical,
+                _ => debug.StopAsync()));
+        host.Events.SubscribeSync<ReloadDebugRequestedEvent>(_ =>
+            scheduler.Schedule("debug.reload", TaskPriority.Critical,
+                _ => debug.RestartAsync()));
+        host.Events.SubscribeSync<ContinueDebugRequestedEvent>(_ =>
+            scheduler.Schedule("debug.continue", TaskPriority.Critical,
+                _ => debug.ContinueAsync()));
+        host.Events.SubscribeSync<StepOverDebugRequestedEvent>(_ =>
+            scheduler.Schedule("debug.step-over", TaskPriority.Critical,
+                _ => debug.StepOverAsync()));
+        host.Events.SubscribeSync<StepIntoDebugRequestedEvent>(_ =>
+            scheduler.Schedule("debug.step-into", TaskPriority.Critical,
+                _ => debug.StepIntoAsync()));
+        host.Events.SubscribeSync<StepOutDebugRequestedEvent>(_ =>
+            scheduler.Schedule("debug.step-out", TaskPriority.Critical,
+                _ => debug.StepOutAsync()));
+        host.Events.SubscribeSync<ToggleBreakpointRequestedEvent>(e =>
+            scheduler.Schedule("debug.breakpoint", TaskPriority.Interactive,
+                _ => debug.ToggleBreakpointAsync(e.FilePath, e.Line)));
 
         commands.Register(new IdeCommandDefinition(
             CommandIds.DebugContinue, "Continue", KeybindingScope.Global, "F5",
@@ -61,12 +83,13 @@ public sealed class Entrypoint : IModule
         commands.Register(new IdeCommandDefinition(
             CommandIds.DebugStepOut, "Step Out", KeybindingScope.Global, "Shift+F11",
             _ => debug.StepOutAsync()));
+
         host.SetModuleState(Name, ModuleState.Active);
     }
 
-    private static async Task HandleAsync(IModuleHost host)
+    private static async Task HandleAsync(IModuleHost host, CancellationToken ct)
     {
         var handler = host.Services.GetRequiredService<ICommandHandler<DebugProjectCommand>>();
-        await handler.HandleAsync(new DebugProjectCommand());
+        await handler.HandleAsync(new DebugProjectCommand(), ct);
     }
 }

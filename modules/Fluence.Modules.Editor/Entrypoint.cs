@@ -1,8 +1,10 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Settings;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
@@ -37,6 +39,8 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
+        var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
+
         host.Services.GetRequiredService<ISettingsRegistry>()
             .Register(EditorSettingsJsonContext.Default.EditorSettings);
 
@@ -45,18 +49,27 @@ public sealed class Entrypoint : IModule
             Name,
             "Editor",
             host.Services.GetRequiredService<EditorViewModel>());
-        host.Events.SubscribeSync<OpenFileRequestedEvent>(e => { _ = OpenFileAsync(host, e.Path); });
-        host.Events.SubscribeSync<SaveActiveDocumentRequestedEvent>(_event => { _ = SaveActiveDocumentAsync(host); });
+
+        host.Events.SubscribeSync<OpenFileRequestedEvent>(e =>
+            scheduler.Schedule("editor.open", TaskPriority.Interactive,
+                ct => OpenFileAsync(host, e.Path, ct),
+                correlationId: e.Path));
+
+        host.Events.SubscribeSync<SaveActiveDocumentRequestedEvent>(_ =>
+            scheduler.Schedule("editor.save", TaskPriority.Critical,
+                ct => SaveActiveDocumentAsync(host, ct)));
+
         host.SetModuleState(Name, ModuleState.Active);
     }
 
-    private static async Task OpenFileAsync(IModuleHost host, string path)
+    private static async Task OpenFileAsync(IModuleHost host, string path, CancellationToken ct)
     {
         try
         {
             var handler = host.Services.GetRequiredService<ICommandHandler<OpenFileWorkspaceCommand>>();
-            await handler.HandleAsync(new OpenFileWorkspaceCommand(path));
+            await handler.HandleAsync(new OpenFileWorkspaceCommand(path), ct);
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex) when (OpenFileFailureNotification.TryShow(
             host.Services.GetRequiredService<IUserNotificationService>(),
             path,
@@ -65,9 +78,9 @@ public sealed class Entrypoint : IModule
         }
     }
 
-    private static async Task SaveActiveDocumentAsync(IModuleHost host)
+    private static async Task SaveActiveDocumentAsync(IModuleHost host, CancellationToken ct)
     {
         var handler = host.Services.GetRequiredService<ICommandHandler<SaveActiveDocumentCommand>>();
-        await handler.HandleAsync(new SaveActiveDocumentCommand());
+        await handler.HandleAsync(new SaveActiveDocumentCommand(), ct);
     }
 }

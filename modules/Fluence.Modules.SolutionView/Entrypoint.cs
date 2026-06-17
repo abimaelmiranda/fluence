@@ -1,6 +1,8 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
@@ -49,9 +51,18 @@ public sealed class Entrypoint : IModule
             _activeTabId = e.TabId;
             UpdateSidebar(host);
         });
-        host.Events.SubscribeSync<OpenSolutionRequestedEvent>(e => { _ = OpenSolutionAsync(host, e.Path); });
-        host.Events.SubscribeSync<RefreshSolutionViewRequestedEvent>(_event => { _ = RefreshSolutionViewAsync(host); });
-        host.Events.SubscribeSync<GitCheckoutCompletedEvent>(_event => { _ = RefreshSolutionViewAsync(host); });
+        var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
+
+        host.Events.SubscribeSync<OpenSolutionRequestedEvent>(e =>
+            scheduler.Schedule("workspace.open-solution", TaskPriority.Interactive,
+                ct => OpenSolutionAsync(host, e.Path, ct),
+                correlationId: e.Path));
+        host.Events.SubscribeSync<RefreshSolutionViewRequestedEvent>(_ =>
+            scheduler.Schedule("solution.refresh", TaskPriority.Maintenance,
+                ct => RefreshSolutionViewAsync(host, ct)));
+        host.Events.SubscribeSync<GitCheckoutCompletedEvent>(_ =>
+            scheduler.Schedule("solution.refresh", TaskPriority.Maintenance,
+                ct => RefreshSolutionViewAsync(host, ct)));
         host.Workspace.Changed += (_, _) => UpdateSidebar(host);
         UpdateSidebar(host);
         host.SetModuleState(Name, ModuleState.Active);
@@ -75,13 +86,13 @@ public sealed class Entrypoint : IModule
         host.ShellRegions.ClearContent(ShellRegion.Sidebar, "SolutionView");
     }
 
-    private static async Task OpenSolutionAsync(IModuleHost host, string path)
+    private static async Task OpenSolutionAsync(IModuleHost host, string path, CancellationToken ct)
     {
         var handler = host.Services.GetRequiredService<ICommandHandler<OpenSolutionWorkspaceCommand>>();
-        await handler.HandleAsync(new OpenSolutionWorkspaceCommand(path));
+        await handler.HandleAsync(new OpenSolutionWorkspaceCommand(path), ct);
     }
 
-    private static Task RefreshSolutionViewAsync(IModuleHost host)
+    private static Task RefreshSolutionViewAsync(IModuleHost host, CancellationToken ct)
     {
         return host.Services.GetRequiredService<SolutionViewModel>().ReloadCurrentSolutionAsync();
     }

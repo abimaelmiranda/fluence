@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 
 namespace Fluence.Core.Abstractions.Modules;
 
@@ -9,9 +8,7 @@ public interface IShellEventBus
 {
     void Publish(IShellEvent shellEvent);
     void SubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent;
-    void SubscribeAsync<TEvent>(Func<TEvent, Task> handler) where TEvent : IShellEvent;
     void UnsubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent;
-    void UnsubscribeAsync<TEvent>(Func<TEvent, Task> handler) where TEvent : IShellEvent;
 }
 
 public sealed class ExpandPanelEvent(string panelId) : IShellEvent
@@ -83,10 +80,12 @@ public sealed record ActivityBarTabChangedEvent(string? TabId) : IShellEvent;
 // LSP — Editor → LanguageServer
 public sealed record DocumentOpenedEvent(string FilePath, string Content, string LanguageId) : IShellEvent;
 public sealed record DocumentChangedEvent(string FilePath, string Content, int Version) : IShellEvent;
+public sealed record DocumentLiveChangedEvent(string FilePath, string Content, int Version, bool FlushImmediately) : IShellEvent;
 public sealed record DocumentClosedEvent(string FilePath) : IShellEvent;
 public sealed record GoToDefinitionRequestedEvent(string FilePath, int Line, int Character) : IShellEvent;
 public sealed record GoToImplementationRequestedEvent(string FilePath, int Line, int Character) : IShellEvent;
 public sealed record GoToTypeDefinitionRequestedEvent(string FilePath, int Line, int Character) : IShellEvent;
+public sealed record LspInteractiveRequestStartedEvent(string FilePath) : IShellEvent;
 
 // LSP — LanguageServer → Editor
 public sealed record DiagnosticsUpdatedEvent(string FilePath, System.Collections.Generic.IReadOnlyList<Core.Models.LanguageServer.LspDiagnostic> Diagnostics) : IShellEvent;
