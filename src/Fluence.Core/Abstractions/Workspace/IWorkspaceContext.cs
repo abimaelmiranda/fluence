@@ -28,6 +28,8 @@ public interface IWorkspaceContext
 
     void UpdateActiveDocumentContent(string content);
 
+    void ReloadDocument(string path, string content);
+
     void MarkActiveDocumentSaved();
 
     void Reset();

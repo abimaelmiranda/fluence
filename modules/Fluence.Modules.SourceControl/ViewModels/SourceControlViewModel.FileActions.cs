@@ -119,6 +119,18 @@ public sealed partial class SourceControlViewModel
         if (!confirmed) return;
 
         await RunFileActionAsync(() => _git.RevertFileAsync(change, repoRoot));
+
+        var absolutePath = Path.IsPathRooted(change.FilePath)
+            ? change.FilePath
+            : Path.GetFullPath(Path.Combine(repoRoot, change.FilePath));
+
+        if (File.Exists(absolutePath) &&
+            _workspace.Current.TabSession.Documents.Any(d =>
+                string.Equals(d.Path, absolutePath, StringComparison.OrdinalIgnoreCase)))
+        {
+            var content = await File.ReadAllTextAsync(absolutePath);
+            _workspace.ReloadDocument(absolutePath, content);
+        }
     }
 
     private async Task RunFileActionAsync(Func<Task> action)
