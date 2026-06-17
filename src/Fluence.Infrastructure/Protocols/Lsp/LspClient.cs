@@ -81,6 +81,9 @@ public sealed class LspClient : IAsyncDisposable
 
     public async Task<JsonNode?> SendRequestAsync(string method, JsonNode? parameters, CancellationToken cancellationToken = default)
     {
+        if (cancellationToken.IsCancellationRequested)
+            return null;
+
         var id = Interlocked.Increment(ref _nextId);
         var tcs = new TaskCompletionSource<JsonNode?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending[id] = tcs;
@@ -101,7 +104,9 @@ public sealed class LspClient : IAsyncDisposable
         catch
         {
             _pending.TryRemove(id, out var orphan);
-            orphan?.TrySetCanceled();
+            orphan?.TrySetResult(null);
+            if (cancellationToken.IsCancellationRequested)
+                return null;
             throw;
         }
 
@@ -110,7 +115,7 @@ public sealed class LspClient : IAsyncDisposable
         using var _ = timeoutCts.Token.Register(() =>
         {
             if (_pending.TryRemove(id, out var pending))
-                pending.TrySetCanceled(timeoutCts.Token);
+                pending.TrySetResult(null);
         });
 
         return await tcs.Task.ConfigureAwait(false);
