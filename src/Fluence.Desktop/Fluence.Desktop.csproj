@@ -7,6 +7,7 @@
     <AssemblyTitle>Fluence IDE</AssemblyTitle>
     <Product>Fluence IDE</Product>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\fluence.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
   <ItemGroup>
