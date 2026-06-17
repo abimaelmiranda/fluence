@@ -7,6 +7,11 @@
              xmlns:converters="using:Fluence.Desktop.Converters"
              Name="Fluence IDE"
              RequestedThemeVariant="Dark">
+    <NativeMenu.Menu>
+        <NativeMenu>
+            <NativeMenuItem Header="About Fluence..." Click="OnAboutClicked"/>
+        </NativeMenu>
+    </NativeMenu.Menu>
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.DataTemplates>

@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -442,6 +444,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsSidebarVisible));
                 return Task.CompletedTask;
             }));
+    }
+
+    [RelayCommand]
+    private void OpenAbout()
+    {
+        var dialog = new Views.AboutDialog();
+        var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        if (owner is not null)
+            _ = dialog.ShowDialog(owner);
+        else
+            dialog.Show();
     }
 
     [RelayCommand]

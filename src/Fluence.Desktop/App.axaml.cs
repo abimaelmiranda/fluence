@@ -54,6 +54,7 @@ public partial class App : Avalonia.Application
                     mainWindowViewModel,
                     _serviceProvider.GetRequiredService<IKeybindingService>()));
 
+
             mainWindow.Closing += async (_, e) =>
             {
                 if (_isSavingWorkspace)
@@ -78,6 +79,16 @@ public partial class App : Avalonia.Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnAboutClicked(object? sender, EventArgs e)
+    {
+        var mainWindow = (ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        var dialog = new Views.AboutDialog();
+        if (mainWindow is not null)
+            _ = dialog.ShowDialog(mainWindow);
+        else
+            dialog.Show();
     }
 
     private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
