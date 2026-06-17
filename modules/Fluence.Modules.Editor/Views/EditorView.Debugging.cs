@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Avalonia.Input;
+using Avalonia.Threading;
 using AvaloniaEdit.Rendering;
 using Fluence.Core.Models.Debugging;
 
@@ -10,6 +11,12 @@ public partial class EditorView
 {
     private void UpdateDebugRendering()
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(UpdateDebugRendering);
+            return;
+        }
+
         var bps = _viewModel?.ActiveDocumentBreakpoints ?? Array.Empty<DebugBreakpoint>();
         _breakpointMargin?.Update(bps);
         _debugLineRenderer.Update(_viewModel?.ActiveExecutionLine);

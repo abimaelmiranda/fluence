@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using AvaloniaEdit.TextMate;
 using TextMateSharp.Grammars;
 using TextMateSharp.Internal.Themes.Reader;
@@ -57,6 +58,12 @@ public partial class EditorView
     {
         if (_registryOptions is null || _textMateInstallation is null || string.IsNullOrEmpty(path))
             return;
+
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => ApplyGrammarForPath(path));
+            return;
+        }
 
         var scope = ResolveScopeName(path);
         if (!string.IsNullOrEmpty(scope))

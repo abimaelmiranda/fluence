@@ -574,16 +574,18 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         }
         catch
         {
-            return files;
+            // MSBuild unavailable (e.g. dotnet not on PATH in app bundle) — fall back to filesystem
         }
 
-        if (result is null)
+        if (result is not null)
         {
+            AddSourceFiles(files, result);
+            AddMsBuildItems(files, projectPath, result);
             return files;
         }
 
-        AddSourceFiles(files, result);
-        AddMsBuildItems(files, projectPath, result);
+        foreach (var path in GetVisibleProjectFilePaths(projectPath, CancellationToken.None))
+            files.Add(path);
         return files;
     }
 

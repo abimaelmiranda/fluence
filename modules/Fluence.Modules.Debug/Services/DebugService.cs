@@ -16,6 +16,7 @@ using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Dialogs;
+using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Services.File;
@@ -39,7 +40,8 @@ public sealed class DebugService(
     IShellRegionHost shellRegions,
     IShellEventBus events,
     IDebugSessionManager sessions,
-    IDebuggerProvisioningService provisioning)
+    IDebuggerProvisioningService provisioning,
+    IDotnetSdkProvisioningService sdk)
     : IDebugService, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -229,8 +231,9 @@ public sealed class DebugService(
 
         ExpandBottomBar();
         await terminal.WriteOutputAsync("[debug] Building project...\r\n", cancellationToken: cancellationToken).ConfigureAwait(false);
+        var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken).ConfigureAwait(false);
         await processHost.RunAsync(
-            "dotnet",
+            dotnet,
             $"build \"{target.ProjectPath}\" -c Debug",
             Path.GetDirectoryName(target.ProjectPath),
             line => _ = terminal.WriteOutputAsync(line + Environment.NewLine),
