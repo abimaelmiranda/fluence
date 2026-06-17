@@ -18,7 +18,7 @@ public sealed class AvaloniaSourceControlDialogService : ISourceControlDialogSer
         {
             Title = "Discard changes?",
             Width = 420,
-            Height = 170,
+            SizeToContent = SizeToContent.Height,
             CanResize = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Background = new SolidColorBrush(Color.Parse("#171B20")),
