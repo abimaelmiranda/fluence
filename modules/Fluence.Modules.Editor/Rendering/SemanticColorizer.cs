@@ -39,6 +39,9 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
         _tokensByLine = map;
     }
 
+    public IBrush? GetBrush(string tokenType) =>
+        _brushes.TryGetValue(tokenType, out var b) ? b : null;
+
     public void ApplyTheme(IReadOnlyDictionary<string, string> semanticTokenColors)
     {
         var colors = new Dictionary<string, string>(DefaultColors, StringComparer.OrdinalIgnoreCase);

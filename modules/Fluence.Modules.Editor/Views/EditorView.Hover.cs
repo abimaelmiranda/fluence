@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Threading;
 using AvaloniaEdit.Document;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Modules.Editor.Rendering;
 using Fluence.Modules.Editor.ViewModels;
 
 namespace Fluence.Modules.Editor.Views;
@@ -68,12 +69,8 @@ public partial class EditorView
     private void OnPointerHoverStopped(object? sender, PointerEventArgs e)
     {
         InvalidateHoverRequests();
-        InvalidateCodeActionRequests();
-        Interlocked.Increment(ref _lspHoverRequestVersion);
-        lock (_lspHoverGate)
-        {
-            _pendingLspHoverRequest = null;
-        }
+        InvalidateLspHoverRequests();
+        InvalidateCodeActionRequests(closePopup: true);
         DiagnosticTooltipPopup.IsOpen = false;
         ClosePopupDelayed();
     }
@@ -226,58 +223,42 @@ public partial class EditorView
             activePath, line, character, hoverPoint,
             Interlocked.Increment(ref _lspHoverRequestVersion));
 
-        lock (_lspHoverGate)
-        {
-            _pendingLspHoverRequest = request;
-            _lspHoverTimer ??= new Timer(
-                static state => ((EditorView)state!).OnLspHoverTimerElapsed(),
-                this,
-                Timeout.InfiniteTimeSpan,
-                Timeout.InfiniteTimeSpan);
-            _lspHoverTimer.Change(LspHoverDebounceDelay, Timeout.InfiniteTimeSpan);
-        }
+        _viewModel?.TaskScheduler.ScheduleLatest(
+            $"editor.hover.{activePath}",
+            Fluence.Core.Abstractions.Tasks.TaskPriority.Background,
+            LspHoverDebounceDelay,
+            ct => ProcessLspHoverAsync(request, ct),
+            correlationId: request.Version);
     }
 
-    private void OnLspHoverTimerElapsed()
-    {
-        LspHoverRequest? request;
-        lock (_lspHoverGate)
-        {
-            if (_lspHoverRequestInFlight || _pendingLspHoverRequest is null)
-                return;
-            request = _pendingLspHoverRequest;
-            _pendingLspHoverRequest = null;
-            _lspHoverRequestInFlight = true;
-        }
-
-        if (request is not null)
-            _ = ProcessLspHoverAsync(request);
-    }
-
-    private async Task ProcessLspHoverAsync(LspHoverRequest request)
+    private async Task ProcessLspHoverAsync(LspHoverRequest request, CancellationToken ct)
     {
         try
         {
             if (_hoverService is null ||
                 !string.Equals(_viewModel?.ActiveDocumentPath, request.FilePath, StringComparison.OrdinalIgnoreCase) ||
-                request.Version != Volatile.Read(ref _lspHoverRequestVersion))
+                request.Version != Volatile.Read(ref _lspHoverRequestVersion) ||
+                ct.IsCancellationRequested)
                 return;
 
             var hover = await _hoverService.GetHoverAsync(
-                request.FilePath, request.Line, request.Character, CancellationToken.None).ConfigureAwait(false);
+                request.FilePath, request.Line, request.Character, ct).ConfigureAwait(false);
 
-            if (hover is null ||
+            if (ct.IsCancellationRequested ||
+                hover is null ||
                 !string.Equals(_viewModel?.ActiveDocumentPath, request.FilePath, StringComparison.OrdinalIgnoreCase) ||
                 request.Version != Volatile.Read(ref _lspHoverRequestVersion))
                 return;
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                if (!string.Equals(_viewModel?.ActiveDocumentPath, request.FilePath, StringComparison.OrdinalIgnoreCase) ||
+                if (ct.IsCancellationRequested ||
+                    !string.Equals(_viewModel?.ActiveDocumentPath, request.FilePath, StringComparison.OrdinalIgnoreCase) ||
                     request.Version != Volatile.Read(ref _lspHoverRequestVersion))
                     return;
 
-                LspHoverText.Text = hover.Contents;
+                LspHoverText.Inlines?.Clear();
+                CSharpSignatureColorizer.BuildInlines(hover.Contents, _semanticColorizer, LspHoverText.Inlines!);
                 LspHoverPopup.PlacementTarget = EditorSurface;
                 LspHoverPopup.PlacementRect = new Rect(request.HoverPoint.X + 12, request.HoverPoint.Y + 18, 1, 1);
                 LspHoverPopup.IsOpen = true;
@@ -285,15 +266,14 @@ public partial class EditorView
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[EditorView/LspHover] {ex.Message}"); }
-        finally
-        {
-            lock (_lspHoverGate)
-            {
-                _lspHoverRequestInFlight = false;
-                if (_pendingLspHoverRequest is not null)
-                    _lspHoverTimer?.Change(LspHoverDebounceDelay, Timeout.InfiniteTimeSpan);
-            }
-        }
+    }
+
+    private void InvalidateLspHoverRequests()
+    {
+        Interlocked.Increment(ref _lspHoverRequestVersion);
+        var activePath = _viewModel?.ActiveDocumentPath;
+        if (!string.IsNullOrWhiteSpace(activePath))
+            _viewModel?.TaskScheduler.Cancel($"editor.hover.{activePath}");
     }
 
     private static string ExtractWordAt(TextDocument document, int offset)

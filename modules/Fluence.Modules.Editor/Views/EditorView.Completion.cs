@@ -8,6 +8,8 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
+using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Modules.Editor.Completion;
 
 namespace Fluence.Modules.Editor.Views;
@@ -27,6 +29,8 @@ public partial class EditorView
             caret.Offset,
             Interlocked.Increment(ref _completionRequestVersion));
 
+        _viewModel.EventBus.Publish(new LspInteractiveRequestStartedEvent(request.FilePath));
+        _viewModel.PublishLiveDocumentChanged(Editor.Text, flushImmediately: true);
         ScheduleCompletionRequest(request, immediate ? DotCompletionDelay : CompletionDebounce);
         return Task.CompletedTask;
     }
@@ -59,26 +63,42 @@ public partial class EditorView
         }
 
         if (request is not null)
-            _ = ProcessCompletionRequestAsync(request);
+        {
+            var scheduler = _viewModel?.TaskScheduler;
+            if (scheduler is null)
+            {
+                FinishCompletionRequest();
+                return;
+            }
+
+            scheduler.Schedule(
+                $"editor.completion.{request.FilePath}",
+                TaskPriority.Input,
+                ct => ProcessCompletionRequestAsync(request, ct),
+                correlationId: request.Version);
+        }
     }
 
-    private async Task ProcessCompletionRequestAsync(CompletionRequest request)
+    private async Task ProcessCompletionRequestAsync(CompletionRequest request, CancellationToken ct)
     {
         try
         {
             if (_completionService is null ||
                 _viewModel?.ActiveDocumentPath is null ||
                 !string.Equals(_viewModel.ActiveDocumentPath, request.FilePath, StringComparison.OrdinalIgnoreCase) ||
-                request.Version != Volatile.Read(ref _completionRequestVersion))
+                request.Version != Volatile.Read(ref _completionRequestVersion) ||
+                ct.IsCancellationRequested)
                 return;
 
             var completions = await _completionService.GetCompletionsAsync(
                 request.FilePath,
                 request.Line,
                 request.Character,
-                CancellationToken.None).ConfigureAwait(false);
+                ct).ConfigureAwait(false);
 
-            if (request.Version != Volatile.Read(ref _completionRequestVersion) || completions.Count == 0)
+            if (ct.IsCancellationRequested ||
+                request.Version != Volatile.Read(ref _completionRequestVersion) ||
+                completions.Count == 0)
                 return;
 
             await Dispatcher.UIThread.InvokeAsync(() =>
@@ -87,6 +107,7 @@ public partial class EditorView
                     _viewModel?.ActiveDocumentPath is null ||
                     !string.Equals(_viewModel.ActiveDocumentPath, request.FilePath, StringComparison.OrdinalIgnoreCase) ||
                     request.Version != Volatile.Read(ref _completionRequestVersion) ||
+                    ct.IsCancellationRequested ||
                     Editor.TextArea.Caret.Offset != request.CaretOffset)
                     return;
 
@@ -96,7 +117,7 @@ public partial class EditorView
                     .OrderBy(item => item.SortText is null ? 1 : 0)
                     .ThenBy(item => item.SortText, StringComparer.Ordinal)
                     .ThenBy(item => item.IsPreselected ? 0 : 1)
-                    .Select((item, index) => new LspCompletionData(item, 100000 - index))
+                    .Select((item, index) => new LspCompletionData(item, 100000 - index, _semanticColorizer))
                     .ToList();
                 var caretOffsetNow = Editor.TextArea.Caret.Offset;
                 var currentPrefix = ExtractCompletionPrefix(Editor.Document, caretOffsetNow);
@@ -111,18 +132,23 @@ public partial class EditorView
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[EditorView/Completion] {ex.Message}"); }
         finally
         {
-            lock (_completionGate)
+            FinishCompletionRequest();
+        }
+    }
+
+    private void FinishCompletionRequest()
+    {
+        lock (_completionGate)
+        {
+            _completionRequestInFlight = false;
+            if (_pendingCompletionRequest is not null)
             {
-                _completionRequestInFlight = false;
-                if (_pendingCompletionRequest is not null)
-                {
-                    _completionTimer ??= new Timer(
-                        static state => ((EditorView)state!).OnCompletionTimerElapsed(),
-                        this,
-                        Timeout.InfiniteTimeSpan,
-                        Timeout.InfiniteTimeSpan);
-                    _completionTimer.Change(CompletionDebounce, Timeout.InfiniteTimeSpan);
-                }
+                _completionTimer ??= new Timer(
+                    static state => ((EditorView)state!).OnCompletionTimerElapsed(),
+                    this,
+                    Timeout.InfiniteTimeSpan,
+                    Timeout.InfiniteTimeSpan);
+                _completionTimer.Change(CompletionDebounce, Timeout.InfiniteTimeSpan);
             }
         }
     }

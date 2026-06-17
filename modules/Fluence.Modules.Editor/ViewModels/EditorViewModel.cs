@@ -18,6 +18,7 @@ using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Models.LanguageServer;
 using Fluence.Core.Services.Debugging;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
@@ -39,6 +40,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private readonly IDebugStateService _debugState;
     private readonly IDebugService _debugService;
     private readonly IShellEventBus _events;
+    private readonly ITaskScheduler _scheduler;
     private readonly ISettingsService _settings;
     private readonly IKeybindingService _keybindings;
     private readonly ICommandRegistry _commands;
@@ -51,6 +53,8 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private bool _isRefreshingFromWorkspace;
     private string? _pendingAutoSavePath;
     private string? _lastOpenedDocumentPath;
+    private string? _lastLiveSyncedPath;
+    private string? _lastLiveSyncedText;
     private int _documentVersion;
 
     [ObservableProperty]
@@ -62,6 +66,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         IDebugStateService debugState,
         IDebugService debugService,
         IShellEventBus events,
+        ITaskScheduler scheduler,
         ISettingsService settings,
         IKeybindingService keybindings,
         ICommandRegistry commands,
@@ -76,6 +81,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _debugState = debugState;
         _debugService = debugService;
         _events = events;
+        _scheduler = scheduler;
         _settings = settings;
         _keybindings = keybindings;
         _commands = commands;
@@ -98,6 +104,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public ICodeActionService? CodeActionService => _codeActionService;
     public IThemeLoader? ThemeLoader => _themeLoader;
     public IShellEventBus EventBus => _events;
+    public ITaskScheduler TaskScheduler => _scheduler;
     public ISettingsService Settings => _settings;
     public IKeybindingService Keybindings => _keybindings;
 
@@ -235,6 +242,21 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _events.Publish(new GoToTypeDefinitionRequestedEvent(ActiveDocumentPath, line, character));
     }
 
+    public void PublishLiveDocumentChanged(string content, bool flushImmediately)
+    {
+        var path = ActiveDocumentPath;
+        if (path is null || !IsTextDocument(path))
+            return;
+
+        _lastLiveSyncedPath = path;
+        _lastLiveSyncedText = content;
+        _events.Publish(new DocumentLiveChangedEvent(
+            path,
+            content,
+            Interlocked.Increment(ref _documentVersion),
+            flushImmediately));
+    }
+
     public async Task SaveIfDirtyAsync()
     {
         await SaveIfDirtyAsync(expectedPath: null, CancellationToken.None);
@@ -248,7 +270,15 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
         var path = ActiveDocumentPath;
         if (path is not null && IsTextDocument(path))
+        {
+            if (string.Equals(path, _lastLiveSyncedPath, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(value, _lastLiveSyncedText, StringComparison.Ordinal))
+            {
+                return;
+            }
+
             _events.Publish(new DocumentChangedEvent(path, value, Interlocked.Increment(ref _documentVersion)));
+        }
     }
 
     private void OnWorkspaceChanged(object? sender, EventArgs e)
