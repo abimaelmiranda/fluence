@@ -27,6 +27,14 @@ public sealed record OpenSolutionRequestedEvent(string Path) : IShellEvent;
 
 public sealed record ManageNuGetPackagesRequestedEvent(string SolutionPath) : IShellEvent;
 
+public sealed record NewProjectRequestedEvent : IShellEvent;
+
+public sealed record PublishProjectRequestedEvent(string? ProjectPath = null) : IShellEvent;
+
+public sealed record DotnetSdkSetupRequestedEvent : IShellEvent;
+
+public sealed record DotnetSdkChangedEvent : IShellEvent;
+
 public sealed record RefreshSolutionViewRequestedEvent : IShellEvent;
 
 public sealed record SaveActiveDocumentRequestedEvent : IShellEvent;

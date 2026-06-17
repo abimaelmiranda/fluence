@@ -18,6 +18,9 @@ public static class CommandIds
     public const string StopDebug = "workbench.stopDebug";
     public const string Test = "workbench.test";
     public const string Clean = "workbench.clean";
+    public const string Publish = "workbench.publish";
+    public const string OpenDotnetSdkSetup = "workbench.openDotnetSdkSetup";
+    public const string ManageNuGetPackages = "workbench.manageNuGetPackages";
     public const string OpenSettings = "workbench.openSettings";
     public const string OpenKeybindings = "workbench.openKeybindings";
     public const string NextTab = "workbench.nextTab";

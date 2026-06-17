@@ -121,9 +121,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     public string BottomBarTitle => _regions.BottomBarContent?.Title ?? "Terminal";
 
-    public bool IsWelcomeVisible => WorkspaceMode == WorkspaceMode.Empty;
+    public bool IsWelcomeVisible => WorkspaceMode == WorkspaceMode.Empty && !HasActiveToolDocument;
 
-    public bool IsWorkspaceVisible => WorkspaceMode != WorkspaceMode.Empty;
+    public bool IsWorkspaceVisible => WorkspaceMode != WorkspaceMode.Empty || HasActiveToolDocument;
 
     public bool IsSidebarVisible => _regions.SidebarContent is not null && _isSidebarExpanded;
 
@@ -136,6 +136,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool HasActiveDocument => _workspace.Current.TabSession.ActiveDocument is not null;
 
     public bool HasNoActiveDocument => !HasActiveDocument;
+
+    private bool HasActiveToolDocument => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.Tool;
 
     public IReadOnlyList<DocumentTabViewModel> OpenDocuments => _workspace.Current.TabSession.Documents
         .Select(document => new DocumentTabViewModel(
@@ -213,6 +215,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         TestCommand.NotifyCanExecuteChanged();
         RestoreCommand.NotifyCanExecuteChanged();
         CleanCommand.NotifyCanExecuteChanged();
+        PublishProjectCommand.NotifyCanExecuteChanged();
+        ManageNuGetPackagesCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(HasActiveDocument));
         OnPropertyChanged(nameof(HasNoActiveDocument));
         OnPropertyChanged(nameof(OpenDocuments));
@@ -372,6 +376,36 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             null,
             CleanAsync));
         _commands.Register(new IdeCommandDefinition(
+            CommandIds.Publish,
+            "Publish",
+            KeybindingScope.Global,
+            null,
+            ct =>
+            {
+                PublishProject();
+                return Task.CompletedTask;
+            }));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.OpenDotnetSdkSetup,
+            "Open .NET SDK",
+            KeybindingScope.Global,
+            null,
+            ct =>
+            {
+                OpenDotnetSdkSetup();
+                return Task.CompletedTask;
+            }));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.ManageNuGetPackages,
+            "Manage NuGet Packages",
+            KeybindingScope.Global,
+            null,
+            ct =>
+            {
+                ManageNuGetPackages();
+                return Task.CompletedTask;
+            }));
+        _commands.Register(new IdeCommandDefinition(
             CommandIds.OpenSettings,
             "Open Settings",
             KeybindingScope.Global,
@@ -479,6 +513,36 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void NewProject()
+    {
+        _eventBus.Publish(new NewProjectRequestedEvent());
+    }
+
+    [RelayCommand]
+    private void OpenDotnetSdkSetup()
+    {
+        _eventBus.Publish(new DotnetSdkSetupRequestedEvent());
+    }
+
+    [RelayCommand(CanExecute = nameof(CanManageNuGetPackages))]
+    private void ManageNuGetPackages()
+    {
+        if (!CanManageNuGetPackages())
+            return;
+
+        _eventBus.Publish(new ManageNuGetPackagesRequestedEvent(_workspace.Current.CurrentSolutionPath!));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPublishProject))]
+    private void PublishProject()
+    {
+        if (!CanPublishProject())
+            return;
+
+        _eventBus.Publish(new PublishProjectRequestedEvent());
+    }
+
+    [RelayCommand]
     private async Task SaveActiveDocumentAsync(CancellationToken cancellationToken)
     {
         _eventBus.Publish(new SaveActiveDocumentRequestedEvent());
@@ -564,6 +628,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private bool HasWorkspace() => WorkspaceMode != WorkspaceMode.Empty;
 
     private bool CanRunOrDebug() => HasWorkspace() && !_isProvisioning;
+
+    private bool CanPublishProject() => WorkspaceMode == WorkspaceMode.Solution &&
+                                        !string.IsNullOrWhiteSpace(_workspace.Current.CurrentSolutionPath);
+
+    private bool CanManageNuGetPackages() => CanPublishProject();
 
     private void SetProvisioning(bool value)
     {

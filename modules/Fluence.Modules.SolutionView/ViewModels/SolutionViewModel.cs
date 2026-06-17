@@ -195,6 +195,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
             CreateBuildCommand(node),
             CreateRestoreCommand(node),
             CreateCleanCommand(node),
+            CreatePublishCommand(node),
             CreateRunCommand(node),
             CreateTestCommand(node),
             CreateSetStartupProjectCommand(node),
@@ -303,6 +304,11 @@ public sealed partial class SolutionViewModel : ViewModelBase
         SolutionTreeNodeKind.Project when node.Path is not null => CreateTerminalCommand(() => _eventBus.Publish(new CleanProjectRequestedEvent(node.Path))),
         _ => null,
     };
+
+    private ICommand? CreatePublishCommand(SolutionTreeNode node) =>
+        node.Kind == SolutionTreeNodeKind.Solution
+            ? new RelayCommand(() => _eventBus.Publish(new PublishProjectRequestedEvent()))
+            : null;
 
     private ICommand? CreateRunCommand(SolutionTreeNode node) =>
         node.Kind == SolutionTreeNodeKind.Project && node.Path is not null

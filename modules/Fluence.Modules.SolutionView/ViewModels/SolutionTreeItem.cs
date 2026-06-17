@@ -35,6 +35,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
         ICommand? buildCommand = null,
         ICommand? restoreCommand = null,
         ICommand? cleanCommand = null,
+        ICommand? publishCommand = null,
         ICommand? runCommand = null,
         ICommand? testCommand = null,
         ICommand? setStartupProjectCommand = null,
@@ -60,6 +61,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
         BuildCommand = buildCommand;
         RestoreCommand = restoreCommand;
         CleanCommand = cleanCommand;
+        PublishCommand = publishCommand;
         RunCommand = runCommand;
         TestCommand = testCommand;
         SetStartupProjectCommand = setStartupProjectCommand;
@@ -89,6 +91,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public ICommand? BuildCommand { get; }
     public ICommand? RestoreCommand { get; }
     public ICommand? CleanCommand { get; }
+    public ICommand? PublishCommand { get; }
     public ICommand? RunCommand { get; }
     public ICommand? TestCommand { get; }
     public ICommand? SetStartupProjectCommand { get; }
@@ -121,6 +124,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public bool HasAdvancedCommands => HasBuildCommand ||
                                        HasRestoreCommand ||
                                        HasCleanCommand ||
+                                       HasPublishCommand ||
                                        HasRunCommand ||
                                        HasTestCommand ||
                                        HasSetStartupProjectCommand ||
@@ -129,6 +133,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public bool HasBuildCommand => BuildCommand is not null;
     public bool HasRestoreCommand => RestoreCommand is not null;
     public bool HasCleanCommand => CleanCommand is not null;
+    public bool HasPublishCommand => PublishCommand is not null;
     public bool HasRunCommand => RunCommand is not null;
     public bool HasTestCommand => TestCommand is not null;
     public bool HasSetStartupProjectCommand => SetStartupProjectCommand is not null;

@@ -15,4 +15,13 @@ public static class ToolTabIds
 
     public const string DebuggerSetup = "tool://fluence/debugger-setup";
     public const string DebuggerSetupTitle = "Debugger Setup";
+
+    public const string NewProject = "tool://fluence/new-project";
+    public const string NewProjectTitle = "New Project";
+
+    public const string Publish = "tool://fluence/publish";
+    public const string PublishTitle = "Publish";
+
+    public const string DotnetSdkSetup = "tool://fluence/dotnet-sdk";
+    public const string DotnetSdkSetupTitle = ".NET SDK";
 }

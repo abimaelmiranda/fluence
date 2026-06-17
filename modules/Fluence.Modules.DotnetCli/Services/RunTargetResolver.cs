@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -12,7 +13,8 @@ namespace Fluence.Modules.DotnetCli.Services;
 
 public sealed class RunTargetResolver(
     IWorkspaceContext workspace,
-    IProjectExecutionTargetResolver projectTargets)
+    IProjectExecutionTargetResolver projectTargets,
+    IDotnetSdkProvisioningService sdk)
 {
     internal async Task<RunTarget?> ResolveAsync(CancellationToken cancellationToken = default)
     {
@@ -23,30 +25,34 @@ public sealed class RunTargetResolver(
 
         var projectTarget = await projectTargets.ResolveProjectTargetAsync(ExecutionMode.Release, cancellationToken);
         if (projectTarget is not null)
-            return CreateProjectTarget(projectTarget);
+            return await CreateProjectTargetAsync(projectTarget, cancellationToken);
 
         if (DotnetPathHelpers.IsRunnableFile(activeFilePath))
-            return CreateFileTarget(activeFilePath!);
+            return await CreateFileTargetAsync(activeFilePath!, cancellationToken);
 
         return null;
     }
 
-    private static RunTarget CreateProjectTarget(ProjectExecutionTarget target)
+    private async Task<RunTarget> CreateProjectTargetAsync(
+        ProjectExecutionTarget target,
+        CancellationToken cancellationToken)
     {
+        var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
         var workingDirectory = Path.GetDirectoryName(target.ProjectPath) ?? Directory.GetCurrentDirectory();
         var args = target.Configuration?.Args is { Count: > 0 } configurationArgs
             ? " -- " + string.Join(" ", configurationArgs.Select(QuoteArgument))
             : string.Empty;
         return new RunTarget(
-            $"dotnet run --project {QuoteArgument(target.ProjectPath)}{args}",
+            $"{QuoteArgument(dotnet)} run --project {QuoteArgument(target.ProjectPath)}{args}",
             workingDirectory,
             MapKind(target.Kind));
     }
 
-    private static RunTarget CreateFileTarget(string filePath)
+    private async Task<RunTarget> CreateFileTargetAsync(string filePath, CancellationToken cancellationToken)
     {
+        var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
         var workingDirectory = Path.GetDirectoryName(filePath) ?? Directory.GetCurrentDirectory();
-        return new RunTarget($"dotnet run --file {QuoteArgument(filePath)}", workingDirectory, RunTargetKind.File);
+        return new RunTarget($"{QuoteArgument(dotnet)} run --file {QuoteArgument(filePath)}", workingDirectory, RunTargetKind.File);
     }
 
     private static RunTargetKind MapKind(ProjectExecutionTargetKind kind) =>
