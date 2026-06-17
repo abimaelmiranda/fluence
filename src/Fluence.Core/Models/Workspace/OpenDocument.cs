@@ -43,6 +43,12 @@ public sealed class OpenDocument
         IsDirty = true;
     }
 
+    public void ReloadContent(string content)
+    {
+        Content = content;
+        IsDirty = false;
+    }
+
     public void MarkSaved()
     {
         IsDirty = false;

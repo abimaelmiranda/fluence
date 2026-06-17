@@ -73,6 +73,13 @@ public sealed class Workspace
         }
     }
 
+    public void ReloadDocument(string path, string content)
+    {
+        var document = TabSession.Documents
+            .FirstOrDefault(d => string.Equals(d.Path, path, StringComparison.OrdinalIgnoreCase));
+        document?.ReloadContent(content);
+    }
+
     public void MarkActiveDocumentSaved()
     {
         TabSession.ActiveDocument?.MarkSaved();

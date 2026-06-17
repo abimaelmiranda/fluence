@@ -65,6 +65,12 @@ public sealed class WorkspaceContext : IWorkspaceContext
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public void ReloadDocument(string path, string content)
+    {
+        Current.ReloadDocument(path, content);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     public void MarkActiveDocumentSaved()
     {
         Current.MarkActiveDocumentSaved();
