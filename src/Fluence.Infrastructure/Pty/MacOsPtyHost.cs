@@ -29,7 +29,7 @@ public sealed class MacOsPtyHost : IPtyHost
     {
         // argv[0] must be the basename so the shell self-identifies correctly (e.g. "zsh", not "/bin/zsh")
         var shellName = System.IO.Path.GetFileName(DefaultShell);
-        var argv = new[] { shellName, "-i" };
+        var argv = new[] { shellName, "-il" };
         var env = MacOsPtyInterop.BuildEnvironment();
         var (masterFd, pid) = MacOsPtyInterop.Spawn(DefaultShell, argv, workingDirectory, env, columns, rows);
         return new MacOsPtySession(masterFd, pid, columns, rows);

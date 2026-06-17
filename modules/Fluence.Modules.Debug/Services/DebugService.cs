@@ -334,7 +334,7 @@ public sealed class DebugService(
         if (!_adapterStarted)
         {
             var hint = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)
-                ? " On macOS this is usually a debugger entitlement issue (com.apple.security.cs.debugger). Check the DAP log for stderr output."
+                ? " On macOS this is often a PATH/dotnet issue (the .app inherits a minimal PATH) or a debugger entitlement issue (com.apple.security.cs.debugger). Check the DAP log for stderr output."
                 : " Check the DAP log for details.";
             _ = terminal.WriteOutputAsync(
                 $"[debug] netcoredbg terminated before starting the debuggee.{hint}\r\n",

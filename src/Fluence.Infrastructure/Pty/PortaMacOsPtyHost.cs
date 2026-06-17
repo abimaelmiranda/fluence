@@ -22,7 +22,7 @@ public sealed class PortaMacOsPtyHost : IPtyHost
     }
 
     public IPtySession CreateShellSession(string workingDirectory, int columns = 80, int rows = 24)
-        => Spawn(DefaultShell, new[] { "-i" }, workingDirectory, columns, rows);
+        => Spawn(DefaultShell, new[] { "-il" }, workingDirectory, columns, rows);
 
     private static PortaPtySession Spawn(
         string executable, string[] args, string workingDirectory, int columns, int rows)

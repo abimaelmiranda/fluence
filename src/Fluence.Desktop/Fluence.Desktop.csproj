@@ -13,15 +13,6 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
-  <PropertyGroup>
-    <NetcoredbgSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../tools/netcoredbg'))</NetcoredbgSourceRoot>
-  </PropertyGroup>
-  <Target Name="CopyNetcoredbgTools" AfterTargets="Build">
-    <ItemGroup>
-      <NetcoredbgTools Include="$(NetcoredbgSourceRoot)/**/*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(NetcoredbgTools)" DestinationFiles="@(NetcoredbgTools-&gt;'$(OutDir)tools/netcoredbg/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-  </Target>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.4" />
     <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
