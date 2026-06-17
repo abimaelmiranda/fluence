@@ -1,7 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Media;
 using XTerm.Buffer;
 using XTerm.Common;
@@ -63,6 +65,11 @@ public sealed class TerminalControl : Avalonia.Controls.Control
     {
         AffectsRender<TerminalControl>(TerminalProperty, FontFamilyProperty, FontSizeProperty);
         FocusableProperty.OverrideDefaultValue<TerminalControl>(true);
+    }
+
+    public TerminalControl()
+    {
+        InputMethod.SetIsInputMethodEnabled(this, true);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -323,6 +330,57 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         var xMod = ToXTermModifiers(e.KeyModifiers);
         var xKey = ToXTermKey(e.Key);
 
+        // Cmd (Meta) key shortcuts — must come before the generic xKey path so that
+        // e.g. Cmd+Delete is not dispatched as plain Delete.
+        if (e.KeyModifiers.HasFlag(AvaloniaKeyModifiers.Meta))
+        {
+            var metaSeq = e.Key switch
+            {
+                AvaloniaKey.Back   => "\x15",   // Cmd+Backspace → delete to beginning of line
+                AvaloniaKey.Delete => "\x0b",   // Cmd+Delete    → delete to end of line
+                AvaloniaKey.Left   => "\x1b[H", // Cmd+Left      → beginning of line (Home)
+                AvaloniaKey.Right  => "\x1b[F", // Cmd+Right     → end of line (End)
+                _ => null,
+            };
+            if (metaSeq is not null)
+            {
+                e.Handled = true;
+                TerminalTextInput?.Invoke(metaSeq);
+                return;
+            }
+
+            // Cmd+V: paste from clipboard using bracketed paste mode.
+            // For text: wraps content in \x1b[200~...\x1b[201~.
+            // For image-only clipboard: sends empty bracketed paste so Claude Code CLI
+            // receives the paste-start signal and reads the image via NSPasteboard itself.
+            if (e.Key == AvaloniaKey.V)
+            {
+                e.Handled = true;
+                _ = PasteFromClipboardAsync();
+                return;
+            }
+        }
+
+        // Option (Alt) key shortcuts for word movement — use the ESC-prefix form that
+        // readline/zsh/bash recognize on macOS rather than the CSI modifier form.
+        if (e.KeyModifiers.HasFlag(AvaloniaKeyModifiers.Alt))
+        {
+            var altSeq = e.Key switch
+            {
+                AvaloniaKey.Left   => "\x1bb",    // Option+Left  → move word backward
+                AvaloniaKey.Right  => "\x1bf",    // Option+Right → move word forward
+                AvaloniaKey.Back   => "\x1b\x7f", // Option+Back  → delete word backward
+                AvaloniaKey.Delete => "\x1bd",    // Option+Delete → delete word forward
+                _ => null,
+            };
+            if (altSeq is not null)
+            {
+                e.Handled = true;
+                TerminalTextInput?.Invoke(altSeq);
+                return;
+            }
+        }
+
         if (xKey is not null)
         {
             var seq = terminal.GenerateKeyInput(xKey.Value, xMod);
@@ -357,6 +415,15 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         }
     }
 
+    private async Task PasteFromClipboardAsync()
+    {
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null) return;
+        var text = await clipboard.TryGetTextAsync();
+        var content = $"\x1b[200~{text ?? string.Empty}\x1b[201~";
+        await (TerminalTextInput?.Invoke(content) ?? Task.CompletedTask);
+    }
+
     protected override void OnTextInput(TextInputEventArgs e)
     {
         base.OnTextInput(e);
@@ -368,6 +435,9 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         foreach (var ch in e.Text)
         {
             var seq = terminal.GenerateCharInput(ch, XTermModifiers.None);
+            // GenerateCharInput may return null for non-ASCII printable chars; send the char directly.
+            if (string.IsNullOrEmpty(seq) && !char.IsControl(ch))
+                seq = ch.ToString();
             if (!string.IsNullOrEmpty(seq))
                 TerminalTextInput?.Invoke(seq);
         }
