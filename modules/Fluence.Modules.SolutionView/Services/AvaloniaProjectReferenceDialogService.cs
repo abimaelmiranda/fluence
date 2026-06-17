@@ -63,7 +63,7 @@ public sealed class AvaloniaProjectReferenceDialogService : IProjectReferenceDia
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var window = CreateWindow("Remove Reference", 420, 160);
+        var window = CreateWindow("Remove Reference", 420, 160, sizeToContentHeight: true);
         var message = new TextBlock
         {
             Text = $"Remove project reference '{referenceName}'?",
@@ -80,17 +80,23 @@ public sealed class AvaloniaProjectReferenceDialogService : IProjectReferenceDia
         return ShowDialogAsync(window, false);
     }
 
-    private static Window CreateWindow(string title, double width, double height)
+    private static Window CreateWindow(string title, double width, double height, bool sizeToContentHeight = false)
     {
-        return new Window
+        var window = new Window
         {
             Title = title,
             Width = width,
-            Height = height,
             MinWidth = 360,
             MinHeight = 140,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
+
+        if (sizeToContentHeight)
+            window.SizeToContent = SizeToContent.Height;
+        else
+            window.Height = height;
+
+        return window;
     }
 
     private static Control CreateDialogLayout(Control content, Button primaryButton, Button cancelButton)

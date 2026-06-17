@@ -98,7 +98,7 @@ public sealed class AvaloniaSolutionFileCreationDialogService : ISolutionFileCre
         {
             Title = "Create C# File",
             Width = 420,
-            Height = 230,
+            SizeToContent = SizeToContent.Height,
             CanResize = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };

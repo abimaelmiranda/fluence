@@ -55,7 +55,7 @@ public sealed class AvaloniaFileOperationDialogService : IFileOperationDialogSer
         string? initialValue = null,
         CancellationToken cancellationToken = default)
     {
-        var window = CreateWindow(title, 420, 180);
+        var window = CreateWindow(title, 420);
 
         var prompt = new TextBlock
         {
@@ -113,15 +113,15 @@ public sealed class AvaloniaFileOperationDialogService : IFileOperationDialogSer
     }
 
     private static Window CreateWindow()
-        => CreateWindow("Delete", 360, 150);
+        => CreateWindow("Delete", 360);
 
-    private static Window CreateWindow(string title, double width, double height)
+    private static Window CreateWindow(string title, double width)
     {
         return new Window
         {
             Title = title,
             Width = width,
-            Height = height,
+            SizeToContent = SizeToContent.Height,
             CanResize = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Background = new SolidColorBrush(Color.Parse("#171B20")),
