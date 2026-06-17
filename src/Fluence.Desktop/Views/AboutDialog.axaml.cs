@@ -1,3 +1,4 @@
+using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -9,10 +10,12 @@ public partial class AboutDialog : Window
     {
         InitializeComponent();
 
-        var version = typeof(App).Assembly.GetName().Version;
-        VersionText.Text = version is not null
-            ? $"Version {version.Major}.{version.Minor}.{version.Build}"
-            : "Version 1.0";
+        var version = typeof(App).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+        VersionText.Text = !string.IsNullOrWhiteSpace(version)
+            ? $"Version {version}"
+            : "Version 0.1.0-alpha";
     }
 
     private void OnCloseClicked(object? sender, RoutedEventArgs e)
