@@ -146,11 +146,13 @@ public sealed partial class SolutionViewModel : ViewModelBase
             if (!_solutionLoader.HasValidCache(solutionPath))
             {
                 var skeleton = await _solutionLoader.LoadStructuralAsync(solutionPath, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
                 RootItems.Add(CreateTreeItem(skeleton.Root));
                 IsLoading = false;
             }
 
             var snapshot = await _solutionLoader.LoadAsync(solutionPath, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             _loadedSnapshot = snapshot;
             _projectAssociations.Update(snapshot);
 
