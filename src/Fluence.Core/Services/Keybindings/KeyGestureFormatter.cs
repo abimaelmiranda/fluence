@@ -62,6 +62,8 @@ public static class KeyGestureFormatter
             "Escape" => "Escape",
             "Return" => "Enter",
             "OemComma" => "Comma",
+            "OemPeriod" => ".",
+            "Decimal" => ".",
             "OemPlus" => "+",
             "OemMinus" => "-",
             _ => keyName,

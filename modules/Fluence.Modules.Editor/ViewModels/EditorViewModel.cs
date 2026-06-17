@@ -143,6 +143,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
             KeybindingScope.Editor,
             "Ctrl+Space"));
         _commands.Register(new IdeCommandDefinition(
+            CommandIds.EditorQuickFix,
+            "Quick Fix",
+            KeybindingScope.Editor,
+            OperatingSystem.IsMacOS() ? "Meta+." : "Ctrl+."));
+        _commands.Register(new IdeCommandDefinition(
             CommandIds.EditorGoToDefinition,
             "Go to Definition",
             KeybindingScope.Editor,
