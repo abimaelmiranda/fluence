@@ -169,11 +169,27 @@
                     BorderBrush="{StaticResource FluenceBrushBorder}"
                     BorderThickness="1"
                     CornerRadius="4"
-                    Padding="8,4">
-                <TextBlock x:Name="SignatureHelpText"
-                           Foreground="{StaticResource FluenceBrushTextSecondary}"
-                           FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
-                           FontSize="12"/>
+                    Padding="8"
+                    MaxWidth="560"
+                    MaxHeight="260">
+                <StackPanel Spacing="6">
+                    <TextBlock x:Name="SignatureHelpText"
+                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"/>
+                    <ScrollViewer x:Name="SignatureHelpDocumentationScroll"
+                                  IsVisible="False"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  MaxHeight="160">
+                        <TextBlock x:Name="SignatureHelpDocumentationText"
+                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                   TextWrapping="Wrap"
+                                   FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                                   FontSize="12"/>
+                    </ScrollViewer>
+                </StackPanel>
             </Border>
         </Popup>
     </Panel>

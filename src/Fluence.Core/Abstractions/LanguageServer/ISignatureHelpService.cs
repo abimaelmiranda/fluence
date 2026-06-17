@@ -11,5 +11,6 @@ public interface ISignatureHelpService
         int line,
         int character,
         bool isRetrigger = false,
+        char? triggerCharacter = null,
         CancellationToken cancellationToken = default);
 }

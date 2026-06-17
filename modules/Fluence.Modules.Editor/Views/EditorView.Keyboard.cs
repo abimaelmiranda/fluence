@@ -40,12 +40,6 @@ public partial class EditorView
             return;
         }
 
-        // For dot: flush LSP document sync immediately so OmniSharp has the latest content
-        // (including the dot) before we request completions. Without this, the 750ms debounce
-        // on didChange means OmniSharp would return generic completions instead of member completions.
-        if (ch == '.' && _eventBus is not null)
-            _eventBus.Publish(new FlushDocumentSyncEvent(_viewModel.ActiveDocumentPath));
-
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             if (_completionService is null || _viewModel?.ActiveDocumentPath is null)
@@ -89,6 +83,8 @@ public partial class EditorView
             if (caretOffset < document.TextLength && document.GetCharAt(caretOffset) == ch)
             {
                 SetCaretOffset(caretOffset + 1);
+                if (ch == ')')
+                    CloseSignatureHelpPopup();
                 e.Handled = true;
             }
 
@@ -118,6 +114,8 @@ public partial class EditorView
 
         document.Insert(caretOffset, $"{ch}{closer}");
         SetCaretOffset(caretOffset + 1);
+        if (ch == '(')
+            _ = TriggerSignatureHelpAsync(ch);
         e.Handled = true;
     }
 
@@ -160,6 +158,13 @@ public partial class EditorView
                 e.Handled = true;
                 return;
             }
+        }
+
+        if (SignatureHelpPopup.IsOpen && e.Key == Key.Escape)
+        {
+            CloseSignatureHelpPopup();
+            e.Handled = true;
+            return;
         }
 
         if (TryHandleSmartEnter(e))
