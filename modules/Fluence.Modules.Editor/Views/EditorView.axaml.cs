@@ -184,7 +184,64 @@ public partial class EditorView : UserControl
         CompletionListBox.ItemTemplate = new FuncDataTemplate<LspCompletionData>(
             (data, _) => data is null ? new TextBlock() : (Control)data.Content,
             supportsRecycling: false);
+        CodeActionsListBox.ItemTemplate = new FuncDataTemplate<CodeActionListItem>(
+            (data, _) => data is null
+                ? new TextBlock()
+                : CreateCodeActionRow(data),
+            supportsRecycling: false);
+        CodeActionsListBox.DoubleTapped += OnCodeActionListBoxDoubleTapped;
         InitializeTextMate();
+    }
+
+    private Control CreateCodeActionRow(CodeActionListItem item)
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+            Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)),
+            Cursor = new Cursor(StandardCursorType.Hand),
+            Margin = new Thickness(0),
+            MinHeight = 28,
+        };
+
+        var badge = new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#25384C")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#3A5C7A")),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(5, 1),
+            Margin = new Thickness(4, 4, 8, 4),
+            Child = new TextBlock
+            {
+                Text = item.Action.IsPreferred ? "FIX" : "ACTION",
+                Foreground = new SolidColorBrush(Color.Parse("#8DBDF8")),
+                FontFamily = new FontFamily("Menlo,Consolas,Cascadia Mono,monospace"),
+                FontSize = 10,
+            },
+        };
+
+        var label = new TextBlock
+        {
+            Text = item.Label,
+            Foreground = new SolidColorBrush(Color.Parse("#D7E2EE")),
+            FontFamily = new FontFamily("Menlo,Consolas,Cascadia Mono,monospace"),
+            FontSize = 12,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0),
+        };
+
+        Grid.SetColumn(badge, 0);
+        Grid.SetColumn(label, 1);
+        grid.Children.Add(badge);
+        grid.Children.Add(label);
+        grid.PointerReleased += (_, _) =>
+        {
+            CodeActionsListBox.SelectedItem = item;
+            ApplySelectedCodeAction();
+        };
+        return grid;
     }
 
     private TimeSpan CompletionDebounce => TimeSpan.FromMilliseconds(

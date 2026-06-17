@@ -123,6 +123,23 @@ public partial class EditorView
     {
         if (_viewModel is null) return;
 
+        var gesture = EditorKeyGestureFormatter.FromEvent(e);
+        if (MatchesEditorCommand(CommandIds.EditorQuickFix, gesture))
+        {
+            TriggerQuickFix();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Handled)
+            return;
+
+        if (TryHandleCodeActionPopupKey(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (TryHandleAcceleratedUndo(e))
         {
             e.Handled = true;
@@ -183,7 +200,6 @@ public partial class EditorView
         var line      = caret.Line - 1;
         var character = caret.Column - 1;
 
-        var gesture = EditorKeyGestureFormatter.FromEvent(e);
         if (MatchesEditorCommand(CommandIds.EditorTriggerCompletion, gesture))
         {
             _ = TriggerCompletionAsync(immediate: true);

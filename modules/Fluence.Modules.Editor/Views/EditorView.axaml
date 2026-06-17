@@ -144,19 +144,48 @@
                     BorderBrush="{StaticResource FluenceBrushBorder}"
                     BorderThickness="1"
                     CornerRadius="4"
-                    Padding="8,6"
-                    MaxWidth="480">
-                <StackPanel Spacing="4">
+                    Padding="8"
+                    MinWidth="340"
+                    MaxWidth="560">
+                <StackPanel Spacing="6">
                     <TextBlock x:Name="CodeActionDiagnosticText"
                                Foreground="{StaticResource FluenceBrushTextPrimary}"
                                TextWrapping="Wrap"
                                FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
-                               FontSize="12"/>
+                               FontSize="12"
+                               MaxHeight="76"/>
                     <Separator x:Name="CodeActionSeparator"
                                Background="{StaticResource FluenceBrushBorder}"
                                Height="1"
-                               Margin="0,2"/>
-                    <StackPanel x:Name="CodeActionsPanel" Spacing="2"/>
+                               Margin="0"/>
+                    <TextBlock x:Name="CodeActionEmptyText"
+                               Text="No quick fixes available"
+                               IsVisible="False"
+                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"/>
+                    <ListBox x:Name="CodeActionsListBox"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Padding="0"
+                             MaxHeight="220"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,1"/>
+                                <Setter Property="MinHeight" Value="28"/>
+                                <Setter Property="CornerRadius" Value="3"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:pointerover">
+                                <Setter Property="Background" Value="#263241"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:selected">
+                                <Setter Property="Background" Value="#2F4156"/>
+                            </Style>
+                        </ListBox.Styles>
+                    </ListBox>
                 </StackPanel>
             </Border>
         </Popup>

@@ -34,6 +34,7 @@ public static class CommandIds
 
     // Editor commands (owned by the Editor module).
     public const string EditorTriggerCompletion = "editor.triggerCompletion";
+    public const string EditorQuickFix = "editor.quickFix";
     public const string EditorGoToDefinition = "editor.goToDefinition";
     public const string EditorGoToImplementation = "editor.goToImplementation";
     public const string EditorGoToTypeDefinition = "editor.goToTypeDefinition";

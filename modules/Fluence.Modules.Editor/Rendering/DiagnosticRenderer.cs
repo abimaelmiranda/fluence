@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia;
 using AvaloniaEdit;
 using Avalonia.Media;
@@ -35,6 +36,32 @@ internal sealed class DiagnosticRenderer : IBackgroundRenderer
             d.StartLine == line &&
             character >= d.StartCharacter &&
             character <= d.EndCharacter);
+
+    public LspDiagnostic? FindDiagnosticForLine(int line, int character)
+    {
+        var diagnostics = _diagnostics
+            .Where(d => d.StartLine <= line && d.EndLine >= line)
+            .OrderBy(d => ContainsPosition(d, line, character) ? 0 : 1)
+            .ThenBy(d => d.Severity)
+            .ThenBy(d => d.StartLine)
+            .ThenBy(d => d.StartCharacter);
+
+        return diagnostics.FirstOrDefault();
+    }
+
+    private static bool ContainsPosition(LspDiagnostic diagnostic, int line, int character)
+    {
+        if (line < diagnostic.StartLine || line > diagnostic.EndLine)
+            return false;
+
+        if (line == diagnostic.StartLine && character < diagnostic.StartCharacter)
+            return false;
+
+        if (line == diagnostic.EndLine && character > diagnostic.EndCharacter)
+            return false;
+
+        return true;
+    }
 
     public void Draw(TextView textView, DrawingContext drawingContext)
     {
