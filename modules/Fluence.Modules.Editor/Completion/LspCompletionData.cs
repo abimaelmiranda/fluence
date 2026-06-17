@@ -7,22 +7,25 @@ using Avalonia.Media;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Modules.Editor.Rendering;
 
 namespace Fluence.Modules.Editor.Completion;
 
 internal sealed partial class LspCompletionData
 {
     private readonly LspCompletion _completion;
+    private readonly SemanticColorizer _colorizer;
 
-    public LspCompletionData(LspCompletion completion, double priority)
+    public LspCompletionData(LspCompletion completion, double priority, SemanticColorizer colorizer)
     {
         _completion = completion;
-        Priority = priority;
-        Text = completion.Label;
+        _colorizer  = colorizer;
+        Priority    = priority;
+        Text        = completion.Label;
     }
 
     public string Text { get; }
-    public object Content => CreateContent(_completion);
+    public object Content => CreateContent(_completion, _colorizer);
     public double Priority { get; }
 
     public bool MatchesPrefix(string prefix) =>
@@ -65,9 +68,10 @@ internal sealed partial class LspCompletionData
 
     private static bool IsCompletionChar(char ch) => char.IsLetterOrDigit(ch) || ch == '_';
 
-    private static Control CreateContent(LspCompletion completion)
+    private static Control CreateContent(LspCompletion completion, SemanticColorizer colorizer)
     {
-        var kind = GetKindLabel(completion.Kind);
+        var kind        = GetKindLabel(completion.Kind);
+        var labelBrush  = KindToTokenType(completion.Kind) is { } tt ? colorizer.GetBrush(tt) : null;
 
         var label = new TextBlock
         {
@@ -76,6 +80,7 @@ internal sealed partial class LspCompletionData
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Stretch,
+            Foreground = labelBrush,
         };
 
         var kindBadge = new Border
@@ -109,6 +114,32 @@ internal sealed partial class LspCompletionData
 
         return grid;
     }
+
+    private static string? KindToTokenType(LspCompletionKind kind) =>
+        kind switch
+        {
+            LspCompletionKind.Method or
+            LspCompletionKind.Function or
+            LspCompletionKind.Constructor   => "method",
+
+            LspCompletionKind.Class or
+            LspCompletionKind.Module        => "type",
+
+            LspCompletionKind.Interface     => "interface",
+            LspCompletionKind.Struct        => "struct",
+            LspCompletionKind.Enum          => "enum",
+
+            LspCompletionKind.EnumMember or
+            LspCompletionKind.Constant      => "enumMember",
+
+            LspCompletionKind.Variable or
+            LspCompletionKind.Field or
+            LspCompletionKind.Property      => "variable",
+
+            LspCompletionKind.TypeParameter => "typeParameter",
+
+            _                               => null,
+        };
 
     private static string GetKindLabel(LspCompletionKind kind) =>
         kind switch

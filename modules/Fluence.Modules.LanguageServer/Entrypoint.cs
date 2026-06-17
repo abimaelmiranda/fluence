@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.LanguageServer.Services;
@@ -24,6 +25,7 @@ public sealed partial class Entrypoint : IModule, IDisposable
     private ILanguageServerService? _languageServer;
     private SemanticTokensService? _semanticTokensService;
     private IShellEventBus? _eventBus;
+    private ITaskScheduler? _scheduler;
 
     public string Name => "LanguageServer";
 
@@ -65,95 +67,140 @@ public sealed partial class Entrypoint : IModule, IDisposable
 
     public void Dispose()
     {
-        _pendingDidChangeTimer?.Dispose();
-        _pendingSemanticTimer?.Dispose();
     }
 
     public void Initialize(IModuleHost host)
     {
         var lsp = host.Services.GetRequiredService<ILanguageServerService>();
         var provisioning = host.Services.GetRequiredService<ILspProvisioningService>();
+        var nav = host.Services.GetRequiredService<INavigationService>();
         _languageServer = lsp;
         _semanticTokensService = host.Services.GetRequiredService<SemanticTokensService>();
         _eventBus = host.Events;
+        _scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
-        // Start language server when workspace has a root
         host.Workspace.Changed += (_, _) => TryStartOrRestart(host, lsp, provisioning, fromProvisioning: false);
 
-        // Respond to document lifecycle events from the editor
-        host.Events.SubscribeAsync<DocumentOpenedEvent>(e =>
+        host.Events.SubscribeSync<DocumentOpenedEvent>(e =>
         {
-            RegisterDocument(e.FilePath, e.Content, e.LanguageId, version: 1, publishStarted: true);
-            if (lsp.IsRunning)
-                SafeSend(EnsureDocumentOpenAndQueueSemanticTokensAsync(lsp, e.FilePath));
-            return Task.CompletedTask;
+            RegisterDocument(e.FilePath, e.Content, e.LanguageId, version: 1);
+            if (!lsp.IsRunning) return;
+            _scheduler.Schedule(
+                $"lsp.ensure-open.{e.FilePath}",
+                TaskPriority.Interactive,
+                ct => EnsureDocumentOpenAndQueueSemanticTokensAsync(lsp, e.FilePath, ct),
+                correlationId: e.FilePath);
         });
 
-        host.Events.SubscribeAsync<DocumentChangedEvent>(e =>
+        host.Events.SubscribeSync<DocumentChangedEvent>(e =>
         {
-            RegisterDocument(e.FilePath, e.Content, "csharp", e.Version, publishStarted: true);
-            if (!lsp.IsRunning) return Task.CompletedTask;
-
-            if (IsOpenInServer(e.FilePath))
-            {
-                QueueDidChange(e.FilePath, e.Version, e.Content);
-                QueueSemanticTokens(e.FilePath);
-            }
-            else
-            {
-                SafeSend(EnsureDocumentOpenAndQueueSemanticTokensAsync(lsp, e.FilePath));
-            }
-
-            return Task.CompletedTask;
+            HandleDocumentContentChanged(lsp, e.FilePath, e.Content, e.Version, flushImmediately: false);
         });
 
-        host.Events.SubscribeAsync<DocumentClosedEvent>(e =>
+        host.Events.SubscribeSync<DocumentLiveChangedEvent>(e =>
+        {
+            HandleDocumentContentChanged(lsp, e.FilePath, e.Content, e.Version, e.FlushImmediately);
+        });
+
+        host.Events.SubscribeSync<DocumentClosedEvent>(e =>
         {
             UnregisterDocument(e.FilePath);
-            if (!lsp.IsRunning) return Task.CompletedTask;
-            SafeSend(FlushPendingDidChangeAndCloseAsync(lsp, e.FilePath));
-            return Task.CompletedTask;
+            if (!lsp.IsRunning) return;
+            _scheduler.Schedule(
+                $"lsp.close.{e.FilePath}",
+                TaskPriority.Interactive,
+                ct => FlushPendingDidChangeAndCloseAsync(lsp, e.FilePath, ct));
         });
 
-        // DocumentOpenedEvent may fire before the server is running, especially during snapshot restore.
-        // Once ready, replay tracked documents into the LSP and request semantic tokens.
-        host.Events.SubscribeAsync<LspServerReadyEvent>(_ =>
+        host.Events.SubscribeSync<LspServerReadyEvent>(_ =>
         {
             foreach (var path in SnapshotDocumentPaths())
-                SafeSend(EnsureDocumentOpenAndQueueSemanticTokensAsync(lsp, path));
-            return Task.CompletedTask;
+                _scheduler.Schedule(
+                    $"lsp.ensure-open.{path}",
+                    TaskPriority.Interactive,
+                    ct => EnsureDocumentOpenAndQueueSemanticTokensAsync(lsp, path, ct),
+                    correlationId: path);
         });
 
-        // Use diagnostics as a signal that OmniSharp finished analyzing — safe moment to fetch semantic tokens.
-        // This also covers the startup case where the LSP wasn't running when DocumentOpenedEvent fired.
-        host.Events.SubscribeAsync<DiagnosticsUpdatedEvent>(e =>
+        // Diagnostics signal OmniSharp finished analyzing — safe moment to fetch semantic tokens
+        host.Events.SubscribeSync<DiagnosticsUpdatedEvent>(e =>
         {
-            if (!lsp.IsRunning) return Task.CompletedTask;
+            if (!lsp.IsRunning) return;
             QueueSemanticTokens(e.FilePath);
-            return Task.CompletedTask;
         });
 
-        host.Events.SubscribeAsync<FlushDocumentSyncEvent>(e =>
+        host.Events.SubscribeSync<FlushDocumentSyncEvent>(e =>
         {
-            if (!lsp.IsRunning) return Task.CompletedTask;
-            SafeSend(FlushPendingDidChangeImmediatelyAsync(lsp, e.FilePath));
-            return Task.CompletedTask;
+            if (!lsp.IsRunning) return;
+            _scheduler.Schedule(
+                $"lsp.flush.{e.FilePath}",
+                TaskPriority.Critical,
+                ct => FlushPendingDidChangeImmediatelyAsync(lsp, e.FilePath, ct));
         });
 
-        // Navigation requests — resolve and open destination
-        host.Events.SubscribeAsync<GoToDefinitionRequestedEvent>(e => HandleNavigation(host, lsp, "definition", e.FilePath, e.Line, e.Character));
-        host.Events.SubscribeAsync<GoToImplementationRequestedEvent>(e => HandleNavigation(host, lsp, "implementation", e.FilePath, e.Line, e.Character));
-        host.Events.SubscribeAsync<GoToTypeDefinitionRequestedEvent>(e => HandleNavigation(host, lsp, "typeDefinition", e.FilePath, e.Line, e.Character));
+        host.Events.SubscribeSync<LspInteractiveRequestStartedEvent>(e =>
+        {
+            CancelSemanticTokens(e.FilePath);
+        });
 
-        // Provisioning completed — start the server (or reset guard if it failed)
-        host.Events.SubscribeAsync<LspProvisioningCompletedEvent>(_ =>
+        host.Events.SubscribeSync<GoToDefinitionRequestedEvent>(e =>
+            _scheduler.Schedule("lsp.navigation", TaskPriority.Interactive,
+                ct => HandleNavigation(host, nav, "definition", e.FilePath, e.Line, e.Character, ct),
+                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}"));
+
+        host.Events.SubscribeSync<GoToImplementationRequestedEvent>(e =>
+            _scheduler.Schedule("lsp.navigation", TaskPriority.Interactive,
+                ct => HandleNavigation(host, nav, "implementation", e.FilePath, e.Line, e.Character, ct),
+                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}"));
+
+        host.Events.SubscribeSync<GoToTypeDefinitionRequestedEvent>(e =>
+            _scheduler.Schedule("lsp.navigation", TaskPriority.Interactive,
+                ct => HandleNavigation(host, nav, "typeDefinition", e.FilePath, e.Line, e.Character, ct),
+                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}"));
+
+        host.Events.SubscribeSync<LspProvisioningCompletedEvent>(_ =>
         {
             _provisioningPending = false;
             TryStartOrRestart(host, lsp, provisioning, fromProvisioning: true);
-            return Task.CompletedTask;
         });
 
         host.SetModuleState(Name, ModuleState.Active);
+    }
+
+    private void HandleDocumentContentChanged(
+        ILanguageServerService lsp,
+        string filePath,
+        string content,
+        int version,
+        bool flushImmediately)
+    {
+        RegisterDocument(filePath, content, "csharp", version);
+        if (!lsp.IsRunning) return;
+
+        if (IsOpenInServer(filePath))
+        {
+            QueueDidChange(filePath, version, content);
+            if (flushImmediately)
+            {
+                _scheduler!.Schedule(
+                    $"lsp.flush.{filePath}",
+                    TaskPriority.Critical,
+                    ct => FlushPendingDidChangeImmediatelyAsync(lsp, filePath, ct),
+                    correlationId: version);
+            }
+            else
+            {
+                QueueSemanticTokens(filePath);
+            }
+        }
+        else
+        {
+            _scheduler!.Schedule(
+                $"lsp.ensure-open.{filePath}",
+                TaskPriority.Interactive,
+                ct => EnsureDocumentOpenAndQueueSemanticTokensAsync(lsp, filePath, ct),
+                correlationId: version);
+        }
     }
 
     private void TryStartOrRestart(IModuleHost host, ILanguageServerService lsp, ILspProvisioningService provisioning, bool fromProvisioning)
@@ -164,7 +211,7 @@ public sealed partial class Entrypoint : IModule, IDisposable
             if (_lastStartedRootPath is not null)
             {
                 _lastStartedRootPath = null;
-                ResetServerDocumentState(publishStarted: false);
+                ResetServerDocumentState();
                 _ = lsp.StopAsync();
             }
             return;
@@ -182,7 +229,6 @@ public sealed partial class Entrypoint : IModule, IDisposable
             return;
         }
 
-        // Reset guard so future "not provisioned" states work again
         _provisioningPending = false;
 
         // Avoid restarting when workspace changes are caused by things unrelated to the root
@@ -192,11 +238,11 @@ public sealed partial class Entrypoint : IModule, IDisposable
             return;
 
         _lastStartedRootPath = rootPath;
-        ResetServerDocumentState(publishStarted: true);
+        ResetServerDocumentState();
         _ = lsp.StartAsync(rootPath, CancellationToken.None);
     }
 
-    private void RegisterDocument(string filePath, string content, string languageId, int version, bool publishStarted)
+    private void RegisterDocument(string filePath, string content, string languageId, int version)
     {
         if (!IsCSharpDocument(filePath, languageId))
             return;
@@ -219,9 +265,6 @@ public sealed partial class Entrypoint : IModule, IDisposable
                 };
             }
         }
-
-        if (publishStarted)
-            _eventBus?.Publish(new SemanticTokensRefreshStartedEvent(filePath));
     }
 
     private void UnregisterDocument(string filePath)
@@ -248,9 +291,8 @@ public sealed partial class Entrypoint : IModule, IDisposable
         }
     }
 
-    private void ResetServerDocumentState(bool publishStarted)
+    private void ResetServerDocumentState()
     {
-        string[] pendingPaths;
         lock (_documentGate)
         {
             foreach (var state in _documents.Values)
@@ -259,18 +301,10 @@ public sealed partial class Entrypoint : IModule, IDisposable
                 state.TokensPending = true;
                 state.SemanticAttempt = 0;
             }
-
-            pendingPaths = [.. _documents.Keys];
         }
-
-        if (!publishStarted || _eventBus is null)
-            return;
-
-        foreach (var path in pendingPaths)
-            _eventBus.Publish(new SemanticTokensRefreshStartedEvent(path));
     }
 
-    private async Task EnsureDocumentOpenAndQueueSemanticTokensAsync(ILanguageServerService lsp, string filePath)
+    private async Task EnsureDocumentOpenAndQueueSemanticTokensAsync(ILanguageServerService lsp, string filePath, CancellationToken ct)
     {
         DocumentSyncState? snapshot;
         lock (_documentGate)
@@ -291,7 +325,7 @@ public sealed partial class Entrypoint : IModule, IDisposable
             filePath,
             snapshot.LanguageId,
             snapshot.Content,
-            CancellationToken.None).ConfigureAwait(false);
+            ct).ConfigureAwait(false);
 
         lock (_documentGate)
         {

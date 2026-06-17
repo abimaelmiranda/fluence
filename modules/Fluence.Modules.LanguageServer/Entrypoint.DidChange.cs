@@ -1,53 +1,43 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
+using Fluence.Core.Abstractions.Tasks;
 
 namespace Fluence.Modules.LanguageServer;
 
 public sealed partial class Entrypoint
 {
     private readonly object _pendingDidChangeGate = new();
-    private PendingDidChange? _pendingDidChange;
-    private DateTime? _pendingDidChangeDueAtUtc;
-    private Timer? _pendingDidChangeTimer;
-    private Task? _pendingDidChangeSendTask;
+    private readonly Dictionary<string, PendingDidChange> _pendingDidChanges = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Task> _pendingDidChangeSendTasks = new(StringComparer.OrdinalIgnoreCase);
 
     private void QueueDidChange(string filePath, int version, string content)
     {
         lock (_pendingDidChangeGate)
         {
-            _pendingDidChange = new PendingDidChange(filePath, content, version);
-            _pendingDidChangeDueAtUtc = DateTime.UtcNow + DidChangeDebounceDelay;
-            _pendingDidChangeTimer ??= new Timer(
-                static state => ((Entrypoint)state!).OnDidChangeTimerElapsed(),
-                this,
-                Timeout.InfiniteTimeSpan,
-                Timeout.InfiniteTimeSpan);
-            _pendingDidChangeTimer.Change(DidChangeDebounceDelay, Timeout.InfiniteTimeSpan);
+            _pendingDidChanges[filePath] = new PendingDidChange(filePath, content, version);
         }
+
+        _scheduler!.ScheduleLatest(
+            $"lsp.didchange.{filePath}",
+            TaskPriority.Input,
+            DidChangeDebounceDelay,
+            ct => SendLatestDidChangeAsync(filePath, ct),
+            correlationId: version);
     }
 
-    private async Task FlushPendingDidChangeImmediatelyAsync(ILanguageServerService lsp, string filePath)
+    private async Task FlushPendingDidChangeImmediatelyAsync(ILanguageServerService lsp, string filePath, CancellationToken ct)
     {
         PendingDidChange? pending;
         Task? inFlightTask;
+        _scheduler?.Cancel($"lsp.didchange.{filePath}");
         lock (_pendingDidChangeGate)
         {
-            _pendingDidChangeTimer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-            pending = _pendingDidChange is not null &&
-                      string.Equals(_pendingDidChange.FilePath, filePath, StringComparison.OrdinalIgnoreCase)
-                ? _pendingDidChange
-                : null;
-
-            if (pending is not null)
-            {
-                _pendingDidChange = null;
-                _pendingDidChangeDueAtUtc = null;
-            }
-
-            inFlightTask = _pendingDidChangeSendTask;
+            _pendingDidChanges.Remove(filePath, out pending);
+            _pendingDidChangeSendTasks.TryGetValue(filePath, out inFlightTask);
         }
 
         if (inFlightTask is not null)
@@ -61,7 +51,7 @@ public sealed partial class Entrypoint
         {
             try
             {
-                await lsp.SendDidChangeAsync(pending.FilePath, pending.Version, pending.Content, CancellationToken.None)
+                await lsp.SendDidChangeAsync(pending.FilePath, pending.Version, pending.Content, ct)
                     .ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
@@ -69,25 +59,15 @@ public sealed partial class Entrypoint
         }
     }
 
-    private async Task FlushPendingDidChangeAndCloseAsync(ILanguageServerService lsp, string filePath)
+    private async Task FlushPendingDidChangeAndCloseAsync(ILanguageServerService lsp, string filePath, CancellationToken ct)
     {
         PendingDidChange? pending;
         Task? inFlightTask;
+        _scheduler?.Cancel($"lsp.didchange.{filePath}");
         lock (_pendingDidChangeGate)
         {
-            _pendingDidChangeTimer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-            pending = _pendingDidChange is not null &&
-                      string.Equals(_pendingDidChange.FilePath, filePath, StringComparison.OrdinalIgnoreCase)
-                ? _pendingDidChange
-                : null;
-
-            if (pending is not null)
-            {
-                _pendingDidChange = null;
-                _pendingDidChangeDueAtUtc = null;
-            }
-
-            inFlightTask = _pendingDidChangeSendTask;
+            _pendingDidChanges.Remove(filePath, out pending);
+            _pendingDidChangeSendTasks.TryGetValue(filePath, out inFlightTask);
         }
 
         if (inFlightTask is not null)
@@ -101,7 +81,7 @@ public sealed partial class Entrypoint
         {
             try
             {
-                await lsp.SendDidChangeAsync(pending.FilePath, pending.Version, pending.Content, CancellationToken.None)
+                await lsp.SendDidChangeAsync(pending.FilePath, pending.Version, pending.Content, ct)
                     .ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
@@ -110,42 +90,49 @@ public sealed partial class Entrypoint
 
         try
         {
-            await lsp.SendDidCloseAsync(filePath, CancellationToken.None).ConfigureAwait(false);
+            await lsp.SendDidCloseAsync(filePath, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { Debug.WriteLine($"[LS] didClose failed: {ex.Message}"); }
     }
 
-    private void OnDidChangeTimerElapsed()
+    private async Task SendLatestDidChangeAsync(string filePath, CancellationToken ct)
     {
+        if (_languageServer is null)
+            return;
+
+        PendingDidChange? pending;
         lock (_pendingDidChangeGate)
         {
-            if (_pendingDidChange is null || _pendingDidChangeDueAtUtc is null)
+            if (!_pendingDidChanges.Remove(filePath, out pending))
                 return;
+        }
 
-            var remaining = _pendingDidChangeDueAtUtc.Value - DateTime.UtcNow;
-            if (remaining > TimeSpan.Zero)
+        var task = SendPendingDidChangeAsync(_languageServer, pending, ct);
+        lock (_pendingDidChangeGate)
+            _pendingDidChangeSendTasks[pending.FilePath] = task;
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        finally
+        {
+            lock (_pendingDidChangeGate)
             {
-                _pendingDidChangeTimer?.Change(remaining, Timeout.InfiniteTimeSpan);
-                return;
+                if (_pendingDidChangeSendTasks.TryGetValue(pending.FilePath, out var current) &&
+                    ReferenceEquals(current, task))
+                {
+                    _pendingDidChangeSendTasks.Remove(pending.FilePath);
+                }
             }
-
-            var pending = _pendingDidChange;
-            _pendingDidChange = null;
-            _pendingDidChangeDueAtUtc = null;
-
-            if (pending is null || _languageServer is null)
-                return;
-
-            _pendingDidChangeSendTask = SendPendingDidChangeAsync(_languageServer, pending);
         }
     }
 
-    private async Task SendPendingDidChangeAsync(ILanguageServerService lsp, PendingDidChange pending)
+    private async Task SendPendingDidChangeAsync(ILanguageServerService lsp, PendingDidChange pending, CancellationToken ct)
     {
         try
         {
-            await lsp.SendDidChangeAsync(pending.FilePath, pending.Version, pending.Content, CancellationToken.None)
+            await lsp.SendDidChangeAsync(pending.FilePath, pending.Version, pending.Content, ct)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException) { }

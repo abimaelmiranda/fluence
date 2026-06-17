@@ -157,6 +157,8 @@ public partial class EditorView
             }
             _lastKnownDocumentPath = newPath;
             InvalidateHoverRequests();
+            InvalidateLspHoverRequests();
+            InvalidateCodeActionRequests(closePopup: true);
             System.Threading.Interlocked.Increment(ref _completionRequestVersion);
             Dispatcher.UIThread.Post(() =>
             {
@@ -164,6 +166,7 @@ public partial class EditorView
                 CloseSignatureHelpPopup();
                 HoverPopup.IsOpen = false;
                 LspHoverPopup.IsOpen = false;
+                CodeActionPopup.IsOpen = false;
             });
             ApplyGrammarForPath(newPath);
             UpdateDebugRendering();
@@ -178,6 +181,9 @@ public partial class EditorView
     private void OnEditorTextChanged(object? sender, EventArgs e)
     {
         if (_isUpdatingEditorText || _viewModel is null) return;
+        InvalidateLspHoverRequests();
+        InvalidateCodeActionRequests(closePopup: true);
+        _viewModel.PublishLiveDocumentChanged(Editor.Text, flushImmediately: false);
         _textSyncTimer!.Change(TextSyncDebounceDelay, Timeout.InfiniteTimeSpan);
     }
 
