@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -44,10 +45,10 @@ public sealed partial class WelcomeViewModel : ViewModelBase
     private string _status = "No workspace opened";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasRecentProjects))]
-    private ObservableCollection<RecentProject> _recentProjects = [];
+    [NotifyPropertyChangedFor(nameof(HasRecentSolutions))]
+    private ObservableCollection<RecentProject> _recentSolutions = [];
 
-    public bool HasRecentProjects => RecentProjects.Count > 0;
+    public bool HasRecentSolutions => RecentSolutions.Count > 0;
 
     private void OnWorkspaceChanged(object? sender, EventArgs e)
     {
@@ -57,22 +58,34 @@ public sealed partial class WelcomeViewModel : ViewModelBase
 
     private void ReloadRecents()
     {
-        var recents = _recentProjectsService.GetRecents();
+        var recents = _recentProjectsService.GetRecents()
+            .Where(recent => recent.Kind == RecentProjectKind.Solution)
+            .ToArray();
+
         if (Dispatcher.UIThread.CheckAccess())
         {
-            RecentProjects.Clear();
+            RecentSolutions.Clear();
             foreach (var r in recents)
-                RecentProjects.Add(r);
+                RecentSolutions.Add(r);
+            OnPropertyChanged(nameof(HasRecentSolutions));
         }
         else
         {
             Dispatcher.UIThread.Post(() =>
             {
-                RecentProjects.Clear();
+                RecentSolutions.Clear();
                 foreach (var r in recents)
-                    RecentProjects.Add(r);
+                    RecentSolutions.Add(r);
+                OnPropertyChanged(nameof(HasRecentSolutions));
             });
         }
+    }
+
+    [RelayCommand]
+    private void NewProject()
+    {
+        _eventBus.Publish(new NewProjectRequestedEvent());
+        Status = "Create a new project";
     }
 
     [RelayCommand]
@@ -127,11 +140,7 @@ public sealed partial class WelcomeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenRecent(RecentProject recent)
     {
-        if (recent.Kind == RecentProjectKind.Solution)
-            _eventBus.Publish(new OpenSolutionRequestedEvent(recent.Path));
-        else
-            _eventBus.Publish(new OpenFolderRequestedEvent(recent.Path));
-
+        _eventBus.Publish(new OpenSolutionRequestedEvent(recent.Path));
         Status = recent.Path;
     }
 }

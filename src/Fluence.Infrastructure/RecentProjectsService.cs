@@ -35,6 +35,7 @@ public sealed class RecentProjectsService(IFluenceStorageService storage) : IRec
             using var stream = File.OpenRead(path);
             var data = System.Text.Json.JsonSerializer.Deserialize(stream, RecentProjectsJsonContext.Default.RecentProjectsData);
             _cache = data?.Recents ?? [];
+            _cache.RemoveAll(r => r.Kind != RecentProjectKind.Solution);
         }
         catch
         {
@@ -46,17 +47,19 @@ public sealed class RecentProjectsService(IFluenceStorageService storage) : IRec
 
     public async Task AddAsync(string path, RecentProjectKind kind, CancellationToken cancellationToken = default)
     {
+        if (kind != RecentProjectKind.Solution)
+            return;
+
         await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var data = await storage.ReadUserAsync(FileName, RecentProjectsJsonContext.Default.RecentProjectsData, cancellationToken).ConfigureAwait(false);
             var recents = data?.Recents ?? [];
 
+            recents.RemoveAll(r => r.Kind != RecentProjectKind.Solution);
             recents.RemoveAll(r => string.Equals(r.Path, path, StringComparison.Ordinal));
 
-            var name = kind == RecentProjectKind.Solution
-                ? Path.GetFileNameWithoutExtension(path)
-                : Path.GetFileName(path);
+            var name = Path.GetFileNameWithoutExtension(path);
 
             recents.Insert(0, new RecentProject
             {
