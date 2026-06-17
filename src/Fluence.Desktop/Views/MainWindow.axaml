@@ -8,7 +8,7 @@
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="760"
         x:Class="Fluence.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/fluence.ico"
         Title="Fluence IDE"
         MinWidth="920"
         MinHeight="620"
