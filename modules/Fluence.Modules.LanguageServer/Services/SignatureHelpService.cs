@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +18,7 @@ internal sealed class SignatureHelpService(ILanguageServerService lsp, LspClient
         int line,
         int character,
         bool isRetrigger = false,
+        char? triggerCharacter = null,
         CancellationToken cancellationToken = default)
     {
         if (!lsp.IsRunning || holder.Client is null)
@@ -28,15 +32,21 @@ internal sealed class SignatureHelpService(ILanguageServerService lsp, LspClient
                 ["position"] = new JsonObject { ["line"] = line, ["character"] = character },
                 ["context"] = new JsonObject
                 {
-                    ["triggerKind"] = isRetrigger ? 3 : 1,
+                    ["triggerKind"] = triggerCharacter.HasValue ? 2 : 1,
+                    ["triggerCharacter"] = triggerCharacter?.ToString(),
                     ["isRetrigger"] = isRetrigger,
                 },
             }, cancellationToken).ConfigureAwait(false);
 
-            return ParseSignatureHelp(result);
+            var signatureHelp = ParseSignatureHelp(result);
+            if (signatureHelp is null)
+                Debug.WriteLine($"[LS] signatureHelp empty result={result?.ToJsonString()}");
+            return signatureHelp;
         }
+        catch (OperationCanceledException) { throw; }
         catch
         {
+            Debug.WriteLine("[LS] signatureHelp request failed");
             return null;
         }
     }
@@ -46,9 +56,12 @@ internal sealed class SignatureHelpService(ILanguageServerService lsp, LspClient
         if (result is not JsonObject obj)
             return null;
 
-        var rawSigs = obj["signatures"]?.AsArray();
+        var rawSigs = TryGetArray(obj["signatures"]);
         if (rawSigs is null || rawSigs.Count == 0)
+        {
+            Debug.WriteLine($"[LS] signatureHelp has no signatures: {result.ToJsonString()}");
             return null;
+        }
 
         var signatures = new List<LspSignatureInformation>();
         foreach (var raw in rawSigs)
@@ -56,21 +69,30 @@ internal sealed class SignatureHelpService(ILanguageServerService lsp, LspClient
             if (raw is not JsonObject sig)
                 continue;
 
-            var label = sig["label"]?.GetValue<string>() ?? string.Empty;
+            var label = TryGetString(sig["label"]) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(label))
+                continue;
+
             var doc = ExtractDocumentation(sig["documentation"]);
-            var parameters = ParseParameters(sig["parameters"]?.AsArray());
+            var parameters = ParseParameters(TryGetArray(sig["parameters"]));
             signatures.Add(new LspSignatureInformation(label, doc, parameters));
         }
 
         if (signatures.Count == 0)
+        {
+            Debug.WriteLine($"[LS] signatureHelp signatures could not be parsed: {result.ToJsonString()}");
             return null;
+        }
 
-        var activeSig = obj["activeSignature"]?.GetValue<int>() ?? 0;
-        var activeParam = obj["activeParameter"]?.GetValue<int>() ?? 0;
+        var activeSig = TryGetInt(obj["activeSignature"]) ?? 0;
+        var activeParam = TryGetInt(obj["activeParameter"]);
 
         activeSig = Math.Clamp(activeSig, 0, signatures.Count - 1);
+        activeParam ??= rawSigs[activeSig] is JsonObject activeSigObj
+            ? TryGetInt(activeSigObj["activeParameter"])
+            : null;
 
-        return new LspSignatureHelp(signatures, activeSig, activeParam);
+        return new LspSignatureHelp(signatures, activeSig, activeParam ?? 0);
     }
 
     private static IReadOnlyList<LspParameterInformation>? ParseParameters(JsonArray? rawParams)
@@ -86,15 +108,15 @@ internal sealed class SignatureHelpService(ILanguageServerService lsp, LspClient
 
             var doc = ExtractDocumentation(p["documentation"]);
             var labelNode = p["label"];
-            if (labelNode is JsonArray offsets && offsets.Count == 2)
+            if (TryGetArray(labelNode) is { Count: 2 } offsets)
             {
-                var start = offsets[0]?.GetValue<int>() ?? 0;
-                var end = offsets[1]?.GetValue<int>() ?? 0;
+                var start = TryGetInt(offsets[0]) ?? 0;
+                var end = TryGetInt(offsets[1]) ?? 0;
                 result.Add(new LspParameterInformation(string.Empty, doc, start, end));
             }
             else
             {
-                var paramLabel = labelNode?.GetValue<string>() ?? string.Empty;
+                var paramLabel = TryGetString(labelNode) ?? string.Empty;
                 result.Add(new LspParameterInformation(paramLabel, doc));
             }
         }
@@ -105,7 +127,46 @@ internal sealed class SignatureHelpService(ILanguageServerService lsp, LspClient
     private static string? ExtractDocumentation(JsonNode? node)
     {
         if (node is null) return null;
-        if (node is JsonObject mc) return mc["value"]?.GetValue<string>();
-        return node.GetValue<string>();
+        if (node is JsonObject mc) return TryGetString(mc["value"]);
+        if (node is JsonArray arr)
+        {
+            var parts = arr
+                .Select(ExtractDocumentation)
+                .Where(text => !string.IsNullOrWhiteSpace(text));
+            return string.Join("\n\n", parts);
+        }
+        return TryGetString(node);
+    }
+
+    private static JsonArray? TryGetArray(JsonNode? node)
+    {
+        try { return node as JsonArray; }
+        catch { return null; }
+    }
+
+    private static string? TryGetString(JsonNode? node)
+    {
+        if (node is null)
+            return null;
+
+        try
+        {
+            if (node.GetValueKind() == JsonValueKind.String)
+                return node.GetValue<string>();
+            return node.ToJsonString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static int? TryGetInt(JsonNode? node)
+    {
+        if (node is null)
+            return null;
+
+        try { return node.GetValue<int>(); }
+        catch { return null; }
     }
 }
