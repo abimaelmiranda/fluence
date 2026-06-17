@@ -21,8 +21,6 @@ public sealed partial class KeybindingRowViewModel(
 
     public bool HasConflict { get; } = hasConflict;
 
-    public string ConflictLabel => HasConflict ? "Conflict" : string.Empty;
-
     [ObservableProperty]
     private string _key = key;
 

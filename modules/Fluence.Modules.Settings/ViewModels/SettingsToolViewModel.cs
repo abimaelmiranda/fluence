@@ -60,11 +60,20 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
     [ObservableProperty]
     private string _status = "Ready";
 
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
     public ObservableCollection<SettingsSectionViewModel> Sections { get; } = [];
+
+    public ObservableCollection<SettingsSectionViewModel> FilteredSections { get; } = [];
 
     public ObservableCollection<KeybindingRowViewModel> Keybindings { get; } = [];
 
+    public ObservableCollection<KeybindingRowViewModel> FilteredKeybindings { get; } = [];
+
     public ObservableCollection<ThemeDescriptor> ThemeOptions { get; } = [];
+
+    partial void OnSearchQueryChanged(string value) => RefreshFilters();
 
     public void ShowSettings()
     {
@@ -148,8 +157,14 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
             var current = _settings.Get(section.SettingsType);
             var properties = SettingsReflectionScaffolder.BuildProperties(
                 section.SettingsType, current, ThemeOptions);
-            Sections.Add(new SettingsSectionViewModel(section.SectionName, section.SettingsType, properties));
+            var sectionViewModel = new SettingsSectionViewModel(section.SectionName, section.SettingsType, properties);
+            foreach (var property in sectionViewModel.Properties)
+                property.PropertyChanged += (_, _) => RefreshSettingsFilter();
+
+            Sections.Add(sectionViewModel);
         }
+
+        RefreshSettingsFilter();
     }
 
     private void ReloadKeybindings()
@@ -170,7 +185,70 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
                 hasConflict,
                 this));
         }
+
+        RefreshKeybindingsFilter();
     }
+
+    private void RefreshFilters()
+    {
+        RefreshSettingsFilter();
+        RefreshKeybindingsFilter();
+    }
+
+    private void RefreshSettingsFilter()
+    {
+        FilteredSections.Clear();
+        var query = NormalizeSearch(SearchQuery);
+        foreach (var section in Sections)
+        {
+            section.FilteredProperties.Clear();
+            if (string.IsNullOrWhiteSpace(query) || ContainsSearch(section.Name, query))
+            {
+                foreach (var property in section.Properties)
+                    section.FilteredProperties.Add(property);
+            }
+            else
+            {
+                foreach (var property in section.Properties.Where(property => MatchesSettingProperty(property, query)))
+                    section.FilteredProperties.Add(property);
+            }
+
+            if (section.FilteredProperties.Count > 0)
+                FilteredSections.Add(section);
+        }
+    }
+
+    private void RefreshKeybindingsFilter()
+    {
+        FilteredKeybindings.Clear();
+        var query = NormalizeSearch(SearchQuery);
+        foreach (var keybinding in Keybindings)
+        {
+            if (string.IsNullOrWhiteSpace(query) || MatchesKeybinding(keybinding, query))
+                FilteredKeybindings.Add(keybinding);
+        }
+    }
+
+    private static bool MatchesSettingProperty(SettingsPropertyViewModel property, string query) =>
+        ContainsSearch(property.Name, query) ||
+        ContainsSearch(property.TextValue, query) ||
+        ContainsSearch(property.ThemeReference, query) ||
+        ContainsSearch(property.SelectedTheme?.DisplayName, query) ||
+        ContainsSearch(property.SelectedTheme?.Reference, query) ||
+        ContainsSearch(property.BoolValue.ToString(), query);
+
+    private static bool MatchesKeybinding(KeybindingRowViewModel keybinding, string query) =>
+        ContainsSearch(keybinding.Title, query) ||
+        ContainsSearch(keybinding.CommandId, query) ||
+        ContainsSearch(keybinding.Scope, query) ||
+        ContainsSearch(keybinding.Key, query);
+
+    private static string NormalizeSearch(string? value) =>
+        value?.Trim() ?? string.Empty;
+
+    private static bool ContainsSearch(string? value, string query) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        value.Contains(query, StringComparison.OrdinalIgnoreCase);
 
     private void SaveSettings()
     {

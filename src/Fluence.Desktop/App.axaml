@@ -3,6 +3,7 @@
              x:Class="Fluence.Desktop.App"
              xmlns:local="using:Fluence.Desktop"
              xmlns:semi="https://irihi.tech/semi"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:converters="using:Fluence.Desktop.Converters"
              Name="Fluence IDE"
              RequestedThemeVariant="Dark">
@@ -25,16 +26,8 @@
     <Application.Styles>
         <FluentTheme/>
         <semi:SemiTheme Locale="en-US"/>
+        <materialIcons:MaterialIconStyles/>
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
-        <Style Selector="TextBox">
-            <Setter Property="Background" Value="{DynamicResource FluenceBrushInputBackground}"/>
-            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextPrimary}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource FluenceBrushBorder}"/>
-            <Setter Property="FontFamily" Value="{DynamicResource FluenceFontFamily}"/>
-        </Style>
-        <Style Selector="Button">
-            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushAccent}"/>
-            <Setter Property="FontFamily" Value="{DynamicResource FluenceFontFamily}"/>
-        </Style>
+        <StyleInclude Source="avares://Fluence/Themes/Controls.axaml"/>
     </Application.Styles>
 </Application>

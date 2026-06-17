@@ -9,10 +9,7 @@
     <StackPanel Spacing="10"
                 Margin="10">
         <Border Padding="10"
-                Background="{StaticResource FluenceBrushShell}"
-                BorderBrush="{StaticResource FluenceBrushBorder}"
-                BorderThickness="1"
-                CornerRadius="6">
+                Classes="idePanel">
             <StackPanel Spacing="4">
                 <TextBlock Text="{Binding SessionTitle}"
                            FontFamily="{StaticResource FluenceFontFamily}"
@@ -32,97 +29,88 @@
 
         <StackPanel Orientation="Horizontal"
                     Spacing="4">
-            <Button Width="28"
-                    Height="28"
+            <Button Width="36"
+                    Height="36"
                     Padding="0"
+                    Classes="ideIcon"
                     Command="{Binding ContinueCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    Background="Transparent"
-                    BorderThickness="0"
                     ToolTip.Tip="Continue">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.ContinueIcon}"
-                      Width="12"
-                      Height="12"
+                      Width="18"
+                      Height="18"
                       Stretch="Uniform"
                       Fill="{StaticResource FluenceBrushTextPrimary}"/>
             </Button>
-            <Button Width="28"
-                    Height="28"
+            <Button Width="36"
+                    Height="36"
                     Padding="0"
+                    Classes="ideIcon"
                     Command="{Binding StepOverCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    Background="Transparent"
-                    BorderThickness="0"
                     ToolTip.Tip="Step over">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.StepOverIcon}"
-                      Width="12"
-                      Height="12"
+                      Width="18"
+                      Height="18"
                       Stretch="Uniform"
                       Fill="{StaticResource FluenceBrushTextPrimary}"/>
             </Button>
-            <Button Width="28"
-                    Height="28"
+            <Button Width="36"
+                    Height="36"
                     Padding="0"
+                    Classes="ideIcon"
                     Command="{Binding StepIntoCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    Background="Transparent"
-                    BorderThickness="0"
                     ToolTip.Tip="Step into">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.StepIntoIcon}"
-                      Width="12"
-                      Height="12"
+                      Width="18"
+                      Height="18"
                       Stretch="Uniform"
                       Fill="{StaticResource FluenceBrushTextPrimary}"/>
             </Button>
-            <Button Width="28"
-                    Height="28"
+            <Button Width="36"
+                    Height="36"
                     Padding="0"
+                    Classes="ideIcon"
                     Command="{Binding StepOutCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    Background="Transparent"
-                    BorderThickness="0"
                     ToolTip.Tip="Step out">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.StepOutIcon}"
-                      Width="12"
-                      Height="12"
+                      Width="18"
+                      Height="18"
                       Stretch="Uniform"
                       Fill="{StaticResource FluenceBrushTextPrimary}"/>
             </Button>
-            <Button Width="28"
-                    Height="28"
+            <Button Width="36"
+                    Height="36"
                     Padding="0"
+                    Classes="ideIcon"
                     Command="{Binding StopCommand}"
                     IsEnabled="{Binding CanRestartSession}"
-                    Background="Transparent"
-                    BorderThickness="0"
                     ToolTip.Tip="Stop debug">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.StopIcon}"
-                      Width="12"
-                      Height="12"
+                      Width="18"
+                      Height="18"
                       Stretch="Uniform"
                       Fill="{StaticResource FluenceBrushTextPrimary}"/>
             </Button>
-            <Button Width="28"
-                    Height="28"
+            <Button Width="36"
+                    Height="36"
                     Padding="0"
+                    Classes="ideIcon"
                     Command="{Binding ReloadCommand}"
                     IsEnabled="{Binding CanRestartSession}"
-                    Background="Transparent"
-                    BorderThickness="0"
                     ToolTip.Tip="Reload session">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.ReloadIcon}"
-                      Width="12"
-                      Height="12"
+                      Width="18"
+                      Height="18"
                       Stretch="Uniform"
                       Fill="{StaticResource FluenceBrushTextPrimary}"/>
             </Button>
         </StackPanel>
 
         <Border Padding="10"
-                Background="{StaticResource FluenceBrushShell}"
-                BorderBrush="{StaticResource FluenceBrushBorder}"
-                BorderThickness="1"
-                CornerRadius="6">
+                Classes="idePanel">
             <StackPanel Spacing="8">
                 <TextBlock Text="Variables"
                            FontFamily="{StaticResource FluenceFontFamily}"
@@ -134,10 +122,7 @@
         </Border>
 
         <Border Padding="10"
-                Background="{StaticResource FluenceBrushShell}"
-                BorderBrush="{StaticResource FluenceBrushBorder}"
-                BorderThickness="1"
-                CornerRadius="6">
+                Classes="idePanel">
             <StackPanel Spacing="8">
                 <TextBlock Text="Call Stack"
                            FontFamily="{StaticResource FluenceFontFamily}"
@@ -149,10 +134,7 @@
         </Border>
 
         <Border Padding="10"
-                Background="{StaticResource FluenceBrushShell}"
-                BorderBrush="{StaticResource FluenceBrushBorder}"
-                BorderThickness="1"
-                CornerRadius="6">
+                Classes="idePanel">
             <StackPanel Spacing="8">
                 <TextBlock Text="Breakpoints"
                            FontFamily="{StaticResource FluenceFontFamily}"

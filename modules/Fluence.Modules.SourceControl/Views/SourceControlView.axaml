@@ -1,24 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Fluence.Modules.SourceControl.ViewModels"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Fluence.Modules.SourceControl.Views.SourceControlView"
              x:DataType="vm:SourceControlViewModel">
 
     <UserControl.Styles>
-        <Style Selector="Button.ghost">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="5,3"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="{StaticResource FluenceFontSizeSmall}"/>
-            <Setter Property="FontFamily" Value="{StaticResource FluenceFontFamily}"/>
-            <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextSecondary}"/>
-        </Style>
-        <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource FluenceBrushBorder}"/>
-        </Style>
-
         <!-- Row hover: highlight background -->
         <Style Selector="Border.fileRow">
             <Setter Property="Background" Value="Transparent"/>
@@ -27,12 +14,14 @@
         <Style Selector="Border.fileRow:pointerover">
             <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
         </Style>
-        <!-- Show action buttons only on row hover -->
+        <!-- Keep action buttons in layout so rows do not resize on hover. -->
         <Style Selector="Border.fileRow StackPanel.fileActions">
-            <Setter Property="IsVisible" Value="False"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
         </Style>
         <Style Selector="Border.fileRow:pointerover StackPanel.fileActions">
-            <Setter Property="IsVisible" Value="True"/>
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="IsHitTestVisible" Value="True"/>
         </Style>
 
         <!-- Branch picker rows -->
@@ -44,10 +33,23 @@
             <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
         </Style>
         <Style Selector="Border.branchRow StackPanel.branchActions">
-            <Setter Property="IsVisible" Value="False"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
         </Style>
         <Style Selector="Border.branchRow:pointerover StackPanel.branchActions">
-            <Setter Property="IsVisible" Value="True"/>
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="IsHitTestVisible" Value="True"/>
+        </Style>
+
+        <Style Selector="Button.sourceControlRowIcon">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="MinHeight" Value="24"/>
+        </Style>
+        <Style Selector="Button.sourceControlHeaderIcon">
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="MinHeight" Value="26"/>
         </Style>
     </UserControl.Styles>
 
@@ -55,14 +57,14 @@
 
         <!-- TOP: Commit area -->
         <Border Grid.Row="0"
-                Padding="8,8,8,6"
+                Padding="8,7,8,6"
                 BorderBrush="{StaticResource FluenceBrushBorder}"
                 BorderThickness="0,0,0,1"
                 IsVisible="{Binding IsGitRepository}">
-            <StackPanel Spacing="5">
+            <StackPanel Spacing="6">
 
                 <!-- Branch picker button -->
-                <Button Classes="ghost"
+                <Button Classes="ideGhost"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Left"
                         Padding="2,2"
@@ -80,7 +82,7 @@
                                     <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:SourceControlViewModel)DataContext).Branches}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:BranchItemViewModel">
-                                                <Border Classes="branchRow" Padding="6,3,4,3" Margin="0,1">
+                                                <Border Classes="branchRow" Padding="6,1,4,1" Margin="0,1">
                                                     <Grid ColumnDefinitions="14,*,Auto">
                                                         <TextBlock Grid.Column="0"
                                                                    Text="●" FontSize="7"
@@ -96,16 +98,24 @@
                                                                    ToolTip.Tip="{Binding Name}"/>
                                                         <StackPanel Grid.Column="2" Classes="branchActions"
                                                                     Orientation="Horizontal">
-                                                            <Button Classes="ghost" Content="⎇"
+                                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                                     Command="{Binding CheckoutCommand}"
                                                                     IsVisible="{Binding CanCheckout}"
-                                                                    ToolTip.Tip="Checkout branch"
-                                                                    Height="20" Padding="4,0"/>
-                                                            <Button Classes="ghost" Content="✕"
+                                                                    ToolTip.Tip="Checkout branch">
+                                                                <materialIcons:MaterialIcon Width="13"
+                                                                                            Height="13"
+                                                                                            Kind="SourceBranch"
+                                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                            </Button>
+                                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                                     Command="{Binding DeleteCommand}"
                                                                     IsVisible="{Binding CanDelete}"
-                                                                    ToolTip.Tip="Delete branch"
-                                                                    Height="20" Padding="4,0"/>
+                                                                    ToolTip.Tip="Delete branch">
+                                                                <materialIcons:MaterialIcon Width="13"
+                                                                                            Height="13"
+                                                                                            Kind="Close"
+                                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                            </Button>
                                                         </StackPanel>
                                                     </Grid>
                                                 </Border>
@@ -117,9 +127,10 @@
                         </Flyout>
                     </Button.Flyout>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <PathIcon Width="12" Height="12"
-                                  Foreground="{StaticResource FluenceBrushTextSecondary}"
-                                  Data="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25z"/>
+                        <materialIcons:MaterialIcon Width="13"
+                                                    Height="13"
+                                                    Kind="SourceBranch"
+                                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
                         <TextBlock Text="{Binding CurrentBranch}"
                                    FontFamily="{StaticResource FluenceFontFamily}"
                                    FontSize="{StaticResource FluenceFontSizeSmall}"
@@ -160,60 +171,79 @@
                                    FontFamily="monospace" FontSize="11"
                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
                         <StackPanel Spacing="4">
-                            <Button Content="Stash &amp; Checkout"
+                            <Button Classes="ideToolbar ideAccent"
+                                    Content="Stash &amp; Checkout"
                                     Command="{Binding StashAndCheckoutCommand}"
                                     IsEnabled="{Binding !IsBusy}"
                                     HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center"
-                                    Height="24"
-                                    FontFamily="{StaticResource FluenceFontFamily}"
-                                    FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                                    HorizontalContentAlignment="Center"/>
                             <Grid ColumnDefinitions="*,Auto">
                                 <Button Grid.Column="0"
-                                        Classes="ghost" Content="Force Checkout"
+                                        Classes="ideGhost"
+                                        Content="Force Checkout"
                                         Command="{Binding ForceCheckoutCommand}"
                                         IsEnabled="{Binding !IsBusy}"
                                         HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Center"
-                                        Height="24"
-                                        FontFamily="{StaticResource FluenceFontFamily}"
-                                        FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                                        HorizontalContentAlignment="Center"/>
                                 <Button Grid.Column="1"
-                                        Classes="ghost" Content="Cancel"
+                                        Classes="ideGhost"
+                                        Content="Cancel"
                                         Command="{Binding CancelCheckoutCommand}"
-                                        Height="24" Margin="4,0,0,0"
-                                        FontFamily="{StaticResource FluenceFontFamily}"
-                                        FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                                        Margin="4,0,0,0"/>
                             </Grid>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <TextBox Text="{Binding CommitMessage}"
+                <TextBox Classes="ideCompact"
+                         Text="{Binding CommitMessage}"
                          PlaceholderText="Commit message..."
-                         AcceptsReturn="False"
-                         FontFamily="{StaticResource FluenceFontFamily}"
-                         FontSize="{StaticResource FluenceFontSizeSmall}"/>
+                         AcceptsReturn="False"/>
 
-                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                    <Grid.Styles>
+                        <Style Selector="Button.sourceControlToolbarIcon">
+                            <Setter Property="Width" Value="30"/>
+                            <Setter Property="Height" Value="30"/>
+                            <Setter Property="MinHeight" Value="30"/>
+                        </Style>
+                    </Grid.Styles>
                     <Button Grid.Column="0"
-                            Content="✓ Commit"
+                            Classes="ideIcon ideAccent sourceControlToolbarIcon"
                             Command="{Binding CommitCommand}"
                             IsEnabled="{Binding !IsBusy}"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            Height="26"
-                            FontFamily="{StaticResource FluenceFontFamily}"
-                            FontSize="{StaticResource FluenceFontSizeSmall}"/>
-                    <Button Grid.Column="1" Classes="ghost" Content="↓ Pull"
+                            ToolTip.Tip="Commit">
+                        <materialIcons:MaterialIcon Width="18"
+                                                    Height="18"
+                                                    Kind="Check"
+                                                    Foreground="{StaticResource FluenceBrushAccent}"/>
+                    </Button>
+                    <Button Grid.Column="2" Classes="ideIcon sourceControlToolbarIcon"
                             Command="{Binding PullCommand}" IsEnabled="{Binding !IsBusy}"
-                            Height="26" Margin="4,0,0,0"/>
-                    <Button Grid.Column="2" Classes="ghost" Content="↑ Push"
+                            Margin="4,0,0,0"
+                            ToolTip.Tip="Pull">
+                        <materialIcons:MaterialIcon Width="18"
+                                                    Height="18"
+                                                    Kind="ArrowDown"
+                                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                    </Button>
+                    <Button Grid.Column="3" Classes="ideIcon sourceControlToolbarIcon"
                             Command="{Binding PushCommand}" IsEnabled="{Binding !IsBusy}"
-                            Height="26" Margin="4,0,0,0"/>
-                    <Button Grid.Column="3" Classes="ghost" Content="⟳ Fetch"
+                            Margin="4,0,0,0"
+                            ToolTip.Tip="Push">
+                        <materialIcons:MaterialIcon Width="18"
+                                                    Height="18"
+                                                    Kind="ArrowUp"
+                                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                    </Button>
+                    <Button Grid.Column="4" Classes="ideIcon sourceControlToolbarIcon"
                             Command="{Binding FetchCommand}" IsEnabled="{Binding !IsBusy}"
-                            Height="26" Margin="4,0,0,0" ToolTip.Tip="Fetch all remotes"/>
+                            Margin="4,0,0,0" ToolTip.Tip="Fetch all remotes">
+                        <materialIcons:MaterialIcon Width="18"
+                                                    Height="18"
+                                                    Kind="Refresh"
+                                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                    </Button>
                 </Grid>
             </StackPanel>
         </Border>
@@ -252,16 +282,20 @@
                                        FontSize="{StaticResource FluenceFontSizeSmall}"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
-                            <Button Grid.Column="1" Classes="ghost"
-                                    Content="− all" FontSize="11" Height="20" Padding="4,0"
+                            <Button Grid.Column="1" Classes="ideIcon sourceControlHeaderIcon"
                                     Command="{Binding UnstageAllCommand}"
-                                    ToolTip.Tip="Unstage all"/>
+                                    ToolTip.Tip="Unstage all">
+                                <materialIcons:MaterialIcon Width="13"
+                                                            Height="13"
+                                                            Kind="Minus"
+                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                            </Button>
                         </Grid>
                     </Border>
                     <ItemsControl ItemsSource="{Binding StagedChanges}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:GitFileChangeViewModel">
-                                <Border Classes="fileRow" Padding="4,2,4,2"
+                                <Border Classes="fileRow" Padding="4,1,4,1"
                                         Tapped="OnChangeRowTapped"
                                         Cursor="Hand">
                                     <Grid ColumnDefinitions="18,*,Auto">
@@ -280,15 +314,30 @@
                                                    ToolTip.Tip="{Binding FilePath}"/>
                                         <StackPanel Grid.Column="2" Classes="fileActions"
                                                     Orientation="Horizontal">
-                                            <Button Classes="ghost" Content="~"
+                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding OpenDiffCommand}"
-                                                    ToolTip.Tip="View diff"/>
-                                            <Button Classes="ghost" Content="↺"
+                                                    ToolTip.Tip="View diff">
+                                                <materialIcons:MaterialIcon Width="13"
+                                                                            Height="13"
+                                                                            Kind="FileCompare"
+                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                            </Button>
+                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding RevertCommand}"
-                                                    ToolTip.Tip="Revert changes"/>
-                                            <Button Classes="ghost" Content="−"
+                                                    ToolTip.Tip="Revert changes">
+                                                <materialIcons:MaterialIcon Width="13"
+                                                                            Height="13"
+                                                                            Kind="Undo"
+                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                            </Button>
+                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding UnstageCommand}"
-                                                    ToolTip.Tip="Unstage"/>
+                                                    ToolTip.Tip="Unstage">
+                                                <materialIcons:MaterialIcon Width="13"
+                                                                            Height="13"
+                                                                            Kind="Minus"
+                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                            </Button>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -307,16 +356,20 @@
                                        FontSize="{StaticResource FluenceFontSizeSmall}"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
-                            <Button Grid.Column="1" Classes="ghost"
-                                    Content="+ all" FontSize="11" Height="20" Padding="4,0"
+                            <Button Grid.Column="1" Classes="ideIcon sourceControlHeaderIcon"
                                     Command="{Binding StageAllCommand}"
-                                    ToolTip.Tip="Stage all"/>
+                                    ToolTip.Tip="Stage all">
+                                <materialIcons:MaterialIcon Width="13"
+                                                            Height="13"
+                                                            Kind="Plus"
+                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                            </Button>
                         </Grid>
                     </Border>
                     <ItemsControl ItemsSource="{Binding UnstagedChanges}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:GitFileChangeViewModel">
-                                <Border Classes="fileRow" Padding="4,2,4,2"
+                                <Border Classes="fileRow" Padding="4,1,4,1"
                                         Tapped="OnChangeRowTapped"
                                         Cursor="Hand">
                                     <Grid ColumnDefinitions="18,*,Auto">
@@ -335,15 +388,30 @@
                                                    ToolTip.Tip="{Binding FilePath}"/>
                                         <StackPanel Grid.Column="2" Classes="fileActions"
                                                     Orientation="Horizontal">
-                                            <Button Classes="ghost" Content="~"
+                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding OpenDiffCommand}"
-                                                    ToolTip.Tip="View diff"/>
-                                            <Button Classes="ghost" Content="↺"
+                                                    ToolTip.Tip="View diff">
+                                                <materialIcons:MaterialIcon Width="13"
+                                                                            Height="13"
+                                                                            Kind="FileCompare"
+                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                            </Button>
+                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding RevertCommand}"
-                                                    ToolTip.Tip="Revert changes"/>
-                                            <Button Classes="ghost" Content="+"
+                                                    ToolTip.Tip="Revert changes">
+                                                <materialIcons:MaterialIcon Width="13"
+                                                                            Height="13"
+                                                                            Kind="Undo"
+                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                            </Button>
+                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding StageCommand}"
-                                                    ToolTip.Tip="Stage"/>
+                                                    ToolTip.Tip="Stage">
+                                                <materialIcons:MaterialIcon Width="13"
+                                                                            Height="13"
+                                                                            Kind="Plus"
+                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                            </Button>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -364,7 +432,7 @@
                     <ItemsControl ItemsSource="{Binding Stashes}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:StashItemViewModel">
-                                <Border Classes="fileRow" Padding="4,3,4,3">
+                                <Border Classes="fileRow" Padding="4,2,4,2">
                                     <Grid ColumnDefinitions="*,Auto">
                                         <StackPanel Grid.Column="0" Spacing="1">
                                             <TextBlock Text="{Binding Message}"
@@ -380,14 +448,22 @@
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Classes="fileActions"
                                                     Orientation="Horizontal">
-                                            <Button Classes="ghost" Content="⊕"
+                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding PopCommand}"
-                                                    ToolTip.Tip="Apply &amp; drop stash"
-                                                    Height="20" Padding="4,0"/>
-                                            <Button Classes="ghost" Content="✕"
+                                                    ToolTip.Tip="Apply &amp; drop stash">
+                                                <materialIcons:MaterialIcon Width="13"
+                                                                            Height="13"
+                                                                            Kind="PlusCircle"
+                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                            </Button>
+                                            <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding DropCommand}"
-                                                    ToolTip.Tip="Drop stash"
-                                                    Height="20" Padding="4,0"/>
+                                                    ToolTip.Tip="Drop stash">
+                                                <materialIcons:MaterialIcon Width="13"
+                                                                            Height="13"
+                                                                            Kind="Close"
+                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                            </Button>
                                         </StackPanel>
                                     </Grid>
                                 </Border>

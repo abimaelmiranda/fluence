@@ -13,4 +13,6 @@ public sealed class SettingsSectionViewModel(
     public Type SettingsType { get; } = settingsType;
 
     public ObservableCollection<SettingsPropertyViewModel> Properties { get; } = properties;
+
+    public ObservableCollection<SettingsPropertyViewModel> FilteredProperties { get; } = [];
 }
