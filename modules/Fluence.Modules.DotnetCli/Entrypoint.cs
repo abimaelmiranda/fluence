@@ -1,9 +1,13 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Commands;
+using Fluence.Core.Abstractions.Jobs;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Tasks;
+using Fluence.Core.Models.Jobs;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
@@ -88,7 +92,7 @@ public sealed class Entrypoint : IModule
                 ct => RunAsync(host, ct)));
         host.Events.SubscribeSync<RunSpecificProjectRequestedEvent>(e =>
             scheduler.Schedule("dotnet.run", TaskPriority.Interactive,
-                ct => HandleAsync(host, new RunSpecificProjectCommand(e.ProjectPath), ct)));
+                ct => RunSpecificAsync(host, e.ProjectPath, ct)));
 
         // UI-only: abrem tool tabs, sem trabalho pesado
         host.Events.SubscribeSync<NewProjectRequestedEvent>(_ => OpenNewProjectWizard(host));
@@ -133,8 +137,46 @@ public sealed class Entrypoint : IModule
         if (!await EnsureSdkAsync(host).ConfigureAwait(false))
             return;
 
-        var handler = host.Services.GetRequiredService<ICommandHandler<RunProjectCommand>>();
-        await handler.HandleAsync(new RunProjectCommand(), ct);
+        await RunExclusiveAsync(host, async () =>
+        {
+            var handler = host.Services.GetRequiredService<ICommandHandler<RunProjectCommand>>();
+            await handler.HandleAsync(new RunProjectCommand(), ct);
+        });
+    }
+
+    private static async Task RunSpecificAsync(IModuleHost host, string projectPath, CancellationToken ct)
+    {
+        if (!await EnsureSdkAsync(host).ConfigureAwait(false))
+            return;
+
+        await RunExclusiveAsync(host, async () =>
+        {
+            host.Events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
+            var handler = host.Services.GetRequiredService<ICommandHandler<RunSpecificProjectCommand>>();
+            await handler.HandleAsync(new RunSpecificProjectCommand(projectPath), ct);
+        });
+    }
+
+    private static async Task RunExclusiveAsync(IModuleHost host, Func<Task> run)
+    {
+        var jobs = host.Services.GetRequiredService<IExclusiveJobCoordinator>();
+        if (!jobs.TryAcquire(ExclusiveJobKind.Run, out var lease))
+        {
+            var activeName = jobs.ActiveJob switch
+            {
+                ExclusiveJobKind.Debug => "debug session",
+                ExclusiveJobKind.Run => "run process",
+                _ => "job",
+            };
+            host.Services.GetRequiredService<IUserNotificationService>()
+                .ShowWarning("Run", $"Cannot start run while a {activeName} is running.");
+            return;
+        }
+
+        using (lease!)
+        {
+            await run().ConfigureAwait(false);
+        }
     }
 
     private static async Task<bool> EnsureSdkAsync(IModuleHost host)
