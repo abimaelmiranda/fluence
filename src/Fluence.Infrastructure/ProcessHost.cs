@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,8 @@ public sealed class ProcessHost : IProcessHost
         string? workingDirectory,
         Action<string> onOutput,
         Action<string> onError,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string>? environment = null)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -27,6 +29,12 @@ public sealed class ProcessHost : IProcessHost
             RedirectStandardError = true,
             CreateNoWindow = true,
         };
+
+        if (environment is not null)
+        {
+            foreach (var item in environment)
+                startInfo.Environment[item.Key] = item.Value;
+        }
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         var tcs = new TaskCompletionSource<int>();

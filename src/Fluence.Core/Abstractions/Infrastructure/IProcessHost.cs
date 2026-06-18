@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,5 +13,6 @@ public interface IProcessHost
         string? workingDirectory,
         Action<string> onOutput,
         Action<string> onError,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string>? environment = null);
 }

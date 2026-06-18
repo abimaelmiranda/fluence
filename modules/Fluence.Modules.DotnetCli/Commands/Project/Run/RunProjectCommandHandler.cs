@@ -29,7 +29,7 @@ public sealed class RunProjectCommandHandler(
     public async Task HandleAsync(RunProjectCommand command, CancellationToken cancellationToken = default)
     {
         if (workspace.Current.Mode is WorkspaceMode.Folder or WorkspaceMode.Solution &&
-            await launchSettings.EnsureAsync(cancellationToken) is null)
+            await launchSettings.EnsureAsync(ExecutionMode.Release, cancellationToken) is null)
         {
             notifications.ShowWarning(
                 "Run",
@@ -57,6 +57,7 @@ public sealed class RunProjectCommandHandler(
             target.WorkingDirectory,
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
-            cancellationToken);
+            cancellationToken,
+            environment: target.Environment);
     }
 }

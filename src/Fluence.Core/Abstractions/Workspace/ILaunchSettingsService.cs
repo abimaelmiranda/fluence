@@ -1,3 +1,4 @@
+using Fluence.Core.Models.Workspace;
 using LaunchSettings = Fluence.Core.Models.Workspace.LaunchSettings;
 using WorkspaceEntity = Fluence.Core.Models.Workspace.Workspace;
 
@@ -14,4 +15,8 @@ public interface ILaunchSettingsService
     Task SaveAsync(string workspaceRoot, LaunchSettings settings, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<string>> DiscoverProjectPathsAsync(string workspaceRoot, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<DotnetLaunchProfile>> DiscoverLaunchProfilesAsync(
+        string projectPath,
+        CancellationToken cancellationToken = default);
 }

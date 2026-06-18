@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Storage;
@@ -57,6 +58,65 @@ public sealed class LaunchSettingsService(IFluenceStorageService storage) : ILau
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         return Task.FromResult<IReadOnlyList<string>>(projects);
+    }
+
+    public async Task<IReadOnlyList<DotnetLaunchProfile>> DiscoverLaunchProfilesAsync(
+        string projectPath,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(projectPath))
+            return Array.Empty<DotnetLaunchProfile>();
+
+        var projectDirectory = Path.GetDirectoryName(projectPath);
+        if (string.IsNullOrWhiteSpace(projectDirectory))
+            return Array.Empty<DotnetLaunchProfile>();
+
+        var settingsPath = Path.Combine(projectDirectory, "Properties", "launchSettings.json");
+        if (!File.Exists(settingsPath))
+            return Array.Empty<DotnetLaunchProfile>();
+
+        JsonDocument document;
+        try
+        {
+            await using var stream = File.OpenRead(settingsPath);
+            document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<DotnetLaunchProfile>();
+        }
+        catch (IOException)
+        {
+            return Array.Empty<DotnetLaunchProfile>();
+        }
+
+        using (document)
+        {
+            if (!document.RootElement.TryGetProperty("profiles", out var profilesElement) ||
+                profilesElement.ValueKind != JsonValueKind.Object)
+                return Array.Empty<DotnetLaunchProfile>();
+
+            var profiles = new List<DotnetLaunchProfile>();
+            foreach (var profileElement in profilesElement.EnumerateObject())
+            {
+                if (profileElement.Value.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var commandName = GetString(profileElement.Value, "commandName");
+                if (!string.Equals(commandName, "Project", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                profiles.Add(new DotnetLaunchProfile(
+                    profileElement.Name,
+                    commandName ?? string.Empty,
+                    GetString(profileElement.Value, "applicationUrl"),
+                    ReadEnvironmentVariables(profileElement.Value),
+                    GetString(profileElement.Value, "commandLineArgs"),
+                    GetString(profileElement.Value, "workingDirectory")));
+            }
+
+            return profiles;
+        }
     }
 
     private static IEnumerable<string> EnumerateProjects(string directory, CancellationToken cancellationToken)
@@ -115,5 +175,29 @@ public sealed class LaunchSettingsService(IFluenceStorageService storage) : ILau
         }
 
         return Path.GetDirectoryName(filePath);
+    }
+
+    private static string? GetString(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var value) &&
+               value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+    }
+
+    private static IReadOnlyDictionary<string, string> ReadEnvironmentVariables(JsonElement profile)
+    {
+        if (!profile.TryGetProperty("environmentVariables", out var envElement) ||
+            envElement.ValueKind != JsonValueKind.Object)
+            return new Dictionary<string, string>();
+
+        var env = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var variable in envElement.EnumerateObject())
+        {
+            if (variable.Value.ValueKind == JsonValueKind.String)
+                env[variable.Name] = variable.Value.GetString() ?? string.Empty;
+        }
+
+        return env;
     }
 }
