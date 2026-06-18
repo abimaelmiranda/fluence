@@ -86,7 +86,7 @@
             </Grid>
 
             <Grid Grid.Column="1"
-                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,*"
+                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*"
                   RowSpacing="12">
                 <Grid Grid.Row="0" ColumnDefinitions="150,*" ColumnSpacing="12">
                     <TextBlock Text="Project name"
@@ -146,6 +146,17 @@
                 </Grid>
 
                 <Grid Grid.Row="5" ColumnDefinitions="150,*" ColumnSpacing="12">
+                    <TextBlock Text="Solution location"
+                               Classes="ideLabel"
+                               VerticalAlignment="Top"
+                               Margin="0,4,0,0"/>
+                    <CheckBox Grid.Column="1"
+                              Content="Place solution in project folder"
+                              IsChecked="{Binding PlaceSolutionInProjectFolder}"
+                              Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                </Grid>
+
+                <Grid Grid.Row="6" ColumnDefinitions="150,*" ColumnSpacing="12">
                     <TextBlock Text="After create"
                                Classes="ideLabel"
                                VerticalAlignment="Top"
