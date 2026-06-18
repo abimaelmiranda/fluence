@@ -186,7 +186,7 @@
                                             <materialIcons:MaterialIcon Width="20"
                                                                         Height="20"
                                                                         Kind="RecordCircle"
-                                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                                        Foreground="{Binding RecordIconBrush}"/>
                                         </Button>
                                         <Button Classes="ideIcon"
                                                 Grid.Column="2"
