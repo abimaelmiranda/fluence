@@ -1,4 +1,5 @@
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
@@ -22,11 +23,16 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
+        var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
+
         host.Events.SubscribeSync<DebuggerProvisioningRequiredEvent>(e =>
         {
             var vm = host.Services.GetRequiredService<DebuggerSetupViewModel>();
             host.Workspace.OpenToolTab("tool://fluence/debugger-setup", "Debugger Setup", vm);
-            var _ = vm.StartProvisioningAsync();
+            scheduler.Schedule(
+                "debugger.provision",
+                TaskPriority.Background,
+                ct => vm.StartProvisioningAsync(ct));
         });
 
         host.SetModuleState(Name, ModuleState.Active);

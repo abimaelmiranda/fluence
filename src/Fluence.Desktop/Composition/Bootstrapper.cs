@@ -87,7 +87,6 @@ internal static class Bootstrapper
         services.AddSingleton<IDotnetSdkProvisioningService, DotnetSdkProvisioningService>();
         services.AddSingleton<ILaunchSettingsService, LaunchSettingsService>();
         services.AddSingleton<ILaunchSettingsCoordinator, LaunchSettingsCoordinator>();
-        services.AddSingleton<NetcoredbgToolService>();
         services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
         services.AddSingleton<IDebuggerProvisioningService, DebuggerProvisioningService>();
         services.AddSingleton<ILspProvisioningService, OmniSharpProvisioningService>();

@@ -9,12 +9,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Debugging;
-using Fluence.Core.Models.Debugging;
-using Fluence.Core.Models.Debugging.Enums;
-using Fluence.Core.Services.Debugging;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Storage;
-using Fluence.Core.Models.Infrastructure;
+using Fluence.Infrastructure;
 
 namespace Fluence.Infrastructure.Protocols.Dap;
 
@@ -30,7 +27,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
         Http.DefaultRequestHeaders.UserAgent.ParseAdd("FluenceIDE");
     }
 
-    public bool IsProvisioned() => File.Exists(GetExecutablePath());
+    public bool IsProvisioned() => TryNormalizeInstallLayout(null);
 
     public string GetExecutablePath()
     {
@@ -92,10 +89,11 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
         onOutput($"[Fluence] Extracting {asset.Value.Name}...");
         ExtractArchive(archivePath, installDir);
 
-        var executable = Directory
-            .EnumerateFiles(installDir, ResolveExecutableName(), SearchOption.AllDirectories)
-            .FirstOrDefault()
+        var executable = FindInstalledExecutable(installDir)
             ?? throw new FileNotFoundException("netcoredbg executable not found after extraction.");
+
+        NormalizeInstallLayout(executable, onOutput);
+        executable = GetExecutablePath();
 
         onOutput("[Fluence] Applying permissions...");
         MakeExecutable(executable);
@@ -155,6 +153,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
             if (!File.Exists(targetExecutable))
                 throw new FileNotFoundException("netcoredbg not found after install.", targetExecutable);
 
+            NormalizeInstallLayout(targetExecutable, onOutput);
             MakeExecutable(targetExecutable);
             onOutput($"[Fluence] netcoredbg installed at: {targetExecutable}");
         }
@@ -286,7 +285,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
         if (executable is null)
             return null;
 
-        RunProcess("chmod", $"+x \"{executable}\"");
+        PlatformTooling.Current.MakeExecutable(executable);
         return executable;
     }
 
@@ -303,15 +302,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
 
     private static string? FindOnPath(string executable)
     {
-        var paths = Environment.GetEnvironmentVariable("PATH") ?? "";
-        foreach (var dir in paths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var candidate = Path.Combine(dir, executable);
-            if (File.Exists(candidate))
-                return candidate;
-        }
-
-        return null;
+        return PlatformTooling.Current.FindOnPath(executable);
     }
 
     private static (string Name, string DownloadUrl)? FindNetcoredbgAsset(JsonElement assets)
@@ -339,6 +330,68 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
         return fallback;
     }
 
+    private bool TryNormalizeInstallLayout(Action<string>? onOutput)
+    {
+        var expected = GetExecutablePath();
+        if (File.Exists(expected))
+            return true;
+
+        var executable = FindInstalledExecutable(ResolveGlobalInstallDir());
+        if (executable is null)
+            return false;
+
+        NormalizeInstallLayout(executable, onOutput);
+        return File.Exists(expected);
+    }
+
+    private static string? FindInstalledExecutable(string installDir)
+    {
+        if (!Directory.Exists(installDir))
+            return null;
+
+        var expected = Path.Combine(installDir, ResolveExecutableName());
+        if (File.Exists(expected))
+            return expected;
+
+        return Directory
+            .EnumerateFiles(installDir, ResolveExecutableName(), SearchOption.AllDirectories)
+            .FirstOrDefault();
+    }
+
+    private void NormalizeInstallLayout(string executable, Action<string>? onOutput)
+    {
+        var installDir = ResolveGlobalInstallDir();
+        var expected = GetExecutablePath();
+        if (string.Equals(Path.GetFullPath(executable), Path.GetFullPath(expected), StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var sourceDir = Path.GetDirectoryName(executable);
+        if (string.IsNullOrWhiteSpace(sourceDir))
+            return;
+
+        onOutput?.Invoke($"[Fluence] Normalizing netcoredbg layout into: {installDir}");
+        CopyDirectoryContents(sourceDir, installDir);
+    }
+
+    private static void CopyDirectoryContents(string sourceDir, string destinationDir)
+    {
+        Directory.CreateDirectory(destinationDir);
+
+        foreach (var directory in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(sourceDir, directory);
+            Directory.CreateDirectory(Path.Combine(destinationDir, relative));
+        }
+
+        foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(sourceDir, file);
+            var destination = Path.Combine(destinationDir, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(file, destination, overwrite: true);
+        }
+    }
+
     private static void ExtractArchive(string archivePath, string installRoot)
     {
         if (archivePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
@@ -356,16 +409,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
 
     private static void MakeExecutable(string executable)
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return;
-
-        RunProcess("chmod", $"+x \"{executable}\"");
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            RunProcess("xattr", $"-d com.apple.quarantine \"{executable}\"");
-            RunProcess("codesign", $"--force --sign - \"{executable}\"");
-        }
+        PlatformTooling.Current.MakeExecutable(executable);
     }
 
     private static void RunProcess(string file, string arguments)
@@ -434,15 +478,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
 
     internal string ResolveGlobalInstallDir() => storage.GetUserPath("debuggers/csharp");
 
-    private static string ResolveExecutableName() =>
-        RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "netcoredbg.exe" : "netcoredbg";
+    private static string ResolveExecutableName() => PlatformTooling.Current.NetcoredbgExecutableName;
 
-    private static string ResolveRuntimeId()
-    {
-        var os = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx"
-            : RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win"
-            : "linux";
-        var arch = RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64";
-        return $"{os}-{arch}";
-    }
+    private static string ResolveRuntimeId() => PlatformTooling.Current.RuntimeId;
 }

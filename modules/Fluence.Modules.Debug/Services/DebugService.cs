@@ -262,7 +262,7 @@ public sealed class DebugService(
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken).ConfigureAwait(false);
         await processHost.RunAsync(
             dotnet,
-            $"build \"{target.ProjectPath}\" -c Debug",
+            ["build", target.ProjectPath, "-c", "Debug"],
             Path.GetDirectoryName(target.ProjectPath),
             line => ScheduleDebugOutput(line + Environment.NewLine, isError: false),
             line => ScheduleDebugOutput(line + Environment.NewLine, isError: true),
@@ -288,6 +288,11 @@ public sealed class DebugService(
 
         var configuration = await CreateDebugConfigurationAsync(target, cancellationToken).ConfigureAwait(false);
         var workingDirectory = ResolveWorkingDirectory(target.ProjectPath, workspaceRoot, configuration.WorkingDirectory);
+        await output.WriteAsync(
+            OutputChannelIds.Debug,
+            $"[debug] program: {programPath}\r\n[debug] cwd: {workingDirectory}\r\n",
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
         var request = new DebugLaunchRequest(
             ProjectPath: target.ProjectPath,
             ProgramPath: programPath,
@@ -620,7 +625,8 @@ public sealed class DebugService(
             .Where(Directory.Exists)
             .SelectMany(root => SafeEnumerateFiles(root, fileName))
             .Where(path => IsDebugBuildOutput(path, targetFramework))
-            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .OrderByDescending(HasRuntimeConfig)
+            .ThenByDescending(File.GetLastWriteTimeUtc)
             .FirstOrDefault();
     }
 
@@ -637,7 +643,8 @@ public sealed class DebugService(
         try
         {
             return Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories)
-                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}ref{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
         }
         catch
         {
@@ -649,6 +656,14 @@ public sealed class DebugService(
     {
         return path.Contains($"{Path.DirectorySeparatorChar}Debug{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) &&
                path.Contains($"{Path.DirectorySeparatorChar}{targetFramework}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasRuntimeConfig(string assemblyPath)
+    {
+        var runtimeConfigPath = Path.Combine(
+            Path.GetDirectoryName(assemblyPath) ?? string.Empty,
+            Path.GetFileNameWithoutExtension(assemblyPath) + ".runtimeconfig.json");
+        return File.Exists(runtimeConfigPath);
     }
 
     private static string? FindProperty(XDocument document, string name)
