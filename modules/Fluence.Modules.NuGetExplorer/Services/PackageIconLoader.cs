@@ -5,8 +5,11 @@ namespace Fluence.Modules.NuGetExplorer.Services;
 
 public sealed class PackageIconLoader
 {
+    private const int MaxCachedIcons = 256;
+
     private static readonly HttpClient Http = new();
     private readonly ConcurrentDictionary<string, Bitmap> _cache = new(StringComparer.Ordinal);
+    private readonly ConcurrentQueue<string> _cacheOrder = new();
 
     public async Task<Bitmap?> LoadAsync(string? iconUrl, CancellationToken cancellationToken = default)
     {
@@ -26,7 +29,23 @@ public sealed class PackageIconLoader
         memory.Position = 0;
 
         var bitmap = new Bitmap(memory);
-        _cache[iconUrl] = bitmap;
-        return bitmap;
+        if (_cache.TryAdd(iconUrl, bitmap))
+        {
+            _cacheOrder.Enqueue(iconUrl);
+            TrimCache();
+            return bitmap;
+        }
+
+        (bitmap as System.IDisposable)?.Dispose();
+        return _cache.TryGetValue(iconUrl, out var winner) ? winner : null;
+    }
+
+    private void TrimCache()
+    {
+        while (_cache.Count > MaxCachedIcons && _cacheOrder.TryDequeue(out var oldKey))
+        {
+            if (_cache.TryRemove(oldKey, out var oldBitmap))
+                (oldBitmap as System.IDisposable)?.Dispose();
+        }
     }
 }
