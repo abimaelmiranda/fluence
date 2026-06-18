@@ -12,7 +12,7 @@ namespace Fluence.Infrastructure;
 
 public sealed class TerminalService : ITerminalService, IAsyncDisposable
 {
-    private const int TerminalLimit = 2;
+    private const int TerminalLimit = 4;
     private static readonly TimeSpan StartupTimeout = TimeSpan.FromSeconds(5);
 
     private readonly IPtyHost _ptyHost;

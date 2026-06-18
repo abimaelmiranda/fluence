@@ -16,6 +16,8 @@ public sealed class ExpandPanelEvent(string panelId) : IShellEvent
     public string PanelId { get; } = panelId;
 }
 
+public sealed record SelectBottomBarTabEvent(string TabId) : IShellEvent;
+
 public sealed record OpenFileRequestedEvent(string Path) : IShellEvent;
 
 public sealed record OpenFolderRequestedEvent(string Path) : IShellEvent;
