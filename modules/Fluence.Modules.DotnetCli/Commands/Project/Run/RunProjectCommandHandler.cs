@@ -1,7 +1,9 @@
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
-using Fluence.Core.Models.Infrastructure;
+using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Models.Output;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
@@ -15,7 +17,8 @@ using Fluence.Modules.DotnetCli.Services;
 namespace Fluence.Modules.DotnetCli.Commands.Project.Run;
 
 public sealed class RunProjectCommandHandler(
-    ITerminalService terminal,
+    IProcessHost processHost,
+    IOutputChannelService output,
     RunTargetResolver runTargets,
     ILaunchSettingsCoordinator launchSettings,
     IWorkspaceContext workspace,
@@ -43,7 +46,17 @@ public sealed class RunProjectCommandHandler(
             return;
         }
 
-        events.Publish(new ExpandPanelEvent("Terminal"));
-        await terminal.ExecuteAsync(target.Command, target.WorkingDirectory, cancellationToken);
+        events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
+        await output.WriteAsync(
+            OutputChannelIds.Run,
+            $"> {DotnetCommandLine.Quote(target.Executable)} {target.Arguments}{Environment.NewLine}",
+            cancellationToken: cancellationToken);
+        await processHost.RunAsync(
+            target.Executable,
+            target.Arguments,
+            target.WorkingDirectory,
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            cancellationToken);
     }
 }

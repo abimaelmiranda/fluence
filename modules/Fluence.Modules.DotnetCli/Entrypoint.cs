@@ -10,6 +10,7 @@ using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.DotnetCli.Commands;
 using Fluence.Modules.DotnetCli.Models;
@@ -122,7 +123,7 @@ public sealed class Entrypoint : IModule
         if (!await EnsureSdkAsync(host).ConfigureAwait(false))
             return;
 
-        host.Events.Publish(new ExpandPanelEvent("Terminal"));
+        host.Events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
         var handler = host.Services.GetRequiredService<ICommandHandler<TCommand>>();
         await handler.HandleAsync(command, ct);
     }

@@ -1,6 +1,7 @@
 namespace Fluence.Modules.DotnetCli.Models;
 
 internal sealed record RunTarget(
-    string Command,
+    string Executable,
+    string Arguments,
     string WorkingDirectory,
     RunTargetKind Kind);

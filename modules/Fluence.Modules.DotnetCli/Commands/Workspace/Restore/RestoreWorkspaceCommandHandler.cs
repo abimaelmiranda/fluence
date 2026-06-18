@@ -1,7 +1,7 @@
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Infrastructure;
-using Fluence.Core.Models.Infrastructure;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -12,9 +12,10 @@ namespace Fluence.Modules.DotnetCli.Commands.Workspace.Restore;
 
 public sealed class RestoreWorkspaceCommandHandler(
     IWorkspaceContext workspace,
-    ITerminalService terminal,
+    IProcessHost processHost,
+    IOutputChannelService output,
     IDotnetSdkProvisioningService sdk)
-    : DotnetCommandHandlerBase(workspace, terminal, sdk), ICommandHandler<RestoreWorkspaceCommand>
+    : DotnetCommandHandlerBase(workspace, processHost, output, sdk), ICommandHandler<RestoreWorkspaceCommand>
 {
     public Task HandleAsync(RestoreWorkspaceCommand command, CancellationToken cancellationToken = default)
         => RunDotnetAsync("restore", cancellationToken);

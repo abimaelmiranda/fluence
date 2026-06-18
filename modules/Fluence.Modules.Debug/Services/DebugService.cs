@@ -10,7 +10,6 @@ using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
 using Fluence.Core.Abstractions.Infrastructure;
-using Fluence.Core.Models.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -19,6 +18,9 @@ using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Models.Output;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.File;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
@@ -34,7 +36,7 @@ public sealed class DebugService(
     IWorkspaceContext workspace,
     IDebugAdapterClientFactory adapterFactory,
     IDebugStateService debugState,
-    ITerminalService terminal,
+    IOutputChannelService output,
     IProcessHost processHost,
     IUserNotificationService notifications,
     IShellRegionHost shellRegions,
@@ -205,7 +207,7 @@ public sealed class DebugService(
         var snapshot = debugState.Snapshot;
         if (!snapshot.IsStopped || snapshot.ActiveThreadId is null)
         {
-            await terminal.WriteOutputAsync("[debug] Process is running; step/continue is available after a stop event.\r\n").ConfigureAwait(false);
+            await output.WriteAsync(OutputChannelIds.Debug, "[debug] Process is running; step/continue is available after a stop event.\r\n").ConfigureAwait(false);
             return;
         }
 
@@ -216,7 +218,7 @@ public sealed class DebugService(
         }
         catch (OperationCanceledException)
         {
-            await terminal.WriteOutputAsync("[debug] Debug adapter did not respond to command in time.\r\n", isError: true).ConfigureAwait(false);
+            await output.WriteAsync(OutputChannelIds.Debug, "[debug] Debug adapter did not respond to command in time.\r\n", OutputChannelEntryKind.Error).ConfigureAwait(false);
         }
     }
 
@@ -230,14 +232,14 @@ public sealed class DebugService(
         }
 
         ExpandBottomBar();
-        await terminal.WriteOutputAsync("[debug] Building project...\r\n", cancellationToken: cancellationToken).ConfigureAwait(false);
+        await output.WriteAsync(OutputChannelIds.Debug, "[debug] Building project...\r\n", cancellationToken: cancellationToken).ConfigureAwait(false);
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken).ConfigureAwait(false);
         await processHost.RunAsync(
             dotnet,
             $"build \"{target.ProjectPath}\" -c Debug",
             Path.GetDirectoryName(target.ProjectPath),
-            line => _ = terminal.WriteOutputAsync(line + Environment.NewLine),
-            line => _ = terminal.WriteOutputAsync(line + Environment.NewLine, isError: true),
+            line => _ = output.WriteAsync(OutputChannelIds.Debug, line + Environment.NewLine),
+            line => _ = output.WriteAsync(OutputChannelIds.Debug, line + Environment.NewLine, OutputChannelEntryKind.Error),
             cancellationToken).ConfigureAwait(false);
 
         var programPath = ResolveProgramPath(target.ProjectPath, workspaceRoot);
@@ -268,7 +270,7 @@ public sealed class DebugService(
         await _adapter.CompleteConfigurationAsync(cancellationToken).ConfigureAwait(false);
         _adapterStarted = true;
         debugState.Continue();
-        await terminal.WriteOutputAsync("[debug] Session started\r\n").ConfigureAwait(false);
+        await output.WriteAsync(OutputChannelIds.Debug, "[debug] Session started\r\n").ConfigureAwait(false);
     }
 
     private async Task StopCoreAsync(CancellationToken cancellationToken)
@@ -316,7 +318,7 @@ public sealed class DebugService(
 
             debugState.SetStopped(e.Reason, e.ThreadId, currentLine);
             debugState.SetInspectionData(frames, variables);
-            await terminal.WriteOutputAsync($"[debug] Stopped: {e.Reason ?? "breakpoint"}\r\n").ConfigureAwait(false);
+            await output.WriteAsync(OutputChannelIds.Debug, $"[debug] Stopped: {e.Reason ?? "breakpoint"}\r\n").ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -324,7 +326,7 @@ public sealed class DebugService(
         }
         catch (Exception ex)
         {
-            await terminal.WriteOutputAsync($"[debug] Error refreshing inspection: {ex.Message}\r\n", isError: true)
+            await output.WriteAsync(OutputChannelIds.Debug, $"[debug] Error refreshing inspection: {ex.Message}\r\n", OutputChannelEntryKind.Error)
                 .ConfigureAwait(false);
         }
     }
@@ -336,9 +338,10 @@ public sealed class DebugService(
             var hint = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)
                 ? " On macOS this is often a PATH/dotnet issue (the .app inherits a minimal PATH) or a debugger entitlement issue (com.apple.security.cs.debugger). Check the DAP log for stderr output."
                 : " Check the DAP log for details.";
-            _ = terminal.WriteOutputAsync(
+            _ = output.WriteAsync(
+                OutputChannelIds.Debug,
                 $"[debug] netcoredbg terminated before starting the debuggee.{hint}\r\n",
-                isError: true);
+                OutputChannelEntryKind.Error);
         }
         _ = StopAsync();
     }
@@ -350,7 +353,10 @@ public sealed class DebugService(
 
     private void OnAdapterOutputReceived(object? sender, DebugAdapterOutputEvent e)
     {
-        _ = terminal.WriteOutputAsync(e.Text, e.IsError);
+        _ = output.WriteAsync(
+            OutputChannelIds.Debug,
+            e.Text,
+            e.IsError ? OutputChannelEntryKind.Error : OutputChannelEntryKind.Information);
     }
 
     private void OpenStoppedFile(string filePath)
@@ -384,7 +390,8 @@ public sealed class DebugService(
 
             foreach (var breakpoint in file.Value.Where(b => !b.IsVerified))
             {
-                await terminal.WriteOutputAsync(
+                await output.WriteAsync(
+                    OutputChannelIds.Debug,
                     $"[debug] Breakpoint pending: {Path.GetFileName(file.Key)}:{breakpoint.Line}\r\n")
                     .ConfigureAwait(false);
             }
@@ -393,6 +400,8 @@ public sealed class DebugService(
 
     private void ExpandBottomBar()
     {
+        events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Debug));
+
         if (Dispatcher.UIThread.CheckAccess())
         {
             shellRegions.Expand(ShellRegion.BottomBar);
