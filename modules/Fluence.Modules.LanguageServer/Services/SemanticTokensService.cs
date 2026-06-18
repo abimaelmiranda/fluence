@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -26,7 +25,6 @@ internal sealed class SemanticTokensService(LanguageServerService lss, LspClient
             var raw = result?.Deserialize(LspJsonContext.Default.LspSemanticTokensRaw);
             if (raw?.Data is null or { Length: 0 })
             {
-                Debug.WriteLine($"[ST] no data — result={result?.ToJsonString()?.Substring(0, Math.Min(120, result.ToJsonString().Length))}");
                 return [];
             }
 
