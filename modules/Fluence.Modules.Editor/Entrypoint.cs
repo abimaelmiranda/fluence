@@ -43,6 +43,8 @@ public sealed class Entrypoint : IModule
 
         host.Services.GetRequiredService<ISettingsRegistry>()
             .Register(EditorSettingsJsonContext.Default.EditorSettings);
+        host.Services.GetRequiredService<ISettingsService>()
+            .Get<EditorSettings>();
 
         host.ShellRegions.SetContent(
             ShellRegion.Main,
@@ -80,7 +82,7 @@ public sealed class Entrypoint : IModule
 
     private static async Task SaveActiveDocumentAsync(IModuleHost host, CancellationToken ct)
     {
-        var handler = host.Services.GetRequiredService<ICommandHandler<SaveActiveDocumentCommand>>();
-        await handler.HandleAsync(new SaveActiveDocumentCommand(), ct);
+        var editor = host.Services.GetRequiredService<EditorViewModel>();
+        await editor.SaveManuallyAsync(ct);
     }
 }

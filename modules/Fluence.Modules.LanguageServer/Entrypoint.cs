@@ -59,6 +59,10 @@ public sealed partial class Entrypoint : IModule, IDisposable
             new CodeActionService(
                 provider.GetRequiredService<ILanguageServerService>(),
                 provider.GetRequiredService<LspClientHolder>()));
+        services.AddSingleton<IFormattingService>(provider =>
+            new FormattingService(
+                provider.GetRequiredService<ILanguageServerService>(),
+                provider.GetRequiredService<LspClientHolder>()));
         services.AddSingleton<SemanticTokensService>(provider =>
             new SemanticTokensService(
                 (LanguageServerService)provider.GetRequiredService<ILanguageServerService>(),
