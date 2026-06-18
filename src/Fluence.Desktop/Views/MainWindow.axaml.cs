@@ -94,8 +94,17 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.ToggleTerminalCommand.Execute(null);
+            viewModel.ToggleBottomBarCommand.Execute(null);
             e.Handled = true;
         }
+    }
+
+    private void OnBottomBarTabPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (sender is not Border { DataContext: BottomBarTabViewModel tab })
+            return;
+
+        tab.SelectCommand.Execute(tab.Id);
+        e.Handled = true;
     }
 }

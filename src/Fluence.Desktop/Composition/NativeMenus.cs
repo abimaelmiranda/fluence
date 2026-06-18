@@ -193,7 +193,7 @@ internal static class NativeMenus
                 {
                     new NativeMenuItem
                     {
-                        Header = WithGesture("Toggle Terminal", keybindings.GetGesture(CommandIds.ToggleTerminal)),
+                        Header = WithGesture("Toggle Bottom Bar", keybindings.GetGesture(CommandIds.ToggleTerminal)),
                         Command = mainWindow.ToggleTerminalCommand,
                     },
                 },
