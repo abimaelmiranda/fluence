@@ -33,7 +33,7 @@ public sealed class ShellEventBus : IShellEventBus
             DispatchSync(handler, shellEvent);
     }
 
-    public void SubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent
+    public IDisposable SubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent
     {
         var type = typeof(TEvent);
         Action<IShellEvent> wrapper = e => handler((TEvent)e);
@@ -44,6 +44,8 @@ public sealed class ShellEventBus : IShellEventBus
             _syncWrappers[handler] = wrapper;
             list.Add(wrapper);
         }
+
+        return new Subscription<TEvent>(this, handler);
     }
 
     public void UnsubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent
@@ -87,6 +89,20 @@ public sealed class ShellEventBus : IShellEventBus
         catch (Exception ex)
         {
             Debug.WriteLine($"Shell event handler failed for {shellEvent.GetType().Name}: {ex}");
+        }
+    }
+
+    private sealed class Subscription<TEvent>(ShellEventBus owner, Action<TEvent> handler) : IDisposable
+        where TEvent : IShellEvent
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+                return;
+
+            owner.UnsubscribeSync(handler);
         }
     }
 }

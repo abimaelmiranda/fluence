@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -14,6 +15,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
 {
     private const int TerminalLimit = 4;
     private static readonly TimeSpan StartupTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(2);
 
     private readonly IPtyHost _ptyHost;
     private readonly object _sessionsGate = new();
@@ -195,13 +197,13 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         }
 
         var disposeTasks = sessions.Select(session => session.DisposeAsync().AsTask()).ToArray();
-        await Task.WhenAll(disposeTasks).ConfigureAwait(false);
+        await WaitBestEffortAsync(Task.WhenAll(disposeTasks), ShutdownTimeout).ConfigureAwait(false);
 
         Task[] cleanupTasks;
         lock (_cleanupGate)
             cleanupTasks = _cleanupTasks.ToArray();
 
-        await Task.WhenAll(cleanupTasks).ConfigureAwait(false);
+        await WaitBestEffortAsync(Task.WhenAll(cleanupTasks), ShutdownTimeout).ConfigureAwait(false);
     }
 
     private static async Task DisposeSessionAsync(TerminalSession session)
@@ -213,6 +215,19 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
         catch
         {
             // Session teardown is best-effort; the UI state has already moved on.
+        }
+    }
+
+    private static async Task WaitBestEffortAsync(Task task, TimeSpan timeout)
+    {
+        try
+        {
+            await task.WaitAsync(timeout).ConfigureAwait(false);
+        }
+        catch
+        {
+            Debug.WriteLine($"Terminal shutdown wait timed out/failed after {timeout.TotalMilliseconds}ms.");
+            // Terminal shutdown must never block application exit.
         }
     }
 
@@ -606,23 +621,15 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
             MarkClosing();
             TryCancelReadLoop();
 
-            var startGateHeld = false;
-            var writeGateHeld = false;
-
             try
             {
-                await _startGate.WaitAsync().ConfigureAwait(false);
-                startGateHeld = true;
-                await _writeGate.WaitAsync().ConfigureAwait(false);
-                writeGateHeld = true;
-
                 var ptySession = DetachPtySession();
                 ClearPendingCommands();
 
                 if (ptySession is not null)
                     await GracefulDisposeAsync(ptySession).ConfigureAwait(false);
 
-                await Task.WhenAll(SnapshotSessionCleanups()).ConfigureAwait(false);
+                await WaitBestEffortAsync(Task.WhenAll(SnapshotSessionCleanups()), ShutdownTimeout).ConfigureAwait(false);
 
                 State = TerminalSessionState.Closed;
             }
@@ -635,10 +642,6 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
                 JoinReadThread();
                 _readCts?.Dispose();
                 _readCts = null;
-                if (writeGateHeld)
-                    _writeGate.Release();
-                if (startGateHeld)
-                    _startGate.Release();
                 _closeCts.Dispose();
                 _startGate.Dispose();
                 _writeGate.Dispose();
@@ -804,7 +807,7 @@ public sealed class TerminalService : ITerminalService, IAsyncDisposable
             return Task.Run(() =>
             {
                 try { ptySession.Dispose(); }
-                catch { }
+                catch (Exception ex) { Debug.WriteLine($"PTY session dispose failed: {ex}"); }
             });
         }
 

@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Core.Abstractions.Modules;
 
-public interface IModule
+public interface IModule : IAsyncDisposable
 {
     string Name { get; }
 
