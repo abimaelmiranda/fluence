@@ -72,8 +72,9 @@ public sealed class Entrypoint : IModule
 
     private void UpdateSidebar(IModuleHost host)
     {
+        var mode = GetNavigationMode(host.Workspace.Current);
         bool shouldShow = _activeTabId == "Files"
-                       && host.Workspace.Current.Mode == WorkspaceMode.Solution;
+                       && mode == WorkspaceMode.Solution;
 
         if (shouldShow)
         {
@@ -87,6 +88,11 @@ public sealed class Entrypoint : IModule
 
         host.ShellRegions.ClearContent(ShellRegion.Sidebar, "SolutionView");
     }
+
+    private static WorkspaceMode GetNavigationMode(Workspace workspace) =>
+        workspace.Mode == WorkspaceMode.Debugging
+            ? workspace.ModeBeforeDebugging ?? workspace.Mode
+            : workspace.Mode;
 
     private static async Task OpenSolutionAsync(IModuleHost host, string path, CancellationToken ct)
     {
