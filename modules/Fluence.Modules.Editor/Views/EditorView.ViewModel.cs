@@ -56,7 +56,7 @@ public partial class EditorView
         if (!string.Equals(loadedPath, e.FilePath, StringComparison.OrdinalIgnoreCase))
         {
             if (retries < 10)
-                Task.Delay(50).ContinueWith(_ => NavigateToLocation(e, retries + 1));
+                ScheduleNavigationRetry(e, retries + 1);
             return;
         }
 
@@ -67,13 +67,36 @@ public partial class EditorView
             docLine.Offset + Math.Clamp(e.Character, 0, docLine.Length),
             0, doc.TextLength);
 
+        _explicitNavigationVersion++;
         SetCaretOffset(offset);
         Editor.ScrollToLine(targetLine);
+        SaveViewStateForPath(e.FilePath);
+    }
+
+    private void ScheduleNavigationRetry(NavigationResolvedEvent e, int retries)
+    {
+        var viewModel = _viewModel;
+        if (viewModel is null)
+            return;
+
+        viewModel.TaskScheduler.ScheduleLatest(
+            "editor.navigation.retry",
+            Fluence.Core.Abstractions.Tasks.TaskPriority.Interactive,
+            TimeSpan.FromMilliseconds(50),
+            _ =>
+            {
+                Dispatcher.UIThread.Post(() => NavigateToLocation(e, retries), DispatcherPriority.Background);
+                return Task.CompletedTask;
+            },
+            correlationId: (e.FilePath, e.Line, e.Character));
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        EnsureEditorTimers();
         BindViewModel();
+        EnsureEditorScrollViewerSubscription();
+        Dispatcher.UIThread.Post(EnsureEditorScrollViewerSubscription, DispatcherPriority.Loaded);
         var lnm = Editor.TextArea.LeftMargins.OfType<LineNumberMargin>().FirstOrDefault();
         if (lnm is not null)
         {
@@ -84,6 +107,9 @@ public partial class EditorView
         }
     }
 
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e) =>
+        ReleaseEditorRuntimeSubscriptions();
+
     private void OnDataContextChanged(object? sender, EventArgs e) => BindViewModel();
 
     private void BindViewModel()
@@ -91,7 +117,12 @@ public partial class EditorView
         if (ReferenceEquals(_viewModel, DataContext))
         {
             if (_viewModel is not null)
-                SetEditorText(_viewModel.ActiveText);
+            {
+                if (string.Equals(_viewModel.ActiveDocumentPath, _lastKnownDocumentPath, StringComparison.OrdinalIgnoreCase))
+                    SetEditorText(_viewModel.ActiveText);
+                else
+                    SwitchEditorDocument(_viewModel.ActiveDocumentPath, _viewModel.ActiveText);
+            }
             return;
         }
 
@@ -122,6 +153,7 @@ public partial class EditorView
             ApplyEditorSettings(_viewModel.Settings.Get<EditorSettings>());
             SetEditorText(_viewModel.ActiveText);
             ApplyGrammarForPath(_viewModel.ActiveDocumentPath);
+            RestoreViewStateForActiveDocument();
             UpdateDebugRendering();
 
             // Wire LSP services if available
@@ -142,6 +174,15 @@ public partial class EditorView
 
         if (e.PropertyName == nameof(EditorViewModel.ActiveText))
         {
+            var activePath = _viewModel.ActiveDocumentPath;
+            if (!string.Equals(activePath, _lastKnownDocumentPath, StringComparison.OrdinalIgnoreCase))
+            {
+                BeginDocumentViewStateSwitch();
+                SaveViewStateForPath(_lastKnownDocumentPath);
+                _savedViewStateDuringTextSwitchPath = _lastKnownDocumentPath;
+                return;
+            }
+
             SetEditorText(_viewModel.ActiveText);
         }
         else if (e.PropertyName == nameof(EditorViewModel.ActiveDocumentPath))
@@ -155,22 +196,8 @@ public partial class EditorView
                 UpdateDebugRendering();
                 return;
             }
-            _lastKnownDocumentPath = newPath;
-            InvalidateHoverRequests();
-            InvalidateLspHoverRequests();
-            InvalidateCodeActionRequests(closePopup: true);
-            System.Threading.Interlocked.Increment(ref _completionRequestVersion);
-            Dispatcher.UIThread.Post(() =>
-            {
-                CloseCompletionPopup();
-                CloseSignatureHelpPopup();
-                HoverPopup.IsOpen = false;
-                LspHoverPopup.IsOpen = false;
-                CodeActionPopup.IsOpen = false;
-                _dismissedExceptionPopupKey = null;
-            });
-            ApplyGrammarForPath(newPath);
-            UpdateDebugRendering();
+
+            SwitchEditorDocument(newPath, _viewModel.ActiveText);
         }
         else if (e.PropertyName == nameof(EditorViewModel.ActiveDocumentBreakpoints) ||
                  e.PropertyName == nameof(EditorViewModel.ActiveExecutionLine) ||
@@ -204,14 +231,31 @@ public partial class EditorView
     private async void OnEditorLostFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (_viewModel is not null)
+        {
+            try
+            {
+                await SaveCurrentViewStateAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[EditorViewState] Save failed: {ex.Message}");
+            }
             await _viewModel.SaveIfDirtyAsync();
+        }
     }
 
     private void SetEditorText(string text)
     {
         if (string.Equals(Editor.Text, text, StringComparison.Ordinal)) return;
         _isUpdatingEditorText = true;
-        Editor.Text = text;
-        _isUpdatingEditorText = false;
+        try
+        {
+            Editor.Text = text;
+        }
+        finally
+        {
+            _isUpdatingEditorText = false;
+        }
     }
+
 }
