@@ -250,6 +250,7 @@ public sealed class DebugService(
 
     private async Task<bool> StartSessionAsync(ProjectExecutionTarget target, ExecutionMode mode, CancellationToken cancellationToken)
     {
+        output.Clear(OutputChannelIds.Debug);
         var workspaceRoot = launchSettings.GetWorkspaceRoot(workspace.Current);
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
