@@ -32,7 +32,7 @@ using Fluence.Core.Services.Workspace;
 
 namespace Fluence.Desktop.ViewModels;
 
-public sealed partial class MainWindowViewModel : ViewModelBase
+public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     public const double DefaultTerminalHeight = 160;
     public const double MinimumTerminalHeight = 80;
@@ -45,13 +45,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly ICommandRegistry _commands;
     private readonly IKeybindingService _keybindings;
     private readonly ISettingsTool _settingsTool;
+    private readonly List<IDisposable> _eventSubscriptions = [];
     private readonly HashSet<string> _semanticTokensPendingFiles = new(StringComparer.OrdinalIgnoreCase);
+    private IDisposable? _shellSettingsSubscription;
 
     [ObservableProperty]
     private WorkspaceMode _workspaceMode;
 
     [ObservableProperty]
-    private bool _isSavingWorkspace;
+    private bool _isShutdownOverlayVisible;
+
+    [ObservableProperty]
+    private string _shutdownStatusText = "Saving workspace...";
 
     [ObservableProperty]
     private bool _isSemanticTokensLoading;
@@ -98,17 +103,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _workspaceMode = workspace.Current.Mode;
         ApplyShellSettings(_settings.Get<ShellSettings>());
         RegisterCommands();
-        _settings.Watch<ShellSettings>().Subscribe(new ActionObserver<ShellSettings>(ApplyShellSettings));
+        _shellSettingsSubscription = _settings.Watch<ShellSettings>()
+            .Subscribe(new ActionObserver<ShellSettings>(ApplyShellSettings));
         _workspace.Changed += OnWorkspaceChanged;
         _regions.Changed += OnShellRegionsChanged;
         _regions.RegionExpanded += OnShellRegionExpanded;
-        _eventBus.SubscribeSync<ExpandPanelEvent>(OnExpandPanelRequested);
-        _eventBus.SubscribeSync<SelectBottomBarTabEvent>(OnSelectBottomBarTabRequested);
-        _eventBus.SubscribeSync<DebuggerProvisioningRequiredEvent>(_ => SetProvisioning(true));
-        _eventBus.SubscribeSync<DebuggerProvisioningFinishedEvent>(_ => SetProvisioning(false));
-        _eventBus.SubscribeSync<SemanticTokensRefreshStartedEvent>(OnSemanticTokensRefreshStarted);
-        _eventBus.SubscribeSync<SemanticTokensRefreshFinishedEvent>(OnSemanticTokensRefreshFinished);
-        _eventBus.SubscribeSync<SemanticTokensRefreshFailedEvent>(OnSemanticTokensRefreshFailed);
+        _eventSubscriptions.Add(_eventBus.SubscribeSync<ExpandPanelEvent>(OnExpandPanelRequested));
+        _eventSubscriptions.Add(_eventBus.SubscribeSync<SelectBottomBarTabEvent>(OnSelectBottomBarTabRequested));
+        _eventSubscriptions.Add(_eventBus.SubscribeSync<DebuggerProvisioningRequiredEvent>(_ => SetProvisioning(true)));
+        _eventSubscriptions.Add(_eventBus.SubscribeSync<DebuggerProvisioningFinishedEvent>(_ => SetProvisioning(false)));
+        _eventSubscriptions.Add(_eventBus.SubscribeSync<SemanticTokensRefreshStartedEvent>(OnSemanticTokensRefreshStarted));
+        _eventSubscriptions.Add(_eventBus.SubscribeSync<SemanticTokensRefreshFinishedEvent>(OnSemanticTokensRefreshFinished));
+        _eventSubscriptions.Add(_eventBus.SubscribeSync<SemanticTokensRefreshFailedEvent>(OnSemanticTokensRefreshFailed));
     }
 
     public ActivityBarViewModel ActivityBar { get; }
@@ -724,6 +730,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     private void CloseDocument(string path) => _workspace.CloseDocument(path);
+
+    public void Dispose()
+    {
+        foreach (var subscription in _eventSubscriptions)
+            subscription.Dispose();
+        _eventSubscriptions.Clear();
+        _shellSettingsSubscription?.Dispose();
+        _shellSettingsSubscription = null;
+        _workspace.Changed -= OnWorkspaceChanged;
+        _regions.Changed -= OnShellRegionsChanged;
+        _regions.RegionExpanded -= OnShellRegionExpanded;
+    }
 
     private sealed class SimulatedUnsupportedFileException(string reason) : FluenceExceptionBase(reason)
     {

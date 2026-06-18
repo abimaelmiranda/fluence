@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -12,15 +13,20 @@ using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
 using Fluence.Core.Abstractions.Keybindings;
+using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Services.Modules;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Desktop;
 
 public partial class App : Avalonia.Application
 {
+    private static readonly TimeSpan ServiceProviderDisposeTimeout = TimeSpan.FromSeconds(2);
+
     private ServiceProvider? _serviceProvider;
     private int _isShowingFatalException;
-    private bool _isSavingWorkspace;
+    private bool _isShuttingDown;
+    private bool _shutdownCompleted;
 
     public override void Initialize()
     {
@@ -57,21 +63,51 @@ public partial class App : Avalonia.Application
 
             mainWindow.Closing += async (_, e) =>
             {
-                if (_isSavingWorkspace)
-                    return; // save finished, allow close
-
-                if (!snapshotCoordinator.HasWorkspaceToSave)
-                    return; // nothing to save, allow close immediately
+                if (_shutdownCompleted)
+                    return;
 
                 e.Cancel = true;
-                _isSavingWorkspace = true;
-                mainWindowViewModel.IsSavingWorkspace = true;
+                if (_isShuttingDown)
+                    return;
 
-                await Task.WhenAll(
-                    snapshotCoordinator.SaveAsync(),
-                    Task.Delay(500));
+                _isShuttingDown = true;
+                mainWindowViewModel.IsShutdownOverlayVisible = true;
+                mainWindowViewModel.ShutdownStatusText = "Saving workspace...";
 
-                mainWindow.Close();
+                try
+                {
+                    var serviceProvider = _serviceProvider;
+                    if (serviceProvider is null)
+                    {
+                        _shutdownCompleted = true;
+                        mainWindow.Close();
+                        return;
+                    }
+
+                    if (snapshotCoordinator.HasWorkspaceToSave)
+                    {
+                        await Task.WhenAll(
+                            snapshotCoordinator.SaveAsync(),
+                            Task.Delay(500));
+                    }
+
+                    mainWindowViewModel.ShutdownStatusText = "Stopping modules...";
+                    using var shutdownCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    var progress = new Progress<ModuleShutdownProgress>(p =>
+                    {
+                        mainWindowViewModel.ShutdownStatusText = p.Message;
+                    });
+
+                    await serviceProvider.GetRequiredService<IShutdownCoordinator>()
+                        .ShutdownAsync(progress, shutdownCts.Token);
+
+                    mainWindowViewModel.ShutdownStatusText = "Finalizing shutdown...";
+                }
+                finally
+                {
+                    _shutdownCompleted = true;
+                    mainWindow.Close();
+                }
             };
 
             desktop.MainWindow = mainWindow;
@@ -100,12 +136,39 @@ public partial class App : Avalonia.Application
         if (_serviceProvider is null)
             return;
 
-        // TODO: Investigate macOS Cmd+Q shutdown path. Closing with the traffic-light button exits cleanly,
-        // but Cmd+Q currently reports a managed unhandled exception as SIGABRT in macOS crash reporter.
-        // Synchronous block required: async void does not hold the process alive long enough
-        // for the service provider to finish disposing (OmniSharp would be left as an orphan process).
-        _serviceProvider.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        var shutdown = _serviceProvider.GetRequiredService<IShutdownCoordinator>();
+        if (!shutdown.IsShutdownComplete)
+        {
+            shutdown.ShutdownAsync()
+                .GetAwaiter()
+                .GetResult();
+            _shutdownCompleted = true;
+        }
+
+        DisposeServiceProviderBestEffort(_serviceProvider);
         _serviceProvider = null;
+    }
+
+    private static void DisposeServiceProviderBestEffort(ServiceProvider serviceProvider)
+    {
+        try
+        {
+            Task.Run(() =>
+                {
+                    serviceProvider.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                })
+                .WaitAsync(ServiceProviderDisposeTimeout)
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch (TimeoutException)
+        {
+            Debug.WriteLine($"Service provider dispose timed out after {ServiceProviderDisposeTimeout.TotalMilliseconds}ms.");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Service provider dispose failed: {ex}");
+        }
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
