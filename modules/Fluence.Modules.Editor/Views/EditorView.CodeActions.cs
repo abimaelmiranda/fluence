@@ -26,7 +26,8 @@ public partial class EditorView
     private void ScheduleCodeActionRequest(LspDiagnostic diagnostic, Point hoverPoint)
     {
         if (_codeActionService is null) return;
-        var filePath = _viewModel?.ActiveDocumentPath;
+        var viewModel = _viewModel;
+        var filePath = viewModel?.ActiveDocumentPath;
         if (string.IsNullOrWhiteSpace(filePath)) return;
 
         var version = Interlocked.Increment(ref _codeActionVersion);
@@ -47,7 +48,8 @@ public partial class EditorView
     private void TriggerQuickFix()
     {
         if (_codeActionService is null) return;
-        var filePath = _viewModel?.ActiveDocumentPath;
+        var viewModel = _viewModel;
+        var filePath = viewModel?.ActiveDocumentPath;
         if (string.IsNullOrWhiteSpace(filePath)) return;
 
         var caret = Editor.TextArea.Caret;
@@ -60,10 +62,10 @@ public partial class EditorView
         LspHoverPopup.IsOpen = false;
         HoverPopup.IsOpen = false;
         CodeActionPopup.IsOpen = false;
-        _viewModel.EventBus.Publish(new Fluence.Core.Abstractions.Modules.LspInteractiveRequestStartedEvent(filePath));
-        _viewModel.PublishLiveDocumentChanged(Editor.Text, flushImmediately: true);
+        viewModel.EventBus.Publish(new Fluence.Core.Abstractions.Modules.LspInteractiveRequestStartedEvent(filePath));
+        viewModel.PublishLiveDocumentChanged(Editor.Text, flushImmediately: true);
 
-        _viewModel.TaskScheduler.ScheduleLatest(
+        viewModel.TaskScheduler.ScheduleLatest(
             $"editor.quick-fix.{filePath}",
             TaskPriority.Input,
             TimeSpan.Zero,

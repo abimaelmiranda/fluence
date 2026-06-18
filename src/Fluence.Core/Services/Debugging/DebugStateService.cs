@@ -17,6 +17,7 @@ public sealed class DebugStateService : IDebugStateService
         Reason: null,
         ActiveThreadId: null,
         CurrentLine: null,
+        ExceptionInfo: null,
         Breakpoints: [],
         StackFrames: [],
         Variables: []);
@@ -100,13 +101,18 @@ public sealed class DebugStateService : IDebugStateService
                 Reason = null,
                 ActiveThreadId = null,
                 CurrentLine = null,
+                ExceptionInfo = null,
             };
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public void SetStopped(string? reason, int threadId, DebugExecutionLine? currentLine)
+    public void SetStopped(
+        string? reason,
+        int threadId,
+        DebugExecutionLine? currentLine,
+        DebugExceptionInfo? exceptionInfo)
     {
         lock (_gate)
         {
@@ -118,6 +124,7 @@ public sealed class DebugStateService : IDebugStateService
                 Reason = reason,
                 ActiveThreadId = threadId,
                 CurrentLine = currentLine,
+                ExceptionInfo = exceptionInfo,
             };
         }
 
@@ -143,6 +150,7 @@ public sealed class DebugStateService : IDebugStateService
                 Status = DebugSessionStatus.Running,
                 Reason = null,
                 CurrentLine = null,
+                ExceptionInfo = null,
             };
         }
 
@@ -161,6 +169,7 @@ public sealed class DebugStateService : IDebugStateService
                 Reason = null,
                 ActiveThreadId = null,
                 CurrentLine = null,
+                ExceptionInfo = null,
                 StackFrames = [],
                 Variables = [],
             };

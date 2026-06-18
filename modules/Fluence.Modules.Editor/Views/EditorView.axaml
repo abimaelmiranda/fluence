@@ -203,6 +203,56 @@
                 </StackPanel>
             </Border>
         </Popup>
+        <Popup x:Name="DebugExceptionPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="TopLeft"
+               PlacementGravity="BottomLeft">
+            <Border x:Name="DebugExceptionPopupBorder"
+                    Background="#B91C1C"
+                    BorderBrush="#FCA5A5"
+                    BorderThickness="2"
+                    CornerRadius="4"
+                    Padding="10,8"
+                    MinWidth="360"
+                    MaxWidth="680">
+                <Grid RowDefinitions="Auto,Auto"
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="10"
+                      RowSpacing="4">
+                    <TextBlock x:Name="DebugExceptionTitleText"
+                               Grid.Row="0"
+                               Grid.Column="0"
+                               Foreground="White"
+                               FontWeight="Bold"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="13"
+                               TextTrimming="CharacterEllipsis"/>
+                    <Button x:Name="DebugExceptionCloseButton"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Classes="ideIcon"
+                            Width="24"
+                            Height="24"
+                            MinHeight="24"
+                            Padding="0"
+                            Content="X"
+                            Foreground="White"
+                            Background="#7F1D1D"
+                            BorderBrush="#FCA5A5"
+                            BorderThickness="1"/>
+                    <TextBlock x:Name="DebugExceptionMessageText"
+                               Grid.Row="1"
+                               Grid.Column="0"
+                               Grid.ColumnSpan="2"
+                               Foreground="#FEE2E2"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"
+                               MaxHeight="80"/>
+                </Grid>
+            </Border>
+        </Popup>
         <Popup x:Name="SignatureHelpPopup"
                IsLightDismissEnabled="False"
                Placement="AnchorAndGravity"

@@ -109,7 +109,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
                 if (!values.TryGetValue(property.Name, out var value) || IsFallbackValue(value))
                     continue;
 
-                sectionObject[ToJsonName(property.Name)] = JsonSerializer.SerializeToNode(value, property.PropertyType, options);
+                sectionObject[ToJsonName(property.Name)] = SerializePropertyValue(value, property.PropertyType, options);
             }
 
             if (sectionObject.Count == 0)
@@ -284,7 +284,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
             if (sectionObject.ContainsKey(key) || sectionObject.ContainsKey(property.Name))
                 continue;
 
-            sectionObject[key] = JsonSerializer.SerializeToNode(
+            sectionObject[key] = SerializePropertyValue(
                 property.GetValue(resolved),
                 property.PropertyType,
                 section.TypeInfo.Options);
@@ -309,7 +309,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
             try
             {
-                var value = node.Deserialize(property.PropertyType, options);
+                var value = DeserializePropertyValue(node, property.PropertyType, options);
                 if (IsFallbackValue(value))
                     continue;
 
@@ -377,6 +377,27 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
     private static bool IsFallbackValue(object? value) =>
         value is null || value is string text && string.IsNullOrWhiteSpace(text);
+
+    private static JsonNode? SerializePropertyValue(object? value, Type propertyType, JsonSerializerOptions options)
+    {
+        if (propertyType.IsEnum && value is not null)
+            return JsonValue.Create(value.ToString());
+
+        return JsonSerializer.SerializeToNode(value, propertyType, options);
+    }
+
+    private static object? DeserializePropertyValue(JsonNode node, Type propertyType, JsonSerializerOptions options)
+    {
+        if (propertyType.IsEnum && node.GetValueKind() == JsonValueKind.String)
+        {
+            var text = node.GetValue<string>();
+            return string.IsNullOrWhiteSpace(text)
+                ? null
+                : Enum.Parse(propertyType, text, ignoreCase: true);
+        }
+
+        return node.Deserialize(propertyType, options);
+    }
 
     private static string ToJsonName(string propertyName) =>
         string.IsNullOrEmpty(propertyName)

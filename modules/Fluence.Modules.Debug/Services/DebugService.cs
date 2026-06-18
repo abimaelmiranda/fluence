@@ -20,6 +20,7 @@ using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.File;
@@ -44,7 +45,8 @@ public sealed class DebugService(
     IShellEventBus events,
     IDebugSessionManager sessions,
     IDebuggerProvisioningService provisioning,
-    IDotnetSdkProvisioningService sdk)
+    IDotnetSdkProvisioningService sdk,
+    ISettingsService settings)
     : IDebugService, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -252,6 +254,7 @@ public sealed class DebugService(
 
         sessions.Start(target, mode);
         debugState.StartSession();
+        var exceptionBreakMode = settings.Get<DebugSettings>().ExceptionBreakMode;
 
         _adapter = await adapterFactory.CreateAsync(workspaceRoot, cancellationToken).ConfigureAwait(false);
         _adapter.Stopped += OnAdapterStopped;
@@ -270,6 +273,7 @@ public sealed class DebugService(
             WorkspaceRoot: workspaceRoot);
         await _adapter.StartAsync(request, cancellationToken).ConfigureAwait(false);
         await SyncBreakpointsAsync(debugState.Snapshot.Breakpoints, cancellationToken).ConfigureAwait(false);
+        await _adapter.SetExceptionBreakpointsAsync(exceptionBreakMode, cancellationToken).ConfigureAwait(false);
         await _adapter.CompleteConfigurationAsync(cancellationToken).ConfigureAwait(false);
         _adapterStarted = true;
         debugState.Continue();
@@ -308,7 +312,8 @@ public sealed class DebugService(
                 return;
 
             var frames = await adapter.GetStackTraceAsync(e.ThreadId).ConfigureAwait(false);
-            var currentFrame = frames.FirstOrDefault();
+            var workspaceRoot = launchSettings.GetWorkspaceRoot(workspace.Current);
+            var currentFrame = SelectStoppedFrame(frames, workspaceRoot);
             var variables = currentFrame is null
                 ? Array.Empty<DebugVariable>()
                 : await adapter.GetVariablesAsync(currentFrame.Id).ConfigureAwait(false);
@@ -319,9 +324,14 @@ public sealed class DebugService(
             if (currentLine is not null)
                 OpenStoppedFile(currentLine.FilePath);
 
-            debugState.SetStopped(e.Reason, e.ThreadId, currentLine);
+            var exceptionInfo = IsExceptionStop(e)
+                ? CreateExceptionInfo(e)
+                : null;
+            debugState.SetStopped(e.Reason, e.ThreadId, currentLine, exceptionInfo);
             debugState.SetInspectionData(frames, variables);
-            await output.WriteAsync(OutputChannelIds.Debug, $"[debug] Stopped: {e.Reason ?? "breakpoint"}\r\n").ConfigureAwait(false);
+            await output.WriteAsync(OutputChannelIds.Debug, FormatStoppedOutput(e, exceptionInfo)).ConfigureAwait(false);
+            if (exceptionInfo is not null && currentLine is null)
+                ShowError(exceptionInfo.Message);
         }
         catch (OperationCanceledException)
         {
@@ -374,6 +384,69 @@ public sealed class DebugService(
         }
 
         Dispatcher.UIThread.Post(() => events.Publish(new OpenFileRequestedEvent(filePath)));
+    }
+
+    private static bool IsExceptionStop(DebugAdapterStoppedEvent e) =>
+        string.Equals(e.Reason, "exception", StringComparison.OrdinalIgnoreCase);
+
+    private static DebugStackFrame? SelectStoppedFrame(
+        IReadOnlyList<DebugStackFrame> frames,
+        string? workspaceRoot)
+    {
+        return frames.FirstOrDefault(frame => IsWorkspaceSourceFrame(frame, workspaceRoot)) ??
+               frames.FirstOrDefault(IsSourceFrame) ??
+               frames.FirstOrDefault();
+    }
+
+    private static bool IsWorkspaceSourceFrame(DebugStackFrame frame, string? workspaceRoot)
+    {
+        if (!IsSourceFrame(frame) || string.IsNullOrWhiteSpace(workspaceRoot))
+            return false;
+
+        var fullPath = Path.GetFullPath(frame.FilePath!);
+        var fullRoot = Path.GetFullPath(workspaceRoot)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(fullPath, fullRoot, StringComparison.OrdinalIgnoreCase) ||
+               fullPath.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSourceFrame(DebugStackFrame frame) =>
+        frame.Line > 0 &&
+        !string.IsNullOrWhiteSpace(frame.FilePath) &&
+        File.Exists(frame.FilePath);
+
+    private static DebugExceptionInfo CreateExceptionInfo(DebugAdapterStoppedEvent e)
+    {
+        var title = FirstNonEmpty(e.Text, e.Description, "Exception");
+        var message = FirstNonEmpty(e.Description, e.Text, "The debugger stopped on an exception.");
+
+        if (string.Equals(title, message, StringComparison.Ordinal))
+            message = "The debugger stopped on an exception.";
+
+        return new DebugExceptionInfo(TrimForPopup(title, 120), TrimForPopup(message, 220));
+    }
+
+    private static string FormatStoppedOutput(DebugAdapterStoppedEvent e, DebugExceptionInfo? exceptionInfo)
+    {
+        if (exceptionInfo is null)
+            return $"[debug] Stopped: {e.Reason ?? "breakpoint"}\r\n";
+
+        return $"[debug] Exception: {exceptionInfo.Title} - {exceptionInfo.Message}\r\n";
+    }
+
+    private static string FirstNonEmpty(params string?[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+
+    private static string TrimForPopup(string value, int maxLength)
+    {
+        value = value.Replace("\r\n", " ", StringComparison.Ordinal)
+            .Replace('\n', ' ')
+            .Replace('\r', ' ')
+            .Trim();
+
+        return value.Length <= maxLength
+            ? value
+            : value[..Math.Max(0, maxLength - 3)] + "...";
     }
 
     private async Task SyncBreakpointsAsync(

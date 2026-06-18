@@ -26,6 +26,10 @@ public interface IDebugAdapterClient : IAsyncDisposable
 
     Task CompleteConfigurationAsync(CancellationToken cancellationToken = default);
 
+    Task SetExceptionBreakpointsAsync(
+        DebugExceptionBreakMode mode,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<DebugStackFrame>> GetStackTraceAsync(int threadId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<DebugVariable>> GetVariablesAsync(int frameId, CancellationToken cancellationToken = default);

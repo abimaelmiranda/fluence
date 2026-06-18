@@ -147,6 +147,19 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         }
     }
 
+    public DebugExceptionInfo? ActiveExceptionStop
+    {
+        get
+        {
+            var snapshot = _debugState.Snapshot;
+            return snapshot.ExceptionInfo is not null &&
+                   snapshot.CurrentLine is not null &&
+                   string.Equals(snapshot.CurrentLine.FilePath, ActiveDocumentPath, StringComparison.OrdinalIgnoreCase)
+                ? snapshot.ExceptionInfo
+                : null;
+        }
+    }
+
     public bool IsDebuggerStopped => _debugState.Snapshot.IsStopped;
 
     private void RegisterEditorCommands()
@@ -350,6 +363,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(ActiveDocumentBreakpoints));
         OnPropertyChanged(nameof(ActiveExecutionLine));
+        OnPropertyChanged(nameof(ActiveExceptionStop));
     }
 
     private void RefreshFromWorkspace()
@@ -366,6 +380,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(ActiveDocumentPath));
         OnPropertyChanged(nameof(ActiveDocumentBreakpoints));
         OnPropertyChanged(nameof(ActiveExecutionLine));
+        OnPropertyChanged(nameof(ActiveExceptionStop));
 
         var newPath = ActiveDocumentPath;
 

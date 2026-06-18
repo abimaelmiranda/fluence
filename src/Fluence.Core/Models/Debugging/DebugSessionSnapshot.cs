@@ -9,6 +9,7 @@ public sealed record DebugSessionSnapshot(
     string? Reason,
     int? ActiveThreadId,
     DebugExecutionLine? CurrentLine,
+    DebugExceptionInfo? ExceptionInfo,
     IReadOnlyList<DebugBreakpoint> Breakpoints,
     IReadOnlyList<DebugStackFrame> StackFrames,
     IReadOnlyList<DebugVariable> Variables);

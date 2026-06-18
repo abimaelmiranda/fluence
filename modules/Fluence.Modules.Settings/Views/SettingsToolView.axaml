@@ -13,6 +13,12 @@
                 <Setter Property="Height" Value="30"/>
                 <Setter Property="MinHeight" Value="30"/>
             </Style>
+            <Style Selector="ComboBox.settingsField">
+                <Setter Property="Height" Value="34"/>
+                <Setter Property="MinHeight" Value="34"/>
+                <Setter Property="Padding" Value="12,0"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
         </Grid.Styles>
         <Border Grid.Row="0"
                 Padding="12,4"
@@ -109,7 +115,7 @@
                                                              Text="{Binding TextValue, Mode=TwoWay}"
                                                              IsVisible="{Binding IsText}"/>
                                                     <ComboBox Grid.Column="1"
-                                                              Classes="ideCompact"
+                                                              Classes="settingsField"
                                                               ItemsSource="{Binding ThemeOptions}"
                                                               SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
                                                               IsVisible="{Binding IsThemeSelector}">
@@ -119,6 +125,11 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
+                                                    <ComboBox Grid.Column="1"
+                                                              Classes="settingsField"
+                                                              ItemsSource="{Binding EnumOptions}"
+                                                              SelectedItem="{Binding SelectedEnumValue, Mode=TwoWay}"
+                                                              IsVisible="{Binding IsEnum}"/>
                                                     <CheckBox Grid.Column="1"
                                                               IsChecked="{Binding BoolValue, Mode=TwoWay}"
                                                               IsVisible="{Binding IsBoolean}"

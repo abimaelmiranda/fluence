@@ -167,13 +167,18 @@ public partial class EditorView
                 HoverPopup.IsOpen = false;
                 LspHoverPopup.IsOpen = false;
                 CodeActionPopup.IsOpen = false;
+                _dismissedExceptionPopupKey = null;
             });
             ApplyGrammarForPath(newPath);
             UpdateDebugRendering();
         }
         else if (e.PropertyName == nameof(EditorViewModel.ActiveDocumentBreakpoints) ||
-                 e.PropertyName == nameof(EditorViewModel.ActiveExecutionLine))
+                 e.PropertyName == nameof(EditorViewModel.ActiveExecutionLine) ||
+                 e.PropertyName == nameof(EditorViewModel.ActiveExceptionStop))
         {
+            if (e.PropertyName == nameof(EditorViewModel.ActiveExecutionLine))
+                _dismissedExceptionPopupKey = null;
+
             UpdateDebugRendering();
         }
     }
