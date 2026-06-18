@@ -111,8 +111,9 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
     private void RefreshForWorkspace()
     {
-        var solutionPath = _workspace.Current.CurrentSolutionPath;
-        if (_workspace.Current.Mode != WorkspaceMode.Solution || string.IsNullOrWhiteSpace(solutionPath))
+        var workspace = _workspace.Current;
+        var solutionPath = workspace.CurrentSolutionPath;
+        if (GetNavigationMode(workspace) != WorkspaceMode.Solution || string.IsNullOrWhiteSpace(solutionPath))
         {
             _loadedSolutionPath = null;
             _loadedSnapshot = null;
@@ -128,6 +129,11 @@ public sealed partial class SolutionViewModel : ViewModelBase
         _loadedSolutionPath = solutionPath;
         _ = LoadAsync(solutionPath);
     }
+
+    private static WorkspaceMode GetNavigationMode(Workspace workspace) =>
+        workspace.Mode == WorkspaceMode.Debugging
+            ? workspace.ModeBeforeDebugging ?? workspace.Mode
+            : workspace.Mode;
 
     private async Task LoadAsync(string solutionPath)
     {

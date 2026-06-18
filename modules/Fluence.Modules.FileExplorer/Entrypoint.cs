@@ -47,8 +47,9 @@ public sealed class Entrypoint : IModule
 
     private void UpdateSidebar(IModuleHost host)
     {
+        var mode = GetNavigationMode(host.Workspace.Current);
         bool shouldShow = _activeTabId == "Files"
-                       && host.Workspace.Current.Mode == WorkspaceMode.Folder;
+                       && mode == WorkspaceMode.Folder;
 
         if (shouldShow)
         {
@@ -62,6 +63,11 @@ public sealed class Entrypoint : IModule
 
         host.ShellRegions.ClearContent(ShellRegion.Sidebar, "FileExplorer");
     }
+
+    private static WorkspaceMode GetNavigationMode(Workspace workspace) =>
+        workspace.Mode == WorkspaceMode.Debugging
+            ? workspace.ModeBeforeDebugging ?? workspace.Mode
+            : workspace.Mode;
 
     private static async Task OpenFolderAsync(IModuleHost host, string path, CancellationToken ct)
     {
