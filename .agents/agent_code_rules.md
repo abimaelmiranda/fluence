@@ -30,10 +30,10 @@ Each module is a self-contained unit that:
 - does not reach into other modules directly
 
 ### 2.2 The IIdeModule Contract
-Every module must implement `IIdeModule`:
+Every module must implement `IIdeModule` / `IModule` and participate in async shutdown:
 
 ```csharp
-public interface IModule
+public interface IModule : IAsyncDisposable
 {
     string Name { get; }
     void Register(IServiceCollection services);
@@ -47,8 +47,23 @@ public interface IModule
 - `RegisterViews` — registers ViewModel → View type mappings in `IViewRegistry`.
 - `GetPanelDescriptors` — declares panels this module contributes to the shell (slot, visibility, order).
 - `Initialize` — post-DI startup logic (sets `ModuleState.Active` when ready).
+- `DisposeAsync` — stops module-owned runtime work and releases module-owned resources.
 
 No module should bypass this contract and self-register in an ad hoc way.
+
+`DisposeAsync` must be:
+- idempotent: repeated calls are safe and cheap
+- best-effort: failures are caught at the module/shutdown boundary and must not block application exit
+- bounded: waits for owned work must use cancellation, timeouts, or both
+
+Modules must dispose every runtime resource they own or control, including:
+- `IShellEventBus` subscriptions
+- event handlers registered on shared services or ViewModels
+- timers, watchers, and `CancellationTokenSource` instances
+- module ViewModels when the module controls their lifetime
+- long-lived services and child processes owned by the module
+
+`IShellEventBus.SubscribeSync<T>` returns an `IDisposable`. New subscriptions must store that disposable and dispose it from the owner lifetime. `UnsubscribeSync` exists for compatibility with older code paths and explicit handler removal, but new code should prefer the returned subscription handle.
 
 ### 2.3 Module Registration at Startup
 Modules are registered explicitly at startup in a single place (`Bootstrapper.cs`).
@@ -144,7 +159,8 @@ src/
                           IIdeModule / IModuleHost / IPanelDescriptor / IViewRegistry / IShellEventBus
                           IWorkspaceContext / Workspace / WorkspaceMode / TabSession / OpenDocument
                           ICommandHandler<T> / IQueryHandler<T,R>
-                          ITerminalService / IProcessHost / IPtyHost  (cross-module platform contracts)
+                          ITerminalService / IProcessHost / IProcessSpawner / ITrackedProcess / IPtyHost
+                          IShutdownCoordinator  (cross-module platform/lifecycle contracts)
                           IWorkspaceDialogService / IUserNotificationService  (cross-cutting ports)
                           FluenceException  (base for all module domain exceptions)
                           Shell request events (BuildWorkspaceRequestedEvent, RunProjectRequestedEvent…)
@@ -352,10 +368,21 @@ Do not resolve services ad hoc from `IServiceProvider` except in composition roo
 All external process execution goes through:
 - `ITerminalService`
 - `IProcessHost`
+- `IProcessSpawner` / `ITrackedProcess` for long-lived runtime processes
 
 Forbidden outside Infrastructure:
 - direct `Process.Start(...)` in Application, Domain, or Desktop
 - shell command construction in ViewModels
+
+Long-lived runtime processes must use `IProcessHost` or `IProcessSpawner`; do not call `Process.Start` directly. Direct `Process.Start` in Infrastructure is allowed only for short-lived platform tooling, URL/provisioning helpers, or adapter internals with an explicit ownership boundary.
+
+Crash-recovery cleanup may kill only processes proven to be owned by Fluence. Persist PID metadata and validate the live process against that metadata before killing it. Never kill an arbitrary PID from a stale file.
+
+`Kill(entireProcessTree: true)` is allowed only for tracked/owned processes. Unix `kill(-pid, ...)` is allowed only after verifying the PID is the process-group leader.
+
+Integrated terminal / PTY shutdown must terminate the terminal process group/tree through `Porta.Pty`. Do not restore or reuse the previous custom macOS PTY implementation.
+
+`ServiceProvider.DisposeAsync` is final best-effort cleanup only. Critical shutdown belongs in `IShutdownCoordinator`, where modules and tracked processes are stopped deliberately before DI disposal.
 
 ### 8.2 CLI Wrapping
 CLI commands must be explicit and safe.
