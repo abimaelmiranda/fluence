@@ -21,6 +21,7 @@ using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Settings;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.File;
@@ -46,7 +47,8 @@ public sealed class DebugService(
     IDebugSessionManager sessions,
     IDebuggerProvisioningService provisioning,
     IDotnetSdkProvisioningService sdk,
-    ISettingsService settings)
+    ISettingsService settings,
+    ITaskScheduler scheduler)
     : IDebugService, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -242,8 +244,8 @@ public sealed class DebugService(
             dotnet,
             $"build \"{target.ProjectPath}\" -c Debug",
             Path.GetDirectoryName(target.ProjectPath),
-            line => _ = output.WriteAsync(OutputChannelIds.Debug, line + Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Debug, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => ScheduleDebugOutput(line + Environment.NewLine, isError: false),
+            line => ScheduleDebugOutput(line + Environment.NewLine, isError: true),
             cancellationToken).ConfigureAwait(false);
 
         var programPath = ResolveProgramPath(target.ProjectPath, workspaceRoot);
@@ -303,10 +305,15 @@ public sealed class DebugService(
 
     private void OnAdapterStopped(object? sender, DebugAdapterStoppedEvent e)
     {
-        _ = RefreshInspectionAsync(e, Volatile.Read(ref _sessionGeneration));
+        var sessionGeneration = Volatile.Read(ref _sessionGeneration);
+        scheduler.Schedule(
+            "debug.inspect",
+            TaskPriority.Interactive,
+            ct => RefreshInspectionAsync(e, sessionGeneration, ct),
+            correlationId: sessionGeneration);
     }
 
-    private async Task RefreshInspectionAsync(DebugAdapterStoppedEvent e, int sessionGeneration)
+    private async Task RefreshInspectionAsync(DebugAdapterStoppedEvent e, int sessionGeneration, CancellationToken cancellationToken)
     {
         try
         {
@@ -314,7 +321,7 @@ public sealed class DebugService(
             if (adapter is null || sessionGeneration != Volatile.Read(ref _sessionGeneration))
                 return;
 
-            var frames = await adapter.GetStackTraceAsync(e.ThreadId).ConfigureAwait(false);
+            var frames = await adapter.GetStackTraceAsync(e.ThreadId, cancellationToken).ConfigureAwait(false);
             if (sessionGeneration != Volatile.Read(ref _sessionGeneration))
                 return;
 
@@ -322,7 +329,7 @@ public sealed class DebugService(
             var currentFrame = SelectStoppedFrame(frames, workspaceRoot);
             var variables = currentFrame is null
                 ? Array.Empty<DebugVariable>()
-                : await adapter.GetVariablesAsync(currentFrame.Id).ConfigureAwait(false);
+                : await adapter.GetVariablesAsync(currentFrame.Id, cancellationToken).ConfigureAwait(false);
             if (sessionGeneration != Volatile.Read(ref _sessionGeneration))
                 return;
 
@@ -343,7 +350,10 @@ public sealed class DebugService(
 
             debugState.SetStopped(e.Reason, e.ThreadId, currentLine, exceptionInfo);
             debugState.SetInspectionData(frames, variables);
-            await output.WriteAsync(OutputChannelIds.Debug, FormatStoppedOutput(e, exceptionInfo)).ConfigureAwait(false);
+            await output.WriteAsync(
+                OutputChannelIds.Debug,
+                FormatStoppedOutput(e, exceptionInfo),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
             if (exceptionInfo is not null && currentLine is null)
                 ShowError(exceptionInfo.Message);
         }
@@ -365,12 +375,16 @@ public sealed class DebugService(
             var hint = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)
                 ? " On macOS this is often a PATH/dotnet issue (the .app inherits a minimal PATH) or a debugger entitlement issue (com.apple.security.cs.debugger). Check the DAP log for stderr output."
                 : " Check the DAP log for details.";
-            _ = output.WriteAsync(
-                OutputChannelIds.Debug,
-                $"[debug] netcoredbg terminated before starting the debuggee.{hint}\r\n",
-                OutputChannelEntryKind.Error);
+            scheduler.Schedule(
+                "debug.output",
+                TaskPriority.Background,
+                ct => output.WriteAsync(
+                    OutputChannelIds.Debug,
+                    $"[debug] netcoredbg terminated before starting the debuggee.{hint}\r\n",
+                    OutputChannelEntryKind.Error,
+                    ct));
         }
-        _ = StopAsync();
+        scheduler.Schedule("debug.stop", TaskPriority.Critical, StopAsync);
     }
 
     private void OnAdapterContinued(object? sender, DebugAdapterContinuedEvent e)
@@ -380,10 +394,19 @@ public sealed class DebugService(
 
     private void OnAdapterOutputReceived(object? sender, DebugAdapterOutputEvent e)
     {
-        _ = output.WriteAsync(
-            OutputChannelIds.Debug,
-            e.Text,
-            e.IsError ? OutputChannelEntryKind.Error : OutputChannelEntryKind.Information);
+        ScheduleDebugOutput(e.Text, e.IsError);
+    }
+
+    private void ScheduleDebugOutput(string text, bool isError)
+    {
+        scheduler.Schedule(
+            "debug.output",
+            isError ? TaskPriority.Interactive : TaskPriority.Background,
+            ct => output.WriteAsync(
+                OutputChannelIds.Debug,
+                text,
+                isError ? OutputChannelEntryKind.Error : OutputChannelEntryKind.Information,
+                ct));
     }
 
     private void OpenStoppedFile(string filePath)

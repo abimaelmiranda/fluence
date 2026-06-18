@@ -243,7 +243,11 @@ public sealed partial class Entrypoint : IModule, IDisposable
 
         _lastStartedRootPath = rootPath;
         ResetServerDocumentState();
-        _ = lsp.StartAsync(rootPath, CancellationToken.None);
+        _scheduler!.Schedule(
+            "lsp.start",
+            TaskPriority.Interactive,
+            ct => lsp.StartAsync(rootPath, ct),
+            correlationId: rootPath);
     }
 
     private void RegisterDocument(string filePath, string content, string languageId, int version)
