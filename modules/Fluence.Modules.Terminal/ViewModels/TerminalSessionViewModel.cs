@@ -87,11 +87,14 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
 
         var cols = columns ?? XTerminal.Cols;
         var rowCount = rows ?? XTerminal.Rows;
+        var resolvedWorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory)
+            ? GetWorkingDirectory()
+            : workingDirectory;
 
         await ResizeXTerminalAsync(cols, rowCount);
         _hasInitialVisualResize = true;
 
-        await _session.StartShellAsync(workingDirectory, cols, rowCount);
+        await _session.StartShellAsync(resolvedWorkingDirectory, cols, rowCount);
 
         if (!_disposed && _session.HasStarted)
             await ResizeXTerminalAsync(cols, rowCount);
