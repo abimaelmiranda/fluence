@@ -104,6 +104,9 @@ public partial class MainWindow : Window
         if (sender is not Border { DataContext: BottomBarTabViewModel tab })
             return;
 
+        if (DataContext is MainWindowViewModel viewModel && !viewModel.IsBottomBarExpanded)
+            viewModel.IsBottomBarExpanded = true;
+
         tab.SelectCommand.Execute(tab.Id);
         e.Handled = true;
     }

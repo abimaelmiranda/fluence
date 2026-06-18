@@ -23,6 +23,7 @@ public sealed class Entrypoint : IModule
             var registry = new SettingsRegistry();
             registry.Register(FluenceCoreSettingsJsonContext.Default.GlobalSettings);
             registry.Register(FluenceCoreSettingsJsonContext.Default.ShellSettings);
+            registry.Register(FluenceCoreSettingsJsonContext.Default.ProblemsSettings);
             return registry;
         });
 

@@ -16,9 +16,13 @@ using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Abstractions.Problems;
 using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Services.File;
+using Fluence.Core.Services.Jobs;
+using Fluence.Core.Services.Problems;
+using Fluence.Core.Abstractions.Jobs;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -73,6 +77,8 @@ internal static class Bootstrapper
         services.AddSingleton<AvaloniaUserNotificationService>();
         services.AddSingleton<IUserNotificationService>(provider => provider.GetRequiredService<AvaloniaUserNotificationService>());
         services.AddSingleton<IOutputChannelService, OutputChannelService>();
+        services.AddSingleton<IProblemService, ProblemService>();
+        services.AddSingleton<IExclusiveJobCoordinator, ExclusiveJobCoordinator>();
         services.AddSingleton<IFileClipboardService, FileClipboardService>();
         services.AddSingleton<IFileOperationDialogService, AvaloniaFileOperationDialogService>();
         services.AddSingleton<IFileService, FileService>();
@@ -95,6 +101,7 @@ internal static class Bootstrapper
         services.AddSingleton<WorkspaceSnapshotCoordinator>();
         services.AddSingleton<WelcomeViewModel>();
         services.AddSingleton<ActivityBarViewModel>();
+        services.AddSingleton<ProblemsViewModel>();
         services.AddSingleton<BottomBarViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 

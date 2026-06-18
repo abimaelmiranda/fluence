@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +21,10 @@ public abstract class DotnetCommandHandlerBase(
 {
     protected IWorkspaceContext Workspace { get; } = workspace;
 
-    protected async Task RunDotnetAsync(string subcommand, CancellationToken cancellationToken)
+    protected async Task RunDotnetAsync(
+        string subcommand,
+        CancellationToken cancellationToken,
+        Action<string, string?>? inspectLine = null)
     {
         var workingDirectory = Workspace.Current.CurrentFolderPath
                                ?? Path.GetDirectoryName(Workspace.Current.CurrentSolutionPath);
@@ -34,12 +38,24 @@ public abstract class DotnetCommandHandlerBase(
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
         var arguments = $"{subcommand} \"{targetPath}\"";
         await output.WriteAsync(OutputChannelIds.Run, $"> {Quote(dotnet)} {arguments}{System.Environment.NewLine}", cancellationToken: cancellationToken);
+        void OnOutput(string line)
+        {
+            inspectLine?.Invoke(line, workingDirectory);
+            _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine);
+        }
+
+        void OnError(string line)
+        {
+            inspectLine?.Invoke(line, workingDirectory);
+            _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine, OutputChannelEntryKind.Error);
+        }
+
         await processHost.RunAsync(
             dotnet,
             arguments,
             workingDirectory,
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine, OutputChannelEntryKind.Error),
+            OnOutput,
+            OnError,
             cancellationToken);
     }
 

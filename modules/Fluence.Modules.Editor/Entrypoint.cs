@@ -58,11 +58,27 @@ public sealed class Entrypoint : IModule
                 ct => OpenFileAsync(host, e.Path, ct),
                 correlationId: e.Path));
 
+        host.Events.SubscribeSync<OpenFileAtLocationRequestedEvent>(e =>
+            scheduler.Schedule("editor.open-location", TaskPriority.Interactive,
+                ct => OpenFileAtLocationAsync(host, e.Path, e.Line, e.Character, ct),
+                correlationId: $"{e.Path}:{e.Line}:{e.Character}"));
+
         host.Events.SubscribeSync<SaveActiveDocumentRequestedEvent>(_ =>
             scheduler.Schedule("editor.save", TaskPriority.Critical,
                 ct => SaveActiveDocumentAsync(host, ct)));
 
         host.SetModuleState(Name, ModuleState.Active);
+    }
+
+    private static async Task OpenFileAtLocationAsync(
+        IModuleHost host,
+        string path,
+        int line,
+        int character,
+        CancellationToken ct)
+    {
+        await OpenFileAsync(host, path, ct);
+        host.Events.Publish(new NavigationResolvedEvent(path, line, character));
     }
 
     private static async Task OpenFileAsync(IModuleHost host, string path, CancellationToken ct)
