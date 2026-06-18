@@ -26,9 +26,12 @@ public sealed partial class KeybindingRowViewModel(
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RecordButtonText))]
+    [NotifyPropertyChangedFor(nameof(RecordIconBrush))]
     private bool _isRecording;
 
     public string RecordButtonText => IsRecording ? "Press keys..." : "Record";
+
+    public string RecordIconBrush => IsRecording ? "#FF6B6B" : "#AAB4BF";
 
     partial void OnIsRecordingChanged(bool value) => _owner.NotifyKeybindingRecordingChanged();
 
