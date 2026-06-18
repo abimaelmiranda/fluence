@@ -6,4 +6,5 @@ public static class BottomBarTabIds
     public const string Debug = "Debug";
     public const string Terminal = "Terminal";
     public const string Run = "Run";
+    public const string Problems = "Problems";
 }

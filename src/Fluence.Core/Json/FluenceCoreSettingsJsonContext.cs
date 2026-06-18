@@ -5,6 +5,7 @@ namespace Fluence.Core.Json;
 
 [JsonSerializable(typeof(GlobalSettings))]
 [JsonSerializable(typeof(ShellSettings))]
+[JsonSerializable(typeof(ProblemsSettings))]
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     WriteIndented = true)]

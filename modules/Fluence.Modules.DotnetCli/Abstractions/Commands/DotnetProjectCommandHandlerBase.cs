@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +14,11 @@ public abstract class DotnetProjectCommandHandlerBase(
     IOutputChannelService output,
     IDotnetSdkProvisioningService sdk)
 {
-    protected async Task RunDotnetAsync(string subcommand, string projectPath, CancellationToken cancellationToken)
+    protected async Task RunDotnetAsync(
+        string subcommand,
+        string projectPath,
+        CancellationToken cancellationToken,
+        Action<string, string?>? inspectLine = null)
     {
         if (string.IsNullOrWhiteSpace(projectPath))
         {
@@ -29,12 +34,24 @@ public abstract class DotnetProjectCommandHandlerBase(
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
         var arguments = $"{subcommand} \"{projectPath}\"";
         await output.WriteAsync(OutputChannelIds.Run, $"> {Quote(dotnet)} {arguments}{System.Environment.NewLine}", cancellationToken: cancellationToken);
+        void OnOutput(string line)
+        {
+            inspectLine?.Invoke(line, workingDirectory);
+            _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine);
+        }
+
+        void OnError(string line)
+        {
+            inspectLine?.Invoke(line, workingDirectory);
+            _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine, OutputChannelEntryKind.Error);
+        }
+
         await processHost.RunAsync(
             dotnet,
             arguments,
             workingDirectory,
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine, OutputChannelEntryKind.Error),
+            OnOutput,
+            OnError,
             cancellationToken);
     }
 

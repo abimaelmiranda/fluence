@@ -29,6 +29,52 @@
         <Style Selector="Button.bottomBarClear:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
         </Style>
+        <Style Selector="Button.problemRow">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+        </Style>
+        <Style Selector="Button.problemRow:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+        </Style>
+        <Style Selector="Border.problemSeverity">
+            <Setter Property="Width" Value="3"/>
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+        <Style Selector="Border.problemSeverity.error">
+            <Setter Property="Background" Value="{DynamicResource FluenceBrushError}"/>
+        </Style>
+        <Style Selector="Border.problemSeverity.warning">
+            <Setter Property="Background" Value="{DynamicResource FluenceBrushAccent}"/>
+        </Style>
+        <Style Selector="Border.problemSeverity.information">
+            <Setter Property="Background" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+        </Style>
+        <Style Selector="Border.problemSeverity.hint">
+            <Setter Property="Background" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+            <Setter Property="Opacity" Value="0.55"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity.error">
+            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushError}"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity.warning">
+            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushAccent}"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity.information">
+            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity.hint">
+            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+            <Setter Property="Opacity" Value="0.7"/>
+        </Style>
     </Window.Styles>
 
     <Panel>
@@ -466,6 +512,93 @@
                                                VerticalAlignment="Top"
                                                HorizontalAlignment="Left"/>
                                 </ScrollViewer>
+                            </Grid>
+                        </Grid>
+
+                        <Grid IsVisible="{Binding BottomBar.IsProblemsActive}">
+                            <Grid RowDefinitions="30,*">
+                                <Border Grid.Row="0"
+                                        Background="{StaticResource FluenceBrushSurface}"
+                                        BorderBrush="{StaticResource FluenceBrushBorder}"
+                                        BorderThickness="0,0,0,1">
+                                    <TextBlock Text="Problems"
+                                               FontSize="12"
+                                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                               VerticalAlignment="Center"
+                                               Margin="10,0,0,0"/>
+                                </Border>
+                                <Grid Grid.Row="1">
+                                    <TextBlock Text="No problems"
+                                               IsVisible="{Binding BottomBar.Problems.IsEmpty}"
+                                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                               FontSize="13"
+                                               Margin="10,8"/>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  Background="{StaticResource FluenceBrushBottomBarContentBackground}">
+                                        <ItemsControl ItemsSource="{Binding BottomBar.Problems.Items}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ProblemItemViewModel">
+                                                            <Button Classes="problemRow"
+                                                            Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).BottomBar.Problems.NavigateCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <Grid ColumnDefinitions="3,82,120,72,110,*"
+                                                              MinHeight="30"
+                                                              Background="Transparent">
+                                                            <Border Grid.Column="0"
+                                                                    Classes="problemSeverity"
+                                                                    Classes.error="{Binding IsError}"
+                                                                    Classes.warning="{Binding IsWarning}"
+                                                                    Classes.information="{Binding IsInformation}"
+                                                                    Classes.hint="{Binding IsHint}"/>
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding Severity}"
+                                                                       Classes="problemSeverity"
+                                                                       Classes.error="{Binding IsError}"
+                                                                       Classes.warning="{Binding IsWarning}"
+                                                                       Classes.information="{Binding IsInformation}"
+                                                                       Classes.hint="{Binding IsHint}"
+                                                                       FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                       FontSize="12"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="10,0,8,0"/>
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding FileName}"
+                                                                       FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource FluenceBrushTextPrimary}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,0,8,0"/>
+                                                            <TextBlock Grid.Column="3"
+                                                                       Text="{Binding Location}"
+                                                                       FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource FluenceBrushTextSecondary}"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="0,0,8,0"/>
+                                                            <TextBlock Grid.Column="4"
+                                                                       Text="{Binding Source}"
+                                                                       FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource FluenceBrushTextSecondary}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,0,8,0"/>
+                                                            <TextBlock Grid.Column="5"
+                                                                       Text="{Binding Message}"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource FluenceBrushTextPrimary}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,0,10,0"/>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
                             </Grid>
                         </Grid>
                     </Grid>

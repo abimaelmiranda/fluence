@@ -20,6 +20,8 @@ public sealed record SelectBottomBarTabEvent(string TabId) : IShellEvent;
 
 public sealed record OpenFileRequestedEvent(string Path) : IShellEvent;
 
+public sealed record OpenFileAtLocationRequestedEvent(string Path, int Line, int Character) : IShellEvent;
+
 public sealed record OpenFolderRequestedEvent(string Path) : IShellEvent;
 
 public sealed record OpenSolutionRequestedEvent(string Path) : IShellEvent;

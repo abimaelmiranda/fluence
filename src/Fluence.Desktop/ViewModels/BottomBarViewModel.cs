@@ -14,11 +14,12 @@ public sealed partial class BottomBarViewModel : ViewModelBase
     [ObservableProperty]
     private string _activeTabId = BottomBarTabIds.Terminal;
 
-    public BottomBarViewModel(IOutputChannelService channels)
+    public BottomBarViewModel(IOutputChannelService channels, ProblemsViewModel problems)
     {
         Output = new OutputChannelViewModel(channels, OutputChannelIds.Output);
         Debug = new OutputChannelViewModel(channels, OutputChannelIds.Debug);
         Run = new OutputChannelViewModel(channels, OutputChannelIds.Run);
+        Problems = problems;
 
         Tabs =
         [
@@ -26,6 +27,7 @@ public sealed partial class BottomBarViewModel : ViewModelBase
             new BottomBarTabViewModel(BottomBarTabIds.Debug, "Debug", SelectTabCommand),
             new BottomBarTabViewModel(BottomBarTabIds.Terminal, "Terminal", SelectTabCommand),
             new BottomBarTabViewModel(BottomBarTabIds.Run, "Run", SelectTabCommand),
+            new BottomBarTabViewModel(BottomBarTabIds.Problems, "Problems", SelectTabCommand),
         ];
 
         RefreshActiveTabs();
@@ -39,6 +41,8 @@ public sealed partial class BottomBarViewModel : ViewModelBase
 
     public OutputChannelViewModel Run { get; }
 
+    public ProblemsViewModel Problems { get; }
+
     public bool IsOutputActive => ActiveTabId == BottomBarTabIds.Output;
 
     public bool IsDebugActive => ActiveTabId == BottomBarTabIds.Debug;
@@ -46,6 +50,8 @@ public sealed partial class BottomBarViewModel : ViewModelBase
     public bool IsTerminalActive => ActiveTabId == BottomBarTabIds.Terminal;
 
     public bool IsRunActive => ActiveTabId == BottomBarTabIds.Run;
+
+    public bool IsProblemsActive => ActiveTabId == BottomBarTabIds.Problems;
 
     [RelayCommand]
     public void SelectTab(string? tabId)
@@ -63,6 +69,7 @@ public sealed partial class BottomBarViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsDebugActive));
         OnPropertyChanged(nameof(IsTerminalActive));
         OnPropertyChanged(nameof(IsRunActive));
+        OnPropertyChanged(nameof(IsProblemsActive));
     }
 
     private void RefreshActiveTabs()

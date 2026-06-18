@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Problems;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.LanguageServer;
+using Fluence.Core.Models.Problems;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.LanguageServer.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,6 +82,7 @@ public sealed partial class Entrypoint : IModule, IDisposable
         var lsp = host.Services.GetRequiredService<ILanguageServerService>();
         var provisioning = host.Services.GetRequiredService<ILspProvisioningService>();
         var nav = host.Services.GetRequiredService<INavigationService>();
+        var problems = host.Services.GetRequiredService<IProblemService>();
         _languageServer = lsp;
         _semanticTokensService = host.Services.GetRequiredService<SemanticTokensService>();
         _eventBus = host.Events;
@@ -129,6 +134,31 @@ public sealed partial class Entrypoint : IModule, IDisposable
         // Diagnostics signal OmniSharp finished analyzing — safe moment to fetch semantic tokens
         host.Events.SubscribeSync<DiagnosticsUpdatedEvent>(e =>
         {
+            var diagnostics = e.Diagnostics;
+            _scheduler.ScheduleLatest(
+                "lsp.problems",
+                TaskPriority.Background,
+                TimeSpan.Zero,
+                ct =>
+                {
+                    if (ct.IsCancellationRequested)
+                        return Task.CompletedTask;
+
+                    problems.ReplaceFile(
+                        "LSP",
+                        e.FilePath,
+                        diagnostics.Select(diagnostic => new ProblemItem(
+                            FilePath: e.FilePath,
+                            Line: diagnostic.StartLine,
+                            Character: diagnostic.StartCharacter,
+                            Severity: ToProblemSeverity(diagnostic.Severity),
+                            Source: "LSP",
+                            Code: diagnostic.Code,
+                            Message: diagnostic.Message)).ToArray());
+
+                    return Task.CompletedTask;
+                },
+                correlationId: e.FilePath);
             if (!lsp.IsRunning) return;
             QueueSemanticTokens(e.FilePath);
         });
@@ -170,6 +200,15 @@ public sealed partial class Entrypoint : IModule, IDisposable
 
         host.SetModuleState(Name, ModuleState.Active);
     }
+
+    private static ProblemSeverity ToProblemSeverity(LspDiagnosticSeverity severity) => severity switch
+    {
+        LspDiagnosticSeverity.Error => ProblemSeverity.Error,
+        LspDiagnosticSeverity.Warning => ProblemSeverity.Warning,
+        LspDiagnosticSeverity.Information => ProblemSeverity.Information,
+        LspDiagnosticSeverity.Hint => ProblemSeverity.Hint,
+        _ => ProblemSeverity.Information,
+    };
 
     private void HandleDocumentContentChanged(
         ILanguageServerService lsp,
