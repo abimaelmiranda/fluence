@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Debugging;
@@ -6,14 +7,23 @@ using Fluence.Core.Abstractions.Storage;
 
 namespace Fluence.Infrastructure.Protocols.Dap;
 
-public sealed class DapDebugAdapterClientFactory(NetcoredbgToolService tools, IFluenceStorageService storage) : IDebugAdapterClientFactory
+public sealed class DapDebugAdapterClientFactory(IDebuggerProvisioningService provisioning, IFluenceStorageService storage) : IDebugAdapterClientFactory
 {
-    public async Task<IDebugAdapterClient> CreateAsync(
+    public Task<IDebugAdapterClient> CreateAsync(
         string workspaceRoot,
         CancellationToken cancellationToken = default)
     {
-        var executable = await tools.ResolveAsync(workspaceRoot, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!provisioning.IsProvisioned())
+        {
+            throw new FileNotFoundException(
+                "No global .NET debugger was found. Use the debugger provisioning flow to install it before debugging.",
+                provisioning.GetExecutablePath());
+        }
+
+        var executable = provisioning.GetExecutablePath();
         var logPath = storage.GetProjectPath(workspaceRoot, $"logs/dap-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.log");
-        return new DapClient(executable, logPath);
+        return Task.FromResult<IDebugAdapterClient>(new DapClient(executable, logPath));
     }
 }

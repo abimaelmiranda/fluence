@@ -48,40 +48,38 @@ public sealed partial class DebuggerSetupViewModel : ViewModelBase
         _eventBus = eventBus;
     }
 
-    public async Task StartProvisioningAsync()
+    public async Task StartProvisioningAsync(CancellationToken cancellationToken = default)
     {
-        _cts = new CancellationTokenSource();
-        IsRunning = true;
-        ErrorMessage = null;
-        Output = string.Empty;
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            IsRunning = true;
+            ErrorMessage = null;
+            Output = string.Empty;
+        });
 
         try
         {
             await _provisioning.ProvisionAsync(AppendOutput, _cts.Token).ConfigureAwait(false);
 
             AppendOutput("[Fluence] Setup complete. Starting debug session...");
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                _eventBus.Publish(new DebuggerProvisioningFinishedEvent());
-                _workspace.CloseDocument(ToolTabId);
-                _eventBus.Publish(new DebugProjectRequestedEvent());
-            });
+            await PublishCompletedAsync(startDebugSession: true).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
             AppendOutput("[Fluence] Setup cancelled.");
-            ErrorMessage = "Setup was cancelled.";
-            _eventBus.Publish(new DebuggerProvisioningFinishedEvent());
+            await SetErrorAsync("Setup was cancelled.").ConfigureAwait(false);
+            await PublishCompletedAsync(startDebugSession: false).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             AppendOutput($"[Fluence] Setup failed: {ex.Message}");
-            ErrorMessage = ex.Message;
-            _eventBus.Publish(new DebuggerProvisioningFinishedEvent());
+            await SetErrorAsync(ex.Message).ConfigureAwait(false);
+            await PublishCompletedAsync(startDebugSession: false).ConfigureAwait(false);
         }
         finally
         {
-            IsRunning = false;
+            await Dispatcher.UIThread.InvokeAsync(() => IsRunning = false);
             _cts?.Dispose();
             _cts = null;
         }
@@ -96,5 +94,24 @@ public sealed partial class DebuggerSetupViewModel : ViewModelBase
     private void AppendOutput(string line)
     {
         Dispatcher.UIThread.Post(() => Output += line + "\n");
+    }
+
+    private async Task SetErrorAsync(string message)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = message);
+    }
+
+    private async Task PublishCompletedAsync(bool startDebugSession)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            _eventBus.Publish(new DebuggerProvisioningFinishedEvent());
+
+            if (!startDebugSession)
+                return;
+
+            _workspace.CloseDocument(ToolTabId);
+            _eventBus.Publish(new DebugProjectRequestedEvent());
+        });
     }
 }
