@@ -27,6 +27,7 @@ using Fluence.Core.ViewModels;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
 
 namespace Fluence.Desktop.ViewModels;
@@ -59,7 +60,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _semanticTokensStatusText = string.Empty;
 
     [ObservableProperty]
-    private bool _isTerminalExpanded;
+    private bool _isBottomBarExpanded;
 
     private bool _isProvisioning;
     private bool _isSidebarExpanded = true;
@@ -77,6 +78,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         IShellEventBus eventBus,
         IShellRegionHost regions,
         ActivityBarViewModel activityBar,
+        BottomBarViewModel bottomBar,
         ISettingsService settings,
         ICommandRegistry commands,
         IKeybindingService keybindings,
@@ -91,6 +93,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _keybindings = keybindings;
         _settingsTool = settingsTool;
         ActivityBar = activityBar;
+        BottomBar = bottomBar;
         Welcome = welcome;
         _workspaceMode = workspace.Current.Mode;
         ApplyShellSettings(_settings.Get<ShellSettings>());
@@ -100,6 +103,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _regions.Changed += OnShellRegionsChanged;
         _regions.RegionExpanded += OnShellRegionExpanded;
         _eventBus.SubscribeSync<ExpandPanelEvent>(OnExpandPanelRequested);
+        _eventBus.SubscribeSync<SelectBottomBarTabEvent>(OnSelectBottomBarTabRequested);
         _eventBus.SubscribeSync<DebuggerProvisioningRequiredEvent>(_ => SetProvisioning(true));
         _eventBus.SubscribeSync<DebuggerProvisioningFinishedEvent>(_ => SetProvisioning(false));
         _eventBus.SubscribeSync<SemanticTokensRefreshStartedEvent>(OnSemanticTokensRefreshStarted);
@@ -108,6 +112,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     public ActivityBarViewModel ActivityBar { get; }
+
+    public BottomBarViewModel BottomBar { get; }
 
     public WelcomeViewModel Welcome { get; }
 
@@ -122,6 +128,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string SidebarTitle => _regions.SidebarContent?.Title ?? SidebarPlaceholder;
 
     public string BottomBarTitle => _regions.BottomBarContent?.Title ?? "Terminal";
+
+    public bool IsTerminalExpanded
+    {
+        get => IsBottomBarExpanded;
+        set => IsBottomBarExpanded = value;
+    }
 
     public bool IsWelcomeVisible => WorkspaceMode == WorkspaceMode.Empty && !HasActiveToolDocument;
 
@@ -236,13 +248,20 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private void OnExpandPanelRequested(ExpandPanelEvent e)
     {
         if (e.PanelId == "Terminal")
-            IsTerminalExpanded = true;
+            SelectBottomBarTab(BottomBarTabIds.Terminal);
+        else if (e.PanelId is BottomBarTabIds.Output or BottomBarTabIds.Debug or BottomBarTabIds.Run)
+            SelectBottomBarTab(e.PanelId);
+    }
+
+    private void OnSelectBottomBarTabRequested(SelectBottomBarTabEvent e)
+    {
+        SelectBottomBarTab(e.TabId);
     }
 
     private void OnShellRegionExpanded(object? sender, ShellRegionExpandedEventArgs e)
     {
         if (e.Region == ShellRegion.BottomBar)
-            IsTerminalExpanded = true;
+            IsBottomBarExpanded = true;
     }
 
     private void OnShellRegionsChanged(object? sender, EventArgs e)
@@ -284,9 +303,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void ToggleBottomBar()
+    {
+        IsBottomBarExpanded = !IsBottomBarExpanded;
+    }
+
+    [RelayCommand]
     private void ToggleTerminal()
     {
-        IsTerminalExpanded = !IsTerminalExpanded;
+        SelectBottomBarTab(BottomBarTabIds.Terminal);
+        IsBottomBarExpanded = !IsBottomBarExpanded;
+    }
+
+    private void SelectBottomBarTab(string tabId)
+    {
+        BottomBar.SelectTab(tabId);
+        IsBottomBarExpanded = true;
     }
 
     public void SetTerminalHeight(double height, double maximumHeight)
@@ -334,7 +366,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             $"{primary}+J",
             ct =>
             {
-                ToggleTerminal();
+                ToggleBottomBar();
                 return Task.CompletedTask;
             }));
         _commands.Register(new IdeCommandDefinition(
@@ -570,7 +602,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!HasWorkspace())
             return;
 
-        IsTerminalExpanded = true;
+        SelectBottomBarTab(BottomBarTabIds.Run);
         _eventBus.Publish(new BuildWorkspaceRequestedEvent());
         await Task.CompletedTask;
     }
@@ -581,7 +613,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!CanRunOrDebug())
             return;
 
-        IsTerminalExpanded = true;
+        SelectBottomBarTab(BottomBarTabIds.Run);
         _eventBus.Publish(new RunProjectRequestedEvent());
         await Task.CompletedTask;
     }
@@ -592,7 +624,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!CanRunOrDebug())
             return;
 
-        IsTerminalExpanded = true;
+        SelectBottomBarTab(BottomBarTabIds.Debug);
         _eventBus.Publish(new DebugProjectRequestedEvent());
         await Task.CompletedTask;
     }
@@ -613,7 +645,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!HasWorkspace())
             return;
 
-        IsTerminalExpanded = true;
+        SelectBottomBarTab(BottomBarTabIds.Run);
         _eventBus.Publish(new TestWorkspaceRequestedEvent());
         await Task.CompletedTask;
     }
@@ -624,7 +656,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!HasWorkspace())
             return;
 
-        IsTerminalExpanded = true;
+        SelectBottomBarTab(BottomBarTabIds.Run);
         _eventBus.Publish(new RestoreWorkspaceRequestedEvent());
         await Task.CompletedTask;
     }
@@ -635,7 +667,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!HasWorkspace())
             return;
 
-        IsTerminalExpanded = true;
+        SelectBottomBarTab(BottomBarTabIds.Run);
         _eventBus.Publish(new CleanWorkspaceRequestedEvent());
         await Task.CompletedTask;
     }

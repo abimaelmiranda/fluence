@@ -15,6 +15,7 @@ using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Services.File;
@@ -71,6 +72,7 @@ internal static class Bootstrapper
         services.AddSingleton<ILaunchSetupDialogService, AvaloniaLaunchSetupDialogService>();
         services.AddSingleton<AvaloniaUserNotificationService>();
         services.AddSingleton<IUserNotificationService>(provider => provider.GetRequiredService<AvaloniaUserNotificationService>());
+        services.AddSingleton<IOutputChannelService, OutputChannelService>();
         services.AddSingleton<IFileClipboardService, FileClipboardService>();
         services.AddSingleton<IFileOperationDialogService, AvaloniaFileOperationDialogService>();
         services.AddSingleton<IFileService, FileService>();
@@ -93,6 +95,7 @@ internal static class Bootstrapper
         services.AddSingleton<WorkspaceSnapshotCoordinator>();
         services.AddSingleton<WelcomeViewModel>();
         services.AddSingleton<ActivityBarViewModel>();
+        services.AddSingleton<BottomBarViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 
         var modules = new IModule[]
