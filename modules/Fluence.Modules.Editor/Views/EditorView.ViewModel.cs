@@ -16,13 +16,15 @@ public partial class EditorView
 {
     private void OnSemanticTokensUpdated(SemanticTokensUpdatedEvent e)
     {
-        var activePath = _viewModel?.ActiveDocumentPath;
-        if (!string.Equals(activePath, e.FilePath, StringComparison.OrdinalIgnoreCase))
+        var activeVersion = _viewModel?.ActiveDocumentVersion ?? 0;
+        if (!IsActiveSemanticTokenEvent(e, activeVersion))
             return;
 
         // Always store latest tokens so the pending redraw uses up-to-date data.
         // If a redraw is already queued, skip posting another one — it will pick up _pendingSemanticTokens.
         _pendingSemanticTokens = e.Tokens;
+        _pendingSemanticTokensPath = e.FilePath;
+        _pendingSemanticTokensVersion = e.Version;
         if (_semanticRedrawPending) return;
         _semanticRedrawPending = true;
 
@@ -30,12 +32,35 @@ public partial class EditorView
         {
             _semanticRedrawPending = false;
             var tokens = _pendingSemanticTokens;
-            if (tokens is not null)
+            var path = _pendingSemanticTokensPath;
+            var version = _pendingSemanticTokensVersion;
+            if (tokens is not null && IsActiveSemanticTokenState(path, version))
             {
                 _semanticColorizer.Update(tokens);
+                _pendingSemanticTokens = null;
+                _pendingSemanticTokensPath = null;
+                _pendingSemanticTokensVersion = 0;
                 Editor.TextArea.TextView.Redraw();
             }
         }, DispatcherPriority.Background);
+    }
+
+    private bool IsActiveSemanticTokenEvent(SemanticTokensUpdatedEvent e, int version)
+    {
+        var viewModel = _viewModel;
+        return viewModel is not null &&
+               version == e.Version &&
+               viewModel.ActiveDocumentVersion == e.Version &&
+               string.Equals(viewModel.ActiveDocumentPath, e.FilePath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsActiveSemanticTokenState(string? path, int version)
+    {
+        var viewModel = _viewModel;
+        return viewModel is not null &&
+               version > 0 &&
+               viewModel.ActiveDocumentVersion == version &&
+               string.Equals(viewModel.ActiveDocumentPath, path, StringComparison.OrdinalIgnoreCase);
     }
 
     private void OnNavigationResolved(NavigationResolvedEvent e) => NavigateToLocation(e, retries: 0);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,10 +55,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private readonly DispatcherTimer _formatFeedbackTimer;
     private bool _isRefreshingFromWorkspace;
     private string? _pendingAutoSavePath;
-    private string? _lastOpenedDocumentPath;
     private string? _lastLiveSyncedPath;
     private string? _lastLiveSyncedText;
     private int _documentVersion;
+    private readonly Dictionary<string, int> _documentVersions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _openTextDocumentPaths = new(StringComparer.OrdinalIgnoreCase);
 
     [ObservableProperty]
     private string _activeText = string.Empty;
@@ -129,6 +131,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public string? ActiveDocumentPath => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.TextDocument
         ? _workspace.Current.TabSession.ActiveDocument.Path
         : null;
+
+    public int ActiveDocumentVersion =>
+        ActiveDocumentPath is { } path && _documentVersions.TryGetValue(path, out var version)
+            ? version
+            : 0;
 
     public IReadOnlyList<DebugBreakpoint> ActiveDocumentBreakpoints =>
         string.IsNullOrWhiteSpace(ActiveDocumentPath)
@@ -290,10 +297,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
         _lastLiveSyncedPath = path;
         _lastLiveSyncedText = content;
+        var version = NextDocumentVersion(path);
         _events.Publish(new DocumentLiveChangedEvent(
             path,
             content,
-            Interlocked.Increment(ref _documentVersion),
+            version,
             flushImmediately));
     }
 
@@ -334,7 +342,8 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            _events.Publish(new DocumentChangedEvent(path, value, Interlocked.Increment(ref _documentVersion)));
+            var version = NextDocumentVersion(path);
+            _events.Publish(new DocumentChangedEvent(path, value, version));
         }
     }
 
@@ -376,8 +385,6 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     private void RefreshFromWorkspace()
     {
-        var previousPath = _lastOpenedDocumentPath;
-
         _isRefreshingFromWorkspace = true;
         var activeDoc = _workspace.Current.TabSession.ActiveDocument;
         ActiveText = activeDoc?.Kind == OpenDocumentKind.TextDocument
@@ -390,23 +397,64 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(ActiveExecutionLine));
         OnPropertyChanged(nameof(ActiveExceptionStop));
 
-        var newPath = ActiveDocumentPath;
+        SyncOpenTextDocuments();
+        OnPropertyChanged(nameof(ActiveDocumentVersion));
+    }
 
-        // Notify LSP when switching away from a document
-        if (previousPath is not null && !string.Equals(previousPath, newPath, StringComparison.OrdinalIgnoreCase))
-            _events.Publish(new DocumentClosedEvent(previousPath));
+    private void SyncOpenTextDocuments()
+    {
+        var openDocuments = _workspace.Current.TabSession.Documents
+            .Where(document => document.Kind == OpenDocumentKind.TextDocument && IsTextDocument(document.Path))
+            .ToArray();
+        var currentPaths = openDocuments
+            .Select(document => document.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // Notify LSP when a new text document is opened
-        if (newPath is not null && IsTextDocument(newPath) &&
-            !string.Equals(newPath, previousPath, StringComparison.OrdinalIgnoreCase))
+        foreach (var path in _openTextDocumentPaths.Where(path => !currentPaths.Contains(path)).ToArray())
         {
-            _lastOpenedDocumentPath = newPath;
-            _events.Publish(new DocumentOpenedEvent(newPath, ActiveText, "csharp"));
+            _openTextDocumentPaths.Remove(path);
+            _documentVersions.Remove(path);
+            CleanupDocumentWork(path);
+            _events.Publish(new DocumentClosedEvent(path));
         }
-        else if (newPath is null)
+
+        foreach (var document in openDocuments)
         {
-            _lastOpenedDocumentPath = null;
+            if (_openTextDocumentPaths.Contains(document.Path))
+                continue;
+
+            _openTextDocumentPaths.Add(document.Path);
+            var version = EnsureDocumentVersion(document.Path);
+            _events.Publish(new DocumentOpenedEvent(document.Path, document.Content, "csharp", version));
         }
+    }
+
+    private int EnsureDocumentVersion(string path)
+    {
+        if (_documentVersions.TryGetValue(path, out var version))
+            return version;
+
+        version = Math.Max(1, Interlocked.Increment(ref _documentVersion));
+        _documentVersions[path] = version;
+        return version;
+    }
+
+    private int NextDocumentVersion(string path)
+    {
+        var version = Math.Max(1, Interlocked.Increment(ref _documentVersion));
+        _documentVersions[path] = version;
+        OnPropertyChanged(nameof(ActiveDocumentVersion));
+        return version;
+    }
+
+    private void CleanupDocumentWork(string path)
+    {
+        _scheduler.CancelAndForget($"editor.hover.{path}");
+        _scheduler.CancelAndForget($"editor.completion.{path}");
+        _scheduler.CancelAndForget($"editor.code-actions.{path}");
+        _scheduler.CancelAndForget($"editor.quick-fix.{path}");
+        _scheduler.CancelAndForget($"editor.signature.{path}");
+        _scheduler.CancelAndForget($"editor.view-state.save.{path}");
     }
 
     private static bool IsTextDocument(string path) =>
@@ -490,7 +538,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         }
 
         var content = ActiveText;
-        var syncVersion = Interlocked.Increment(ref _documentVersion);
+        var syncVersion = NextDocumentVersion(activeDocument.Path);
         _lastLiveSyncedPath = activeDocument.Path;
         _lastLiveSyncedText = content;
         return new ManualFormatRequest(activeDocument.Path, content, syncVersion);

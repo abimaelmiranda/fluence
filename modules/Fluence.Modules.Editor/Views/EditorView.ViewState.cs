@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using AvaloniaEdit.Document;
+using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Modules.Editor.Services;
 using Fluence.Modules.Editor.ViewModels;
@@ -36,12 +37,76 @@ public partial class EditorView
         _textSyncTimer = null;
         _viewStateSaveTimer?.Dispose();
         _viewStateSaveTimer = null;
+        _completionTimer?.Dispose();
+        _completionTimer = null;
+        _completionRefreshTimer?.Stop();
+        _hoverTimer?.Dispose();
+        _hoverTimer = null;
+        _popupCloseTimer?.Dispose();
+        _popupCloseTimer = null;
+
+        _eventBus?.UnsubscribeSync<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
+        _eventBus?.UnsubscribeSync<NavigationResolvedEvent>(OnNavigationResolved);
+        _eventBus?.UnsubscribeSync<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
+        _eventBus?.UnsubscribeSync<WorkspaceEditRequestedEvent>(OnWorkspaceEditRequested);
+        _eventBus = null;
+
+        if (_viewModel is not null)
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+
+        _editorSettingsSubscription?.Dispose();
+        _editorSettingsSubscription = null;
+        _themeSubscription?.Dispose();
+        _themeSubscription = null;
+        _completionService = null;
+        _hoverService = null;
+        _signatureHelpService = null;
+        _codeActionService = null;
+        _viewModel = null;
 
         if (_editorScrollViewer is not null)
         {
             _editorScrollViewer.ScrollChanged -= OnEditorScrollChanged;
             _editorScrollViewer = null;
         }
+
+        ClearEditorTransientState();
+    }
+
+    private void ClearEditorTransientState()
+    {
+        _pendingCompletionRequest = null;
+        _completionRequestInFlight = false;
+        _completionRefreshPending = false;
+        _activeCompletions = null;
+        _completionTriggerOffset = -1;
+        _pendingHoverRequest = null;
+        _pendingLspHoverRequest = null;
+        _hoverRequestInFlight = false;
+        _lspHoverRequestInFlight = false;
+        _pendingSemanticTokens = null;
+        _pendingSemanticTokensPath = null;
+        _pendingSemanticTokensVersion = 0;
+        _semanticRedrawPending = false;
+        _pendingCodeActionDiag = null;
+        _pendingViewStateSavePath = null;
+        _pendingViewStateSaveTransitionVersion = 0;
+        _savedViewStateDuringTextSwitchPath = null;
+        _dismissedExceptionPopupKey = null;
+        _semanticColorizer.Clear();
+        _diagnosticRenderer.Clear();
+        Editor.TextArea.Caret.PositionChanged -= OnCaretPositionChangedForCompletion;
+        Editor.TextArea.Caret.PositionChanged -= OnCaretPositionChangedForSignatureHelp;
+        CompletionPopup.IsOpen = false;
+        HoverPopup.IsOpen = false;
+        LspHoverPopup.IsOpen = false;
+        DiagnosticTooltipPopup.IsOpen = false;
+        CodeActionPopup.IsOpen = false;
+        SignatureHelpPopup.IsOpen = false;
+        CompletionListBox.ItemsSource = null;
+        HoverTree.ItemsSource = null;
+        CodeActionsListBox.ItemsSource = null;
+        Editor.TextArea.TextView.Redraw();
     }
 
     private void EnsureEditorScrollViewerSubscription()
@@ -108,6 +173,11 @@ public partial class EditorView
 
         _savedViewStateDuringTextSwitchPath = null;
         _lastKnownDocumentPath = newPath;
+        _pendingSemanticTokens = null;
+        _pendingSemanticTokensPath = null;
+        _pendingSemanticTokensVersion = 0;
+        _semanticColorizer.Clear();
+        _diagnosticRenderer.Clear();
         InvalidateHoverRequests();
         InvalidateLspHoverRequests();
         InvalidateCodeActionRequests(closePopup: true);

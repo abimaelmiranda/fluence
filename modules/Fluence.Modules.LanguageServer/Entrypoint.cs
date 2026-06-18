@@ -92,7 +92,7 @@ public sealed partial class Entrypoint : IModule, IDisposable
 
         host.Events.SubscribeSync<DocumentOpenedEvent>(e =>
         {
-            RegisterDocument(e.FilePath, e.Content, e.LanguageId, version: 1);
+            RegisterDocument(e.FilePath, e.Content, e.LanguageId, e.Version);
             if (!lsp.IsRunning) return;
             _scheduler.Schedule(
                 $"lsp.ensure-open.{e.FilePath}",
@@ -318,6 +318,11 @@ public sealed partial class Entrypoint : IModule, IDisposable
     {
         lock (_documentGate)
             _documents.Remove(filePath);
+
+        _scheduler?.CancelAndForget($"lsp.ensure-open.{filePath}");
+        _scheduler?.CancelAndForget($"lsp.didchange.{filePath}");
+        _scheduler?.CancelAndForget($"lsp.semantic.{filePath}");
+        _scheduler?.CancelAndForget($"lsp.flush.{filePath}");
 
         _eventBus?.Publish(new SemanticTokensRefreshFinishedEvent(filePath));
     }

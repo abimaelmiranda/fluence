@@ -133,6 +133,8 @@ public partial class EditorView : UserControl
     // ── Semantic redraw throttle ────────────────────────────────────────────
     private bool              _semanticRedrawPending;
     private SemanticToken[]?  _pendingSemanticTokens;
+    private string?           _pendingSemanticTokensPath;
+    private int               _pendingSemanticTokensVersion;
 
     // ── Document path tracking ──────────────────────────────────────────────
     private string? _lastKnownDocumentPath;
@@ -316,6 +318,14 @@ public partial class EditorView : UserControl
         ISignatureHelpService? signatureHelpService = null,
         ICodeActionService? codeActionService = null)
     {
+        if (_eventBus is not null)
+        {
+            _eventBus.UnsubscribeSync<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
+            _eventBus.UnsubscribeSync<NavigationResolvedEvent>(OnNavigationResolved);
+            _eventBus.UnsubscribeSync<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
+            _eventBus.UnsubscribeSync<WorkspaceEditRequestedEvent>(OnWorkspaceEditRequested);
+        }
+
         _completionService    = completionService;
         _eventBus             = eventBus;
         _hoverService         = hoverService;
