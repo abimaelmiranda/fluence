@@ -68,6 +68,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
                 return cached;
 
             var resolved = Resolve(settingsType);
+            EnsureSectionDefaults(settingsType, resolved);
             _cache[settingsType] = resolved;
             return resolved;
         }
@@ -146,8 +147,16 @@ public sealed class SettingsService : ISettingsService, IDisposable
         {
             LoadDocument();
             _cache.Clear();
+            var changed = false;
             foreach (var section in _registry.Sections)
-                Publish(section.SettingsType, Resolve(section.SettingsType));
+            {
+                var resolved = Resolve(section.SettingsType);
+                changed |= EnsureSectionDefaults(section.SettingsType, resolved, saveImmediately: false);
+                Publish(section.SettingsType, resolved);
+            }
+
+            if (changed)
+                SaveDocument();
         }
     }
 
@@ -157,9 +166,14 @@ public sealed class SettingsService : ISettingsService, IDisposable
         {
             _document = new JsonObject();
             _cache.Clear();
-            SaveDocument();
             foreach (var section in _registry.Sections)
-                Publish(section.SettingsType, Resolve(section.SettingsType));
+            {
+                var resolved = Resolve(section.SettingsType);
+                EnsureSectionDefaults(section.SettingsType, resolved, saveImmediately: false);
+                Publish(section.SettingsType, resolved);
+            }
+
+            SaveDocument();
         }
     }
 
@@ -248,6 +262,39 @@ public sealed class SettingsService : ISettingsService, IDisposable
         }
 
         return settings;
+    }
+
+    private bool EnsureSectionDefaults(Type settingsType, object resolved, bool saveImmediately = true)
+    {
+        var section = _registry.GetSection(settingsType);
+        var sectionObject = _document[section.SectionName] as JsonObject;
+        if (sectionObject is null)
+        {
+            _document[section.SectionName] = JsonSerializer.SerializeToNode(resolved, section.TypeInfo);
+            if (saveImmediately)
+                SaveDocument();
+
+            return true;
+        }
+
+        var changed = false;
+        foreach (var property in GetWritableProperties(settingsType))
+        {
+            var key = ToJsonName(property.Name);
+            if (sectionObject.ContainsKey(key) || sectionObject.ContainsKey(property.Name))
+                continue;
+
+            sectionObject[key] = JsonSerializer.SerializeToNode(
+                property.GetValue(resolved),
+                property.PropertyType,
+                section.TypeInfo.Options);
+            changed = true;
+        }
+
+        if (changed && saveImmediately)
+            SaveDocument();
+
+        return changed;
     }
 
     private static HashSet<string> ApplyObject(object target, Type targetType, JsonObject source, JsonSerializerOptions options)

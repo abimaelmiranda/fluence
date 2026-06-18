@@ -13,5 +13,7 @@ public sealed class EditorSettings
 
     public bool AutoPairBrackets { get; set; } = true;
 
+    public bool FormatOnSave { get; set; } = true;
+
     public int CompletionTriggerDelayMs { get; set; } = 120;
 }

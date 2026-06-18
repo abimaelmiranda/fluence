@@ -24,6 +24,7 @@ internal sealed partial class LanguageServerService
                 },
                 ["publishDiagnostics"] = new JsonObject { ["relatedInformation"] = false },
                 ["definition"] = new JsonObject { ["linkSupport"] = false },
+                ["formatting"] = new JsonObject { ["dynamicRegistration"] = false },
                 ["implementation"] = new JsonObject { ["linkSupport"] = false },
                 ["typeDefinition"] = new JsonObject { ["linkSupport"] = false },
                 ["hover"] = new JsonObject
