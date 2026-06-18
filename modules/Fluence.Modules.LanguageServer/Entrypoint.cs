@@ -347,9 +347,9 @@ public sealed partial class Entrypoint : IModule, IDisposable
     private static string? ResolveRootPath(IWorkspaceContext workspace)
     {
         var current = workspace.Current;
-        if (current.Mode == WorkspaceMode.Solution && !string.IsNullOrWhiteSpace(current.CurrentSolutionPath))
+        if (current.NavigationMode == WorkspaceMode.Solution && !string.IsNullOrWhiteSpace(current.CurrentSolutionPath))
             return Path.GetDirectoryName(current.CurrentSolutionPath);
-        if (current.Mode == WorkspaceMode.Folder && !string.IsNullOrWhiteSpace(current.CurrentFolderPath))
+        if (current.NavigationMode == WorkspaceMode.Folder && !string.IsNullOrWhiteSpace(current.CurrentFolderPath))
             return current.CurrentFolderPath;
         return null;
     }
