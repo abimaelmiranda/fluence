@@ -224,7 +224,8 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
     [RelayCommand]
     private async Task RemoveSelectedPackageAsync(CancellationToken cancellationToken)
     {
-        if (!CanModifyPackages || SelectedInstalledPackage is null)
+        var package = SelectedInstalledPackage;
+        if (!CanModifyPackages || package is null)
         {
             NotifyBlockedIfNeeded();
             return;
@@ -233,14 +234,14 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         await RunBusyAsync(async token =>
         {
             await _projectService.RemovePackageAsync(
-                SelectedInstalledPackage.ProjectPath,
-                SelectedInstalledPackage.Id,
+                package.ProjectPath,
+                package.Id,
                 token);
 
             NotifySolutionChanged();
             await LoadInstalledPackagesAsync(token);
             await LoadUpdatesAsync(token);
-            StatusMessage = $"Removed {SelectedInstalledPackage.Id}.";
+            StatusMessage = $"Removed {package.Id}.";
         }, cancellationToken);
     }
 
