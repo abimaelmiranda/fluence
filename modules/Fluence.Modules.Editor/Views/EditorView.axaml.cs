@@ -174,6 +174,7 @@ public partial class EditorView : UserControl
         Editor.TextArea.TextEntering    += OnTextEntering;
         Editor.TextArea.TextEntered     += OnTextEntered;
         Editor.AddHandler(KeyDownEvent, OnEditorPreviewKeyDown, RoutingStrategies.Tunnel, true);
+        Editor.AddHandler(KeyUpEvent, OnEditorPreviewKeyUp, RoutingStrategies.Tunnel, true);
         _textSyncTimer = new Timer(
             static state => ((EditorView)state!).OnTextSyncTimerElapsed(),
             this,

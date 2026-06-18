@@ -19,12 +19,15 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel);
+        AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Bubble);
     }
 
     private async void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        if (viewModel.IsRecordingKeybinding)
             return;
 
         var gesture = KeyGestureFormatter.FromEvent(e);

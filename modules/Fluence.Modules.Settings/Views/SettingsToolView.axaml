@@ -165,8 +165,7 @@
                                     <TextBox Grid.Column="2"
                                              Classes="ideCompact"
                                              Width="160"
-                                             Text="{Binding Key, Mode=TwoWay}"
-                                             KeyDown="OnKeybindingTextBoxKeyDown"/>
+                                             Text="{Binding Key, Mode=TwoWay}"/>
                                     <Grid Grid.Column="3"
                                           ColumnDefinitions="32,36,36"
                                           ColumnSpacing="6"
@@ -183,7 +182,6 @@
                                         <Button Classes="ideIcon"
                                                 Grid.Column="1"
                                                 Command="{Binding StartRecordingCommand}"
-                                                KeyDown="OnKeybindingRecordKeyDown"
                                                 ToolTip.Tip="{Binding RecordButtonText}">
                                             <materialIcons:MaterialIcon Width="20"
                                                                         Height="20"

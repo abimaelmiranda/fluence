@@ -9,6 +9,7 @@ using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Services;
+using Fluence.Core.Services.Keybindings;
 
 namespace Fluence.Modules.Settings.Services;
 
@@ -271,49 +272,6 @@ public sealed class KeybindingService : IKeybindingService, IDisposable
     private static string NormalizeScope(string? scope) =>
         string.IsNullOrWhiteSpace(scope) ? KeybindingScope.Global : scope.Trim().ToLowerInvariant();
 
-    private static string NormalizeKey(string? key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-            return string.Empty;
-
-        var parts = key.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(NormalizeKeyPart)
-            .ToArray();
-        var modifiers = parts
-            .Where(IsModifier)
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(ModifierOrder)
-            .ToArray();
-        var mainKey = parts.LastOrDefault(part => !IsModifier(part)) ?? string.Empty;
-
-        return string.Join(
-            '+',
-            modifiers.Concat(string.IsNullOrWhiteSpace(mainKey) ? Array.Empty<string>() : new[] { mainKey }));
-    }
-
-    private static string NormalizeKeyPart(string part)
-    {
-        if (part.Equals("cmd", StringComparison.OrdinalIgnoreCase) ||
-            part.Equals("command", StringComparison.OrdinalIgnoreCase))
-            return "META";
-        if (part.Equals("control", StringComparison.OrdinalIgnoreCase))
-            return "CTRL";
-        if (part.Equals("esc", StringComparison.OrdinalIgnoreCase))
-            return "ESCAPE";
-
-        return part.ToUpperInvariant();
-    }
-
-    private static bool IsModifier(string part) =>
-        part is "CTRL" or "META" or "ALT" or "SHIFT";
-
-    private static int ModifierOrder(string part) =>
-        part switch
-        {
-            "CTRL" => 0,
-            "META" => 1,
-            "ALT" => 2,
-            "SHIFT" => 3,
-            _ => 4,
-        };
+    private static string NormalizeKey(string? key) =>
+        Fluence.Core.Services.Keybindings.KeyGestureFormatter.Normalize(key);
 }

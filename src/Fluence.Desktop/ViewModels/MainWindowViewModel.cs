@@ -307,6 +307,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public Task<bool> TryHandleKeybindingAsync(string scope, string key) =>
         _keybindings.TryExecuteAsync(scope, key);
 
+    public bool IsRecordingKeybinding => _settingsTool.IsRecordingKeybinding;
+
     private void ApplyShellSettings(ShellSettings settings)
     {
         Dispatcher.UIThread.Post(() =>

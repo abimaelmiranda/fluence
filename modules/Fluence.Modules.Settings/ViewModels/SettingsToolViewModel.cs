@@ -73,6 +73,8 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     public ObservableCollection<ThemeDescriptor> ThemeOptions { get; } = [];
 
+    public bool IsRecordingKeybinding => Keybindings.Any(row => row.IsRecording);
+
     partial void OnSearchQueryChanged(string value) => RefreshFilters();
 
     public void ShowSettings()
@@ -89,6 +91,28 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     public void UpdateKeybinding(string commandId, string scope, string key) =>
         _keybindings.SetKeybinding(commandId, scope, key);
+
+    public bool TryCaptureKeybinding(string? gesture, bool isCancel)
+    {
+        var row = Keybindings.FirstOrDefault(row => row.IsRecording);
+        if (row is null)
+            return false;
+
+        row.HandleCapture(gesture, isCancel);
+        return true;
+    }
+
+    internal void StartKeybindingCapture(KeybindingRowViewModel activeRow)
+    {
+        foreach (var row in Keybindings.Where(row => !ReferenceEquals(row, activeRow)))
+            row.CancelCapture();
+
+        activeRow.IsRecording = true;
+        OnPropertyChanged(nameof(IsRecordingKeybinding));
+    }
+
+    internal void NotifyKeybindingRecordingChanged() =>
+        OnPropertyChanged(nameof(IsRecordingKeybinding));
 
     public void ResetKeybinding(string commandId)
     {
