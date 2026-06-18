@@ -222,6 +222,19 @@ public partial class EditorView
         }
     }
 
+    private void OnEditorPreviewKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (_viewModel is null || !IsMacCommandPeriodRelease(e))
+            return;
+
+        var gesture = EditorKeyGestureFormatter.FromEvent(e);
+        if (!MatchesEditorCommand(CommandIds.EditorQuickFix, gesture))
+            return;
+
+        TriggerQuickFix();
+        e.Handled = true;
+    }
+
     private bool MatchesEditorCommand(string commandId, string gesture) =>
         _viewModel?.Keybindings.GetKeybindings().Any(binding =>
             string.Equals(binding.Command, commandId, StringComparison.Ordinal)
@@ -230,6 +243,11 @@ public partial class EditorView
                 EditorKeyGestureFormatter.Normalize(binding.Key),
                 EditorKeyGestureFormatter.Normalize(gesture),
                 StringComparison.Ordinal)) == true;
+
+    private static bool IsMacCommandPeriodRelease(KeyEventArgs e) =>
+        OperatingSystem.IsMacOS() &&
+        e.KeyModifiers.HasFlag(KeyModifiers.Meta) &&
+        EditorKeyGestureFormatter.Normalize(EditorKeyGestureFormatter.FromEvent(e)) == "META+.";
 
     private bool TryHandleAcceleratedUndo(KeyEventArgs e)
     {

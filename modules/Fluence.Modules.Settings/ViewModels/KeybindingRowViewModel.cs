@@ -30,6 +30,8 @@ public sealed partial class KeybindingRowViewModel(
 
     public string RecordButtonText => IsRecording ? "Press keys..." : "Record";
 
+    partial void OnIsRecordingChanged(bool value) => _owner.NotifyKeybindingRecordingChanged();
+
     public void HandleCapture(string? gesture, bool isEscape)
     {
         if (isEscape)
@@ -57,7 +59,7 @@ public sealed partial class KeybindingRowViewModel(
     public void CancelCapture() => IsRecording = false;
 
     [RelayCommand]
-    private void StartRecording() => IsRecording = true;
+    private void StartRecording() => _owner.StartKeybindingCapture(this);
 
     [RelayCommand]
     private void Reset() => _owner.ResetKeybinding(CommandId);

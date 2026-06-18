@@ -13,7 +13,8 @@ public static class KeyGestureFormatter
 {
     public static string Format(KeyInput input)
     {
-        if (string.IsNullOrWhiteSpace(input.KeyName) || IsModifier(input.KeyName))
+        var keyName = NormalizeKeyName(input.KeyName);
+        if (string.IsNullOrWhiteSpace(keyName) || IsModifier(keyName))
             return string.Empty;
 
         var prefix = string.Empty;
@@ -26,7 +27,7 @@ public static class KeyGestureFormatter
         if (input.Shift)
             prefix += "Shift+";
 
-        return prefix + NormalizeKeyName(input.KeyName);
+        return prefix + keyName;
     }
 
     /// <summary>
@@ -56,19 +57,6 @@ public static class KeyGestureFormatter
             modifiers.Concat(string.IsNullOrWhiteSpace(mainKey) ? Array.Empty<string>() : new[] { mainKey }));
     }
 
-    private static string NormalizeKeyName(string keyName) =>
-        keyName switch
-        {
-            "Escape" => "Escape",
-            "Return" => "Enter",
-            "OemComma" => "Comma",
-            "OemPeriod" => ".",
-            "Decimal" => ".",
-            "OemPlus" => "+",
-            "OemMinus" => "-",
-            _ => keyName,
-        };
-
     private static string NormalizePart(string part)
     {
         if (part.Equals("cmd", StringComparison.OrdinalIgnoreCase) ||
@@ -81,7 +69,51 @@ public static class KeyGestureFormatter
         if (part.Equals("esc", StringComparison.OrdinalIgnoreCase))
             return "ESCAPE";
 
-        return part.ToUpperInvariant();
+        return NormalizeKeyName(part).ToUpperInvariant();
+    }
+
+    public static string NormalizeKeyName(string? keyName)
+    {
+        if (string.IsNullOrWhiteSpace(keyName) ||
+            keyName.Equals("None", StringComparison.OrdinalIgnoreCase))
+            return string.Empty;
+
+        var trimmed = keyName.Trim();
+        return trimmed.ToLowerInvariant() switch
+        {
+            "esc" => "Escape",
+            "escape" => "Escape",
+            "return" => "Enter",
+            "enter" => "Enter",
+            "oemcomma" => "Comma",
+            "numpadcomma" => "Comma",
+            "oemperiod" => ".",
+            "decimal" => ".",
+            "period" => ".",
+            "numpaddecimal" => ".",
+            "." => ".",
+            "oemplus" => "+",
+            "plus" => "+",
+            "add" => "+",
+            "numpadadd" => "+",
+            "oemminus" => "-",
+            "minus" => "-",
+            "subtract" => "-",
+            "numpadsubtract" => "-",
+            _ => trimmed,
+        };
+    }
+
+    public static string FirstMeaningfulKeyName(params string?[] candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            var normalized = NormalizeKeyName(candidate);
+            if (!string.IsNullOrWhiteSpace(normalized))
+                return normalized;
+        }
+
+        return string.Empty;
     }
 
     private static bool IsModifier(string part) =>
@@ -93,7 +125,9 @@ public static class KeyGestureFormatter
             "SHIFT" => true,
             // Bare modifier key names emitted by FromEvent for modifier keys themselves.
             "LeftCtrl" or "RightCtrl" or "LeftShift" or "RightShift"
-                or "LeftAlt" or "RightAlt" or "LWin" or "RWin" => true,
+                or "LeftAlt" or "RightAlt" or "LWin" or "RWin"
+                or "ControlLeft" or "ControlRight" or "ShiftLeft" or "ShiftRight"
+                or "AltLeft" or "AltRight" or "MetaLeft" or "MetaRight" => true,
             _ => false,
         };
 

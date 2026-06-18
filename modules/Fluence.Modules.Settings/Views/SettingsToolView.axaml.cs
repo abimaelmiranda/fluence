@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Fluence.Modules.Settings.Services;
 using Fluence.Modules.Settings.ViewModels;
 
@@ -10,27 +11,29 @@ public partial class SettingsToolView : UserControl
     public SettingsToolView()
     {
         InitializeComponent();
+        AddHandler(KeyDownEvent, OnSettingsPreviewKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(KeyUpEvent, OnSettingsPreviewKeyUp, RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
-    private void OnKeybindingTextBoxKeyDown(object? sender, KeyEventArgs e)
+    private void OnSettingsPreviewKeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is not TextBox { DataContext: KeybindingRowViewModel row } || !row.IsRecording)
+        if (DataContext is not SettingsToolViewModel viewModel || !viewModel.IsRecordingKeybinding)
             return;
 
-        CaptureKeybinding(row, e);
+        if (viewModel.TryCaptureKeybinding(
+                KeyGestureFormatter.FromEvent(e),
+                KeyGestureFormatter.IsCancelCapture(e)))
+            e.Handled = true;
     }
 
-    private void OnKeybindingRecordKeyDown(object? sender, KeyEventArgs e)
+    private void OnSettingsPreviewKeyUp(object? sender, KeyEventArgs e)
     {
-        if (sender is not Button { DataContext: KeybindingRowViewModel row } || !row.IsRecording)
+        if (DataContext is not SettingsToolViewModel viewModel || !viewModel.IsRecordingKeybinding)
             return;
 
-        CaptureKeybinding(row, e);
-    }
-
-    private static void CaptureKeybinding(KeybindingRowViewModel row, KeyEventArgs e)
-    {
-        row.HandleCapture(KeyGestureFormatter.FromEvent(e), e.Key == Key.Escape);
-        e.Handled = true;
+        if (viewModel.TryCaptureKeybinding(
+                KeyGestureFormatter.FromEvent(e),
+                KeyGestureFormatter.IsCancelCapture(e)))
+            e.Handled = true;
     }
 }
