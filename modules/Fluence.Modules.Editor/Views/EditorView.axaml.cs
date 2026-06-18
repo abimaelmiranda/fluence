@@ -34,6 +34,7 @@ public partial class EditorView : UserControl
     private static readonly TimeSpan LspHoverDebounceDelay   = TimeSpan.FromMilliseconds(350);
     private static readonly TimeSpan CompletionRefreshDelay  = TimeSpan.FromMilliseconds(30);
     private static readonly TimeSpan PopupCloseDelay         = TimeSpan.FromMilliseconds(350);
+    private static readonly TimeSpan ViewStateSaveDelay      = TimeSpan.FromMilliseconds(250);
 
     // ── Language scope lookup ───────────────────────────────────────────────
     private static readonly Dictionary<string, string> LanguageScopeByExtension = new(StringComparer.OrdinalIgnoreCase)
@@ -127,6 +128,7 @@ public partial class EditorView : UserControl
 
     // ── Text sync debounce ──────────────────────────────────────────────────
     private Timer? _textSyncTimer;
+    private Timer? _viewStateSaveTimer;
 
     // ── Semantic redraw throttle ────────────────────────────────────────────
     private bool              _semanticRedrawPending;
@@ -135,6 +137,16 @@ public partial class EditorView : UserControl
     // ── Document path tracking ──────────────────────────────────────────────
     private string? _lastKnownDocumentPath;
     private string? _dismissedExceptionPopupKey;
+    private string? _savedViewStateDuringTextSwitchPath;
+    private string? _pendingViewStateSavePath;
+    private ScrollViewer? _editorScrollViewer;
+    private bool    _isSwitchingDocumentViewState;
+    private bool    _isEditorHiddenForDocumentSwitch;
+    private double  _editorOpacityBeforeDocumentSwitch = 1;
+    private int     _viewStateRestoreVersion;
+    private int     _explicitNavigationVersion;
+    private int     _viewStateTransitionVersion;
+    private int     _pendingViewStateSaveTransitionVersion;
 
     // ── Undo acceleration ──────────────────────────────────────────────────
     private DateTime _lastUndoShortcutAt = DateTime.MinValue;
@@ -150,10 +162,12 @@ public partial class EditorView : UserControl
         InitializeComponent();
         DataContextChanged    += OnDataContextChanged;
         AttachedToVisualTree  += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
         Editor.TextChanged    += OnEditorTextChanged;
         Editor.LostFocus      += OnEditorLostFocus;
         _breakpointMargin = new BreakpointMargin(line => _viewModel?.ToggleBreakpoint(line));
         Editor.TextArea.LeftMargins.Insert(0, _breakpointMargin);
+        EnsureEditorScrollViewerSubscription();
         Editor.TextArea.AddHandler(
             InputElement.PointerPressedEvent,
             OnBreakpointAreaPressed,
@@ -177,11 +191,7 @@ public partial class EditorView : UserControl
         Editor.TextArea.TextEntered     += OnTextEntered;
         Editor.AddHandler(KeyDownEvent, OnEditorPreviewKeyDown, RoutingStrategies.Tunnel, true);
         Editor.AddHandler(KeyUpEvent, OnEditorPreviewKeyUp, RoutingStrategies.Tunnel, true);
-        _textSyncTimer = new Timer(
-            static state => ((EditorView)state!).OnTextSyncTimerElapsed(),
-            this,
-            Timeout.InfiniteTimeSpan,
-            Timeout.InfiniteTimeSpan);
+        EnsureEditorTimers();
         _completionRefreshTimer = new DispatcherTimer { Interval = CompletionRefreshDelay };
         _completionRefreshTimer.Tick += OnCompletionRefreshTimerTick;
         CompletionListBox.ItemTemplate = new FuncDataTemplate<LspCompletionData>(

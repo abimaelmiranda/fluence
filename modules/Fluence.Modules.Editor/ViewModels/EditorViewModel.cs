@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,6 +26,7 @@ using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Editor.Commands;
+using Fluence.Modules.Editor.Services;
 
 namespace Fluence.Modules.Editor.ViewModels;
 
@@ -42,6 +41,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private readonly IShellEventBus _events;
     private readonly ITaskScheduler _scheduler;
     private readonly ISettingsService _settings;
+    private readonly EditorViewStateStore _viewStateStore;
     private readonly IKeybindingService _keybindings;
     private readonly ICommandRegistry _commands;
     private readonly ICompletionService? _completionService;
@@ -78,6 +78,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         IShellEventBus events,
         ITaskScheduler scheduler,
         ISettingsService settings,
+        EditorViewStateStore viewStateStore,
         IKeybindingService keybindings,
         ICommandRegistry commands,
         ICompletionService? completionService = null,
@@ -94,6 +95,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _events = events;
         _scheduler = scheduler;
         _settings = settings;
+        _viewStateStore = viewStateStore;
         _keybindings = keybindings;
         _commands = commands;
         _completionService = completionService;
@@ -193,6 +195,12 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     public Task<DebugVariable?> EvaluateHoverAsync(string expression, CancellationToken cancellationToken) =>
         _debugService.EvaluateAsync(expression, cancellationToken);
+
+    public Task<EditorDocumentViewState?> GetViewStateAsync(string filePath, CancellationToken cancellationToken = default) =>
+        _viewStateStore.GetAsync(filePath, cancellationToken);
+
+    public Task SaveViewStateAsync(EditorDocumentViewState viewState, CancellationToken cancellationToken = default) =>
+        _viewStateStore.SaveAsync(viewState, cancellationToken);
 
     public async Task ApplyCodeActionAsync(LspCodeAction action, CancellationToken cancellationToken = default)
     {

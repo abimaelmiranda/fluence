@@ -33,6 +33,7 @@ public sealed class Entrypoint : IModule
     {
         services.AddSingleton<EditorViewModel>();
         services.AddSingleton<ITextFileService, TextFileService>();
+        services.AddSingleton<EditorViewStateStore>();
         services.AddSingleton<ICommandHandler<OpenFileWorkspaceCommand>, OpenFileWorkspaceCommandHandler>();
         services.AddSingleton<ICommandHandler<SaveActiveDocumentCommand>, SaveActiveDocumentCommandHandler>();
     }
