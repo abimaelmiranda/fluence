@@ -270,7 +270,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
         var sectionObject = _document[section.SectionName] as JsonObject;
         if (sectionObject is null)
         {
-            _document[section.SectionName] = JsonSerializer.SerializeToNode(resolved, section.TypeInfo);
+            _document[section.SectionName] = CreateSectionObject(settingsType, resolved, section.TypeInfo.Options);
             if (saveImmediately)
                 SaveDocument();
 
@@ -295,6 +295,20 @@ public sealed class SettingsService : ISettingsService, IDisposable
             SaveDocument();
 
         return changed;
+    }
+
+    private static JsonObject CreateSectionObject(Type settingsType, object resolved, JsonSerializerOptions options)
+    {
+        var sectionObject = new JsonObject();
+        foreach (var property in GetWritableProperties(settingsType))
+        {
+            sectionObject[ToJsonName(property.Name)] = SerializePropertyValue(
+                property.GetValue(resolved),
+                property.PropertyType,
+                options);
+        }
+
+        return sectionObject;
     }
 
     private static HashSet<string> ApplyObject(object target, Type targetType, JsonObject source, JsonSerializerOptions options)

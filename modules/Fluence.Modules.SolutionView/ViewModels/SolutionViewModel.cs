@@ -17,7 +17,6 @@ using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Services.File;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Abstractions.Workspace;
-using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
@@ -113,7 +112,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
     {
         var workspace = _workspace.Current;
         var solutionPath = workspace.CurrentSolutionPath;
-        if (GetNavigationMode(workspace) != WorkspaceMode.Solution || string.IsNullOrWhiteSpace(solutionPath))
+        if (workspace.NavigationMode != WorkspaceMode.Solution || string.IsNullOrWhiteSpace(solutionPath))
         {
             _loadedSolutionPath = null;
             _loadedSnapshot = null;
@@ -129,11 +128,6 @@ public sealed partial class SolutionViewModel : ViewModelBase
         _loadedSolutionPath = solutionPath;
         _ = LoadAsync(solutionPath);
     }
-
-    private static WorkspaceMode GetNavigationMode(Workspace workspace) =>
-        workspace.Mode == WorkspaceMode.Debugging
-            ? workspace.ModeBeforeDebugging ?? workspace.Mode
-            : workspace.Mode;
 
     private async Task LoadAsync(string solutionPath)
     {

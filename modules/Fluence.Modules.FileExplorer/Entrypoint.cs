@@ -7,7 +7,6 @@ using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
-using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.FileExplorer.ViewModels;
@@ -47,9 +46,8 @@ public sealed class Entrypoint : IModule
 
     private void UpdateSidebar(IModuleHost host)
     {
-        var mode = GetNavigationMode(host.Workspace.Current);
         bool shouldShow = _activeTabId == "Files"
-                       && mode == WorkspaceMode.Folder;
+                       && host.Workspace.Current.NavigationMode == WorkspaceMode.Folder;
 
         if (shouldShow)
         {
@@ -63,11 +61,6 @@ public sealed class Entrypoint : IModule
 
         host.ShellRegions.ClearContent(ShellRegion.Sidebar, "FileExplorer");
     }
-
-    private static WorkspaceMode GetNavigationMode(Workspace workspace) =>
-        workspace.Mode == WorkspaceMode.Debugging
-            ? workspace.ModeBeforeDebugging ?? workspace.Mode
-            : workspace.Mode;
 
     private static async Task OpenFolderAsync(IModuleHost host, string path, CancellationToken ct)
     {

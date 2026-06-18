@@ -139,6 +139,14 @@ internal sealed class DapClient : IDebugAdapterClient
         CancellationToken cancellationToken = default)
     {
         var filters = ResolveExceptionFilters(mode);
+        if (filters.Length == 0)
+        {
+            OutputReceived?.Invoke(this, new DebugAdapterOutputEvent(
+                "[debug] Exception breakpoints are not supported by this debug adapter.\r\n",
+                false));
+            return;
+        }
+
         await SendRequestAsync("setExceptionBreakpoints", new JsonObject
         {
             ["filters"] = new JsonArray(filters.Select(filter => JsonValue.Create(filter)).ToArray()),
@@ -573,11 +581,10 @@ internal sealed class DapClient : IDebugAdapterClient
 
         var available = _exceptionBreakpointFilters;
         if (available.Count == 0)
-            return [candidates[0]];
+            return [];
 
         return candidates
             .Where(available.Contains)
-            .DefaultIfEmpty(candidates[0])
             .Take(1)
             .ToArray();
     }

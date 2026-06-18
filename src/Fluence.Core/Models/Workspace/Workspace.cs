@@ -20,6 +20,11 @@ public sealed class Workspace
 
     public WorkspaceMode? ModeBeforeDebugging { get; private set; }
 
+    public WorkspaceMode NavigationMode =>
+        Mode == WorkspaceMode.Debugging
+            ? ModeBeforeDebugging ?? Mode
+            : Mode;
+
     public TabSession TabSession { get; private set; } = TabSession.Empty;
 
     public IReadOnlyDictionary<string, ModuleState> ModuleStates => _moduleStates;

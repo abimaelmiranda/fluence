@@ -7,7 +7,6 @@ using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
-using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.SolutionView.Abstractions;
@@ -72,9 +71,8 @@ public sealed class Entrypoint : IModule
 
     private void UpdateSidebar(IModuleHost host)
     {
-        var mode = GetNavigationMode(host.Workspace.Current);
         bool shouldShow = _activeTabId == "Files"
-                       && mode == WorkspaceMode.Solution;
+                       && host.Workspace.Current.NavigationMode == WorkspaceMode.Solution;
 
         if (shouldShow)
         {
@@ -88,11 +86,6 @@ public sealed class Entrypoint : IModule
 
         host.ShellRegions.ClearContent(ShellRegion.Sidebar, "SolutionView");
     }
-
-    private static WorkspaceMode GetNavigationMode(Workspace workspace) =>
-        workspace.Mode == WorkspaceMode.Debugging
-            ? workspace.ModeBeforeDebugging ?? workspace.Mode
-            : workspace.Mode;
 
     private static async Task OpenSolutionAsync(IModuleHost host, string path, CancellationToken ct)
     {
