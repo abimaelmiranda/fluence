@@ -17,6 +17,8 @@
     <Color x:Key="FluenceColorActivityBarForeground">#F2F5F8</Color>
     <Color x:Key="FluenceColorActivityBarInactiveForeground">#AAB4BF</Color>
     <Color x:Key="FluenceColorBottomBarBackground">#602676</Color>
+    <Color x:Key="FluenceColorBottomBarDivider">#44282828</Color>
+    <Color x:Key="FluenceColorBottomBarContentBackground">#1A1D23</Color>
 
     <SolidColorBrush x:Key="FluenceBrushShell" Color="{StaticResource FluenceColorShell}"/>
     <SolidColorBrush x:Key="FluenceBrushSurface" Color="{StaticResource FluenceColorSurface}"/>
@@ -35,4 +37,6 @@
     <SolidColorBrush x:Key="FluenceBrushActivityBarForeground" Color="{StaticResource FluenceColorActivityBarForeground}"/>
     <SolidColorBrush x:Key="FluenceBrushActivityBarInactiveForeground" Color="{StaticResource FluenceColorActivityBarInactiveForeground}"/>
     <SolidColorBrush x:Key="FluenceBrushBottomBarBackground" Color="{StaticResource FluenceColorBottomBarBackground}"/>
+    <SolidColorBrush x:Key="FluenceBrushBottomBarDivider" Color="{StaticResource FluenceColorBottomBarDivider}"/>
+    <SolidColorBrush x:Key="FluenceBrushBottomBarContentBackground" Color="{StaticResource FluenceColorBottomBarContentBackground}"/>
 </ResourceDictionary>
