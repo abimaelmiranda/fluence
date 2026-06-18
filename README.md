@@ -1,6 +1,6 @@
 # Fluence
 
-A lightweight, native C# IDE for macOS and Windows — built with Avalonia UI.
+A lightweight, native C# IDE for macOS and Windows
 
 Fluence is a focused desktop IDE designed for C# developers who want fast startup, low memory usage, and a clean workflow without the overhead of web-based editors. It is a thin shell over the proven .NET ecosystem: Roslyn, MSBuild, DAP, and the dotnet CLI — nothing reimplemented from scratch.
 
@@ -115,7 +115,7 @@ The macOS publish target automatically creates a proper `.app` bundle with `Info
 |---|---|
 | macOS (Apple Silicon) | Primary development target — fully functional |
 | macOS (Intel) | Supported |
-| Windows | Builds and runs; terminal (ConPTY) implemented, not fully validated |
+| Windows | Builds and runs; terminal (ConPTY) implemented, not fully validated | Debugger do not work. Currently working on.
 | Linux | Not tested |
 
 ---

@@ -29,6 +29,8 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
     private readonly IShellEventBus _events;
     private readonly IDotnetSdkProvisioningService _sdk;
     private readonly IUserNotificationService _notifications;
+    private bool _isInitializing;
+    private bool _syncSolutionNameWithProjectName = true;
 
     public NewProjectWizardViewModel(
         IWorkspaceDialogService dialogs,
@@ -44,6 +46,7 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         _events = events;
         _sdk = sdk;
         _notifications = notifications;
+        _isInitializing = true;
 
         Templates =
         [
@@ -68,6 +71,7 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             "source",
             "repos");
+        _isInitializing = false;
     }
 
     public ObservableCollection<DotnetTemplateOption> Templates { get; }
@@ -93,6 +97,9 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
     private string _solutionName = string.Empty;
 
     [ObservableProperty]
+    private bool _placeSolutionInProjectFolder;
+
+    [ObservableProperty]
     private bool _openAfterCreate = true;
 
     [ObservableProperty]
@@ -103,8 +110,18 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
 
     partial void OnProjectNameChanged(string value)
     {
-        if (string.IsNullOrWhiteSpace(SolutionName) || SolutionName == "MyProject")
-            SolutionName = value;
+        if (_isInitializing || !_syncSolutionNameWithProjectName)
+            return;
+
+        SolutionName = value;
+    }
+
+    partial void OnSolutionNameChanged(string value)
+    {
+        if (_isInitializing)
+            return;
+
+        _syncSolutionNameWithProjectName = string.Equals(value, ProjectName, StringComparison.Ordinal);
     }
 
     [RelayCommand]
@@ -159,14 +176,17 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
             if (CreateSolution)
             {
                 var solutionName = string.IsNullOrWhiteSpace(SolutionName) ? ProjectName : SolutionName.Trim();
-                solutionPath = Path.Combine(Location, $"{solutionName}.sln");
+                var solutionLocation = PlaceSolutionInProjectFolder ? projectRoot : Location;
                 await RunDotnetAsync(
-                    ["new", "sln", "-n", solutionName, "-o", Location],
-                    Location,
+                    ["new", "sln", "-n", solutionName, "-o", solutionLocation],
+                    solutionLocation,
                     cancellationToken);
+                solutionPath = ResolveSolutionFile(solutionLocation, solutionName);
+                if (solutionPath is null)
+                    throw new FileNotFoundException($"The solution file was not created in '{solutionLocation}'.");
                 await RunDotnetAsync(
                     ["sln", solutionPath, "add", FindProjectFile(projectRoot) ?? projectRoot],
-                    Location,
+                    solutionLocation,
                     cancellationToken);
             }
 
@@ -228,6 +248,17 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         return Directory.Exists(projectRoot)
             ? Directory.EnumerateFiles(projectRoot, "*.csproj", SearchOption.TopDirectoryOnly).FirstOrDefault()
             : null;
+    }
+
+    private static string? ResolveSolutionFile(string location, string solutionName)
+    {
+        var candidates = new[]
+        {
+            Path.Combine(location, $"{solutionName}.slnx"),
+            Path.Combine(location, $"{solutionName}.sln"),
+        };
+
+        return candidates.FirstOrDefault(File.Exists);
     }
 
     private async Task RunDotnetAsync(IReadOnlyList<string> arguments, string workingDirectory, CancellationToken cancellationToken)
