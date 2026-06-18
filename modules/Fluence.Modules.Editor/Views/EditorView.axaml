@@ -236,11 +236,18 @@
                             Height="24"
                             MinHeight="24"
                             Padding="0"
-                            Content="X"
                             Foreground="White"
-                            Background="#7F1D1D"
-                            BorderBrush="#FCA5A5"
-                            BorderThickness="1"/>
+                            Background="{StaticResource FluenceBrushError}"
+                            BorderBrush="{StaticResource FluenceBrushTextPrimary}"
+                            BorderThickness="1">
+                        <Path Width="10"
+                              Height="10"
+                              Stretch="Uniform"
+                              Stroke="White"
+                              StrokeThickness="2"
+                              StrokeLineCap="Round"
+                              Data="M0,0 L10,10 M10,0 L0,10"/>
+                    </Button>
                     <TextBlock x:Name="DebugExceptionMessageText"
                                Grid.Row="1"
                                Grid.Column="0"

@@ -52,6 +52,7 @@ public sealed class DebugService(
     private readonly SemaphoreSlim _gate = new(1, 1);
     private IDebugAdapterClient? _adapter;
     private bool _adapterStarted;
+    private int _sessionGeneration;
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -256,6 +257,7 @@ public sealed class DebugService(
         debugState.StartSession();
         var exceptionBreakMode = settings.Get<DebugSettings>().ExceptionBreakMode;
 
+        Interlocked.Increment(ref _sessionGeneration);
         _adapter = await adapterFactory.CreateAsync(workspaceRoot, cancellationToken).ConfigureAwait(false);
         _adapter.Stopped += OnAdapterStopped;
         _adapter.Terminated += OnAdapterTerminated;
@@ -282,6 +284,7 @@ public sealed class DebugService(
 
     private async Task StopCoreAsync(CancellationToken cancellationToken)
     {
+        Interlocked.Increment(ref _sessionGeneration);
         _adapterStarted = false;
         if (_adapter is not null)
         {
@@ -300,33 +303,44 @@ public sealed class DebugService(
 
     private void OnAdapterStopped(object? sender, DebugAdapterStoppedEvent e)
     {
-        _ = RefreshInspectionAsync(e);
+        _ = RefreshInspectionAsync(e, Volatile.Read(ref _sessionGeneration));
     }
 
-    private async Task RefreshInspectionAsync(DebugAdapterStoppedEvent e)
+    private async Task RefreshInspectionAsync(DebugAdapterStoppedEvent e, int sessionGeneration)
     {
         try
         {
             var adapter = _adapter;
-            if (adapter is null)
+            if (adapter is null || sessionGeneration != Volatile.Read(ref _sessionGeneration))
                 return;
 
             var frames = await adapter.GetStackTraceAsync(e.ThreadId).ConfigureAwait(false);
+            if (sessionGeneration != Volatile.Read(ref _sessionGeneration))
+                return;
+
             var workspaceRoot = launchSettings.GetWorkspaceRoot(workspace.Current);
             var currentFrame = SelectStoppedFrame(frames, workspaceRoot);
             var variables = currentFrame is null
                 ? Array.Empty<DebugVariable>()
                 : await adapter.GetVariablesAsync(currentFrame.Id).ConfigureAwait(false);
+            if (sessionGeneration != Volatile.Read(ref _sessionGeneration))
+                return;
 
             var currentLine = !string.IsNullOrWhiteSpace(currentFrame?.FilePath) && currentFrame.Line > 0
                 ? new DebugExecutionLine(currentFrame.FilePath!, currentFrame.Line)
                 : null;
+            if (sessionGeneration != Volatile.Read(ref _sessionGeneration))
+                return;
+
             if (currentLine is not null)
                 OpenStoppedFile(currentLine.FilePath);
 
             var exceptionInfo = IsExceptionStop(e)
                 ? CreateExceptionInfo(e)
                 : null;
+            if (sessionGeneration != Volatile.Read(ref _sessionGeneration))
+                return;
+
             debugState.SetStopped(e.Reason, e.ThreadId, currentLine, exceptionInfo);
             debugState.SetInspectionData(frames, variables);
             await output.WriteAsync(OutputChannelIds.Debug, FormatStoppedOutput(e, exceptionInfo)).ConfigureAwait(false);
