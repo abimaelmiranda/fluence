@@ -126,7 +126,7 @@ internal sealed class WindowsPtySession : IPtySession
     {
         if (_disposed) return;
         _disposed = true;
-        try { _process.Kill(); } catch { }
+        try { _process.Kill(entireProcessTree: true); } catch { }
         _process.Dispose();
         _inputPipe.Dispose();
         _outputPipe.Dispose();

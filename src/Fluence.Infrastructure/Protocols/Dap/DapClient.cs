@@ -10,6 +10,7 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
@@ -19,6 +20,7 @@ namespace Fluence.Infrastructure.Protocols.Dap;
 internal sealed class DapClient : IDebugAdapterClient
 {
     private readonly string _netcoredbgPath;
+    private readonly IProcessSpawner _spawner;
     private readonly string _logPath;
     private readonly CancellationTokenSource _disposeCts = new();
     private readonly ConcurrentDictionary<int, TaskCompletionSource<JsonObject?>> _pending = new();
@@ -26,16 +28,19 @@ internal sealed class DapClient : IDebugAdapterClient
     private readonly TaskCompletionSource _initializedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(3);
     private IReadOnlySet<string> _exceptionBreakpointFilters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private ITrackedProcess? _trackedProcess;
     private Process? _process;
     private StreamWriter? _stdin;
     private Stream? _stdout;
     private int _seq;
     private int _threadId;
+    private static readonly TimeSpan DisposeTimeout = TimeSpan.FromSeconds(2);
 
-    public DapClient(string netcoredbgPath, string logPath)
+    public DapClient(string netcoredbgPath, string logPath, IProcessSpawner spawner)
     {
         _netcoredbgPath = netcoredbgPath;
         _logPath = logPath;
+        _spawner = spawner;
     }
 
     public event EventHandler<DebugAdapterStoppedEvent>? Stopped;
@@ -50,9 +55,7 @@ internal sealed class DapClient : IDebugAdapterClient
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_logPath)!);
 
-        _process = new Process
-        {
-            StartInfo = new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
             {
                 FileName = _netcoredbgPath,
                 ArgumentList = { "--interpreter=vscode" },
@@ -62,9 +65,9 @@ internal sealed class DapClient : IDebugAdapterClient
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-            },
-            EnableRaisingEvents = true,
-        };
+            };
+        _trackedProcess = await _spawner.StartAsync(startInfo, "DebugAdapter", cancellationToken).ConfigureAwait(false);
+        _process = _trackedProcess.Process;
         _process.Exited += (_, _) =>
         {
             var code = _process?.ExitCode;
@@ -73,9 +76,6 @@ internal sealed class DapClient : IDebugAdapterClient
                 OutputReceived?.Invoke(this, new DebugAdapterOutputEvent($"[netcoredbg] Process exited with code {code}{Environment.NewLine}", true));
             Terminated?.Invoke(this, new DebugAdapterTerminatedEvent());
         };
-
-        if (!_process.Start())
-            throw new InvalidOperationException("Unable to start netcoredbg.");
 
         OutputReceived?.Invoke(this, new DebugAdapterOutputEvent($"[debug] netcoredbg: {_netcoredbgPath}{Environment.NewLine}", false));
 
@@ -608,7 +608,7 @@ internal sealed class DapClient : IDebugAdapterClient
         try
         {
             if (_process is { HasExited: false })
-                _process.Kill(entireProcessTree: true);
+                _trackedProcess?.KillTree();
         }
         catch
         {
@@ -620,8 +620,21 @@ internal sealed class DapClient : IDebugAdapterClient
         _disposeCts.Cancel();
         KillProcess();
         if (_process is not null)
-            await _process.WaitForExitAsync().ConfigureAwait(false);
-        _process?.Dispose();
+        {
+            try
+            {
+                await _process.WaitForExitAsync()
+                    .WaitAsync(DisposeTimeout)
+                    .ConfigureAwait(false);
+            }
+            catch
+            {
+            }
+        }
+        if (_trackedProcess is not null)
+            await _trackedProcess.DisposeAsync().ConfigureAwait(false);
+        _trackedProcess = null;
+        _process = null;
         _disposeCts.Dispose();
         _writeGate.Dispose();
     }

@@ -8,22 +8,31 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Infrastructure;
 
 namespace Fluence.Infrastructure.Protocols.Lsp;
 
 public sealed class LspClient : IAsyncDisposable
 {
+    private readonly IProcessSpawner _spawner;
     private readonly CancellationTokenSource _disposeCts = new();
     private readonly ConcurrentDictionary<int, TaskCompletionSource<JsonNode?>> _pending = new();
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(10);
+    private ITrackedProcess? _trackedProcess;
     private Process? _process;
     private StreamWriter? _stdin;
     private Stream? _stdout;
     private int _nextId;
+    private static readonly TimeSpan DisposeTimeout = TimeSpan.FromSeconds(2);
 
     public event Action<string, JsonNode?, int?>? NotificationReceived;
     public event Action? Disconnected;
+
+    public LspClient(IProcessSpawner spawner)
+    {
+        _spawner = spawner;
+    }
 
     public async Task StartAsync(
         string executable,
@@ -50,20 +59,14 @@ public sealed class LspClient : IAsyncDisposable
                 psi.Environment[key] = value;
         }
 
-        _process = new Process
-        {
-            StartInfo = psi,
-            EnableRaisingEvents = true,
-        };
+        _trackedProcess = await _spawner.StartAsync(psi, "LanguageServer", cancellationToken).ConfigureAwait(false);
+        _process = _trackedProcess.Process;
 
         _process.Exited += (_, _) =>
         {
             CancelAllPendingRequests();
             Disconnected?.Invoke();
         };
-
-        if (!_process.Start())
-            throw new InvalidOperationException("Unable to start language server process.");
 
         _stdin = _process.StandardInput;
         _stdout = _process.StandardOutput.BaseStream;
@@ -266,12 +269,25 @@ public sealed class LspClient : IAsyncDisposable
         try
         {
             if (_process is { HasExited: false })
-                _process.Kill(entireProcessTree: true);
+                _trackedProcess?.KillTree();
         }
         catch { }
         if (_process is not null)
-            await _process.WaitForExitAsync().ConfigureAwait(false);
-        _process?.Dispose();
+        {
+            try
+            {
+                await _process.WaitForExitAsync()
+                    .WaitAsync(DisposeTimeout)
+                    .ConfigureAwait(false);
+            }
+            catch
+            {
+            }
+        }
+        if (_trackedProcess is not null)
+            await _trackedProcess.DisposeAsync().ConfigureAwait(false);
+        _trackedProcess = null;
+        _process = null;
         _disposeCts.Dispose();
         _writeGate.Dispose();
     }

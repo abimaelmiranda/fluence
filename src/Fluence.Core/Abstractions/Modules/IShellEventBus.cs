@@ -7,7 +7,7 @@ public interface IShellEvent { }
 public interface IShellEventBus
 {
     void Publish(IShellEvent shellEvent);
-    void SubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent;
+    IDisposable SubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent;
     void UnsubscribeSync<TEvent>(Action<TEvent> handler) where TEvent : IShellEvent;
 }
 

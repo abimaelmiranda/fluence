@@ -7,7 +7,7 @@ using Fluence.Core.Abstractions.Infrastructure;
 
 namespace Fluence.Infrastructure;
 
-public sealed class ProcessHost : IProcessHost
+public sealed class ProcessHost(IProcessSpawner spawner) : IProcessHost
 {
     public async Task RunAsync(
         string executable,
@@ -57,7 +57,7 @@ public sealed class ProcessHost : IProcessHost
         await RunCoreAsync(startInfo, onOutput, onError, cancellationToken, environment).ConfigureAwait(false);
     }
 
-    private static async Task RunCoreAsync(
+    private async Task RunCoreAsync(
         ProcessStartInfo startInfo,
         Action<string> onOutput,
         Action<string> onError,
@@ -70,8 +70,9 @@ public sealed class ProcessHost : IProcessHost
                 startInfo.Environment[item.Key] = item.Value;
         }
 
-        using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         var tcs = new TaskCompletionSource<int>();
+        var tracked = await spawner.StartAsync(startInfo, "ProcessHost", cancellationToken).ConfigureAwait(false);
+        var process = tracked.Process;
 
         process.OutputDataReceived += (_, e) =>
         {
@@ -87,14 +88,20 @@ public sealed class ProcessHost : IProcessHost
 
         await using var _ = cancellationToken.Register(() =>
         {
-            try { process.Kill(entireProcessTree: true); } catch { }
+            tracked.KillTree();
             tcs.TrySetCanceled(cancellationToken);
         });
 
-        process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        await tcs.Task.ConfigureAwait(false);
+        try
+        {
+            await tcs.Task.ConfigureAwait(false);
+        }
+        finally
+        {
+            await tracked.DisposeAsync().ConfigureAwait(false);
+        }
     }
 }

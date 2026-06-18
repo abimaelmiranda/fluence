@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Models.Debugging;
@@ -72,6 +75,7 @@ internal static class Bootstrapper
         services.AddSingleton<IShellRegionHost>(provider => provider.GetRequiredService<ShellRegionHost>());
         services.AddSingleton<IWorkspaceContext>(provider => new WorkspaceContext(provider.GetRequiredService<IUiDispatcher>()));
         services.AddSingleton<IModuleHost, ModuleHost>();
+        services.AddSingleton<IShutdownCoordinator, ShutdownCoordinator>();
         services.AddSingleton<IWorkspaceDialogService, AvaloniaWorkspaceDialogService>();
         services.AddSingleton<ILaunchSetupDialogService, AvaloniaLaunchSetupDialogService>();
         services.AddSingleton<AvaloniaUserNotificationService>();
@@ -83,6 +87,7 @@ internal static class Bootstrapper
         services.AddSingleton<IFileOperationDialogService, AvaloniaFileOperationDialogService>();
         services.AddSingleton<IFileService, FileService>();
         services.AddSingleton<IFluenceStorageService, FluenceStorageService>();
+        services.AddSingleton<IProcessSpawner, ProcessSpawner>();
         services.AddSingleton<IProcessHost, ProcessHost>();
         services.AddSingleton<IDotnetSdkProvisioningService, DotnetSdkProvisioningService>();
         services.AddSingleton<ILaunchSettingsService, LaunchSettingsService>();
@@ -127,7 +132,12 @@ internal static class Bootstrapper
 
         services.AddSingleton<IReadOnlyList<IModule>>(modules);
 
-        return services.BuildServiceProvider();
+        var serviceProvider = services.BuildServiceProvider();
+        serviceProvider.GetRequiredService<IProcessSpawner>()
+            .CleanupPreviousSessionAsync()
+            .GetAwaiter()
+            .GetResult();
+        return serviceProvider;
     }
 
     public static void InitializeModules(IServiceProvider serviceProvider)
@@ -147,4 +157,11 @@ internal static class Bootstrapper
             }
         }
     }
+
+    public static Task ShutdownModulesAsync(
+        IServiceProvider serviceProvider,
+        IProgress<ModuleShutdownProgress>? progress = null,
+        CancellationToken cancellationToken = default) =>
+        serviceProvider.GetRequiredService<IShutdownCoordinator>()
+            .ShutdownAsync(progress, cancellationToken);
 }
