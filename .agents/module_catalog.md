@@ -20,6 +20,8 @@ Key types:
 - `IPanelDescriptor` / `IViewRegistry` — panel declaration and view registration
 - `ICommandHandler<T>` / `IQueryHandler<T,R>` — internal use-case contracts
 - `ITerminalService` / `IProcessHost` — platform process contracts
+- `IShutdownCoordinator` — ordered, bounded module shutdown contract
+- `IProcessSpawner` / `ITrackedProcess` — tracked long-lived process ownership contract
 - Shell request events: `BuildWorkspaceRequestedEvent`, `RunProjectRequestedEvent`, `TestWorkspaceRequestedEvent`, `RestoreWorkspaceRequestedEvent`, `CleanWorkspaceRequestedEvent`
 - `FluenceException` — base for all module domain exceptions
 
@@ -28,8 +30,10 @@ OS/platform adapters only. Implements Core contracts.
 
 Key implementations:
 - `ProcessHost` — safe process execution wrapper
+- `ProcessSpawner` — tracked process start/kill/session metadata cleanup
 - `TerminalService` — terminal session management
-- `Pty/` — `MacOsPtySession` (posix_spawn, two FileStreams), `WindowsPtySession` (ConPTY)
+- `Pty/` — `Porta.Pty` as the active Unix PTY adapter, `WindowsPtySession` (ConPTY)
+- process tracking — persists owned process metadata for best-effort cleanup after crash
 - `Protocols/Lsp/` — LSP protocol utilities
 - `Protocols/Dap/` — DAP protocol utilities (`DapClient`, `NetcoredbgToolService`)
 - `DotnetSdkProvisioningService` — SDK discovery and provisioning
@@ -76,6 +80,7 @@ Responsibilities:
 - Resize handling (PTY + XTerm sync)
 - Scrollback and TUI app support
 - Process output routing (build, run, test output from DotnetCli)
+- Shutdown terminates the integrated terminal process group/tree through the PTY adapter
 
 Key files: `Terminal/TerminalControl.cs`, `ViewModels/TerminalSessionViewModel.cs`, `Views/TerminalView.axaml.cs`
 
