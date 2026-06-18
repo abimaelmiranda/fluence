@@ -237,6 +237,24 @@
                                                         ConverterParameter=SourceControl}"/>
                     </Button>
 
+                    <!-- Debug -->
+                    <Button Command="{Binding ActivityBar.SelectTabCommand}"
+                            CommandParameter="Debug"
+                            Width="40" Height="40" Padding="0"
+                            HorizontalAlignment="Center"
+                            Background="{Binding ActivityBar.ActiveTabId,
+                                Converter={StaticResource ActivityBarBgConverter},
+                                ConverterParameter=Debug}"
+                            BorderThickness="0"
+                            CornerRadius="6"
+                            ToolTip.Tip="Debug">
+                        <materialIcons:MaterialIcon Width="24" Height="24"
+                                                    Kind="Bug"
+                                                    Foreground="{Binding ActivityBar.ActiveTabId,
+                                                        Converter={StaticResource ActivityBarFgConverter},
+                                                        ConverterParameter=Debug}"/>
+                    </Button>
+
                 </StackPanel>
             </Border>
         </Grid>

@@ -16,6 +16,7 @@ public sealed partial class ActivityBarViewModel : ViewModelBase
     public ActivityBarViewModel(IShellEventBus events)
     {
         _events = events;
+        _events.SubscribeSync<ActivityBarTabSelectRequestedEvent>(e => SelectRequestedTab(e.TabId));
     }
 
     [RelayCommand]
@@ -27,4 +28,10 @@ public sealed partial class ActivityBarViewModel : ViewModelBase
 
     public void RePublishActiveTab()
         => _events.Publish(new ActivityBarTabChangedEvent(ActiveTabId));
+
+    private void SelectRequestedTab(string? tabId)
+    {
+        ActiveTabId = tabId;
+        _events.Publish(new ActivityBarTabChangedEvent(ActiveTabId));
+    }
 }

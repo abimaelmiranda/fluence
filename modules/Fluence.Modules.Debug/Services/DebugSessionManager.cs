@@ -16,6 +16,7 @@ namespace Fluence.Modules.Debug.Services;
 public sealed class DebugSessionManager(
     IWorkspaceContext workspace,
     IShellRegionHost shellRegions,
+    IShellEventBus events,
     DebugSidebarViewModel sidebar)
     : IDebugSessionManager
 {
@@ -39,7 +40,7 @@ public sealed class DebugSessionManager(
 
         sidebar.Update(CurrentSession);
         workspace.SetMode(WorkspaceMode.Debugging);
-        shellRegions.SetContent(ShellRegion.Sidebar, "DebugSidebar", "Debug", sidebar);
+        events.Publish(new ActivityBarTabSelectRequestedEvent("Debug"));
     }
 
     public void Stop()
