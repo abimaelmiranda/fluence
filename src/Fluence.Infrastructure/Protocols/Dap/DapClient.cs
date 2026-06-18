@@ -25,6 +25,7 @@ internal sealed class DapClient : IDebugAdapterClient
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly TaskCompletionSource _initializedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(3);
+    private IReadOnlySet<string> _exceptionBreakpointFilters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     private Process? _process;
     private StreamWriter? _stdin;
     private Stream? _stdout;
@@ -97,7 +98,7 @@ internal sealed class DapClient : IDebugAdapterClient
             catch (OperationCanceledException) { }
         });
 
-        await SendRequestAsync("initialize", new JsonObject
+        var initializeResponse = await SendRequestAsync("initialize", new JsonObject
         {
             ["adapterID"] = "netcoredbg",
             ["clientID"] = "fluence",
@@ -106,6 +107,7 @@ internal sealed class DapClient : IDebugAdapterClient
             ["columnsStartAt1"] = true,
             ["pathFormat"] = "path",
         }, cancellationToken).ConfigureAwait(false);
+        _exceptionBreakpointFilters = ParseExceptionBreakpointFilters(initializeResponse);
 
         await SendRequestAsync("launch", new JsonObject
         {
@@ -130,6 +132,17 @@ internal sealed class DapClient : IDebugAdapterClient
     public async Task CompleteConfigurationAsync(CancellationToken cancellationToken = default)
     {
         await SendRequestAsync("configurationDone", new JsonObject(), cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task SetExceptionBreakpointsAsync(
+        DebugExceptionBreakMode mode,
+        CancellationToken cancellationToken = default)
+    {
+        var filters = ResolveExceptionFilters(mode);
+        await SendRequestAsync("setExceptionBreakpoints", new JsonObject
+        {
+            ["filters"] = new JsonArray(filters.Select(filter => JsonValue.Create(filter)).ToArray()),
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyDictionary<string, IReadOnlyList<DebugBreakpoint>>> SetBreakpointsAsync(
@@ -486,7 +499,9 @@ internal sealed class DapClient : IDebugAdapterClient
                 _threadId = body?["threadId"]?.GetValue<int>() ?? _threadId;
                 Stopped?.Invoke(this, new DebugAdapterStoppedEvent(
                     body?["reason"]?.GetValue<string>(),
-                    _threadId));
+                    _threadId,
+                    body?["description"]?.GetValue<string>(),
+                    body?["text"]?.GetValue<string>()));
                 break;
             case "terminated":
             case "exited":
@@ -548,6 +563,37 @@ internal sealed class DapClient : IDebugAdapterClient
         }
 
         return obj;
+    }
+
+    private string[] ResolveExceptionFilters(DebugExceptionBreakMode mode)
+    {
+        var candidates = mode == DebugExceptionBreakMode.StopInAllExceptions
+            ? new[] { "all" }
+            : new[] { "user-unhandled", "userUnhandled", "unhandled", "uncaught" };
+
+        var available = _exceptionBreakpointFilters;
+        if (available.Count == 0)
+            return [candidates[0]];
+
+        return candidates
+            .Where(available.Contains)
+            .DefaultIfEmpty(candidates[0])
+            .Take(1)
+            .ToArray();
+    }
+
+    private static IReadOnlySet<string> ParseExceptionBreakpointFilters(JsonObject? initializeResponse)
+    {
+        var filters = initializeResponse?["exceptionBreakpointFilters"]?.AsArray();
+        if (filters is null)
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        return filters
+            .OfType<JsonObject>()
+            .Select(filter => filter["filter"]?.GetValue<string>())
+            .Where(filter => !string.IsNullOrWhiteSpace(filter))
+            .Cast<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private void KillProcess()

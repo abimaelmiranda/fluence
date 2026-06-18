@@ -15,7 +15,11 @@ public interface IDebugStateService
 
     void StartSession();
 
-    void SetStopped(string? reason, int threadId, DebugExecutionLine? currentLine);
+    void SetStopped(
+        string? reason,
+        int threadId,
+        DebugExecutionLine? currentLine,
+        DebugExceptionInfo? exceptionInfo);
 
     void SetInspectionData(
         IReadOnlyList<DebugStackFrame> stackFrames,

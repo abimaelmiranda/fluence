@@ -4,6 +4,7 @@ using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.Tasks;
+using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Models.Keybindings;
@@ -20,6 +21,7 @@ using Fluence.Modules.Debug.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Fluence.Modules.Debug.Commands.DebugProject;
 using Fluence.Modules.Debug.Abstractions.Session;
+using Fluence.Modules.Debug.Json;
 using Fluence.Modules.Debug.Services;
 
 namespace Fluence.Modules.Debug;
@@ -44,6 +46,11 @@ public sealed class Entrypoint : IModule
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
         var debug = host.Services.GetRequiredService<IDebugService>();
         var commands = host.Services.GetRequiredService<ICommandRegistry>();
+
+        host.Services.GetRequiredService<ISettingsRegistry>()
+            .Register(DebugSettingsJsonContext.Default.DebugSettings);
+        host.Services.GetRequiredService<ISettingsService>()
+            .Get<DebugSettings>();
 
         host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
         {

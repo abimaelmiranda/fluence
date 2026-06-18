@@ -134,6 +134,7 @@ public partial class EditorView : UserControl
 
     // ── Document path tracking ──────────────────────────────────────────────
     private string? _lastKnownDocumentPath;
+    private string? _dismissedExceptionPopupKey;
 
     // ── Undo acceleration ──────────────────────────────────────────────────
     private DateTime _lastUndoShortcutAt = DateTime.MinValue;
@@ -171,6 +172,7 @@ public partial class EditorView : UserControl
         LspHoverBorder.PointerExited       += (_, _) => { _mouseInPopup = false; ClosePopupDelayed(); };
         CodeActionPopupBorder.PointerEntered += (_, _) => { _mouseInPopup = true;  CancelPopupClose(); };
         CodeActionPopupBorder.PointerExited  += (_, _) => { _mouseInPopup = false; ClosePopupDelayed(); };
+        DebugExceptionCloseButton.Click += (_, _) => DismissDebugExceptionPopup();
         Editor.TextArea.TextEntering    += OnTextEntering;
         Editor.TextArea.TextEntered     += OnTextEntered;
         Editor.AddHandler(KeyDownEvent, OnEditorPreviewKeyDown, RoutingStrategies.Tunnel, true);

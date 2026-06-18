@@ -2,7 +2,9 @@ namespace Fluence.Core.Models.Debugging;
 
 public sealed record DebugAdapterStoppedEvent(
     string? Reason,
-    int ThreadId);
+    int ThreadId,
+    string? Description,
+    string? Text);
 
 public sealed record DebugAdapterTerminatedEvent;
 

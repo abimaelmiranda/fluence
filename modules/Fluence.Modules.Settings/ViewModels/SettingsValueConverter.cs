@@ -24,6 +24,9 @@ internal static class SettingsValueConverter
                 return item.TextValue.Trim();
             }
 
+            if (property.PropertyType.IsEnum)
+                return Enum.Parse(property.PropertyType, item.SelectedEnumValue, ignoreCase: true);
+
             return System.Convert.ChangeType(item.TextValue, property.PropertyType, CultureInfo.InvariantCulture);
         }
         catch

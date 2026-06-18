@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
+using Avalonia;
 using Avalonia.Input;
 using Avalonia.Threading;
+using AvaloniaEdit;
 using AvaloniaEdit.Rendering;
 using Fluence.Core.Models.Debugging;
 
@@ -21,6 +23,7 @@ public partial class EditorView
         _breakpointMargin?.Update(bps);
         _debugLineRenderer.Update(_viewModel?.ActiveExecutionLine);
         Editor.TextArea.TextView.InvalidateLayer(KnownLayer.Background);
+        UpdateDebugExceptionPopup();
     }
 
     private void OnBreakpointAreaPointerMoved(object? sender, PointerEventArgs e)
@@ -57,5 +60,69 @@ public partial class EditorView
                 return true;
             }))
             e.Handled = true;
+    }
+
+    private void UpdateDebugExceptionPopup()
+    {
+        var exception = _viewModel?.ActiveExceptionStop;
+        var line = _viewModel?.ActiveExecutionLine;
+        if (exception is null || line is null)
+        {
+            DebugExceptionPopup.IsOpen = false;
+            return;
+        }
+
+        var key = $"{line.FilePath}:{line.Line}:{exception.Title}:{exception.Message}";
+        if (string.Equals(key, _dismissedExceptionPopupKey, StringComparison.Ordinal))
+            return;
+
+        var placement = GetLinePopupRect(line.Line);
+        if (placement is null)
+        {
+            DebugExceptionPopup.IsOpen = false;
+            return;
+        }
+
+        DebugExceptionTitleText.Text = exception.Title;
+        DebugExceptionMessageText.Text = exception.Message;
+        DebugExceptionPopup.PlacementTarget = Editor.TextArea.TextView;
+        DebugExceptionPopup.PlacementRect = placement.Value;
+        DebugExceptionPopup.IsOpen = true;
+    }
+
+    private Rect? GetLinePopupRect(int lineNumber)
+    {
+        var document = Editor.Document;
+        if (document is null || lineNumber < 1 || lineNumber > document.LineCount)
+            return null;
+
+        var textView = Editor.TextArea.TextView;
+        textView.EnsureVisualLines();
+        if (textView.GetVisualLine(lineNumber) is null)
+        {
+            Editor.ScrollToLine(lineNumber);
+            textView.EnsureVisualLines();
+            if (textView.GetVisualLine(lineNumber) is null)
+                return null;
+        }
+
+        var position = new TextViewPosition(lineNumber, 1);
+        var visualTop = textView.GetVisualPosition(position, VisualYPosition.LineTop);
+        var scrollOffset = textView.ScrollOffset;
+        return new Rect(
+            Math.Max(0, visualTop.X - scrollOffset.X),
+            Math.Max(0, visualTop.Y - scrollOffset.Y - 6),
+            Math.Max(1, Math.Min(720, textView.Bounds.Width - 24)),
+            1);
+    }
+
+    private void DismissDebugExceptionPopup()
+    {
+        var exception = _viewModel?.ActiveExceptionStop;
+        var line = _viewModel?.ActiveExecutionLine;
+        if (exception is not null && line is not null)
+            _dismissedExceptionPopupKey = $"{line.FilePath}:{line.Line}:{exception.Title}:{exception.Message}";
+
+        DebugExceptionPopup.IsOpen = false;
     }
 }
