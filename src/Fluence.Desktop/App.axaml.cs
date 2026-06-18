@@ -21,6 +21,7 @@ public partial class App : Avalonia.Application
     private ServiceProvider? _serviceProvider;
     private int _isShowingFatalException;
     private bool _isSavingWorkspace;
+    private bool _workspaceSavedForShutdown;
 
     public override void Initialize()
     {
@@ -61,15 +62,23 @@ public partial class App : Avalonia.Application
                     return; // save finished, allow close
 
                 if (!snapshotCoordinator.HasWorkspaceToSave)
+                {
+                    _workspaceSavedForShutdown = true;
                     return; // nothing to save, allow close immediately
+                }
 
                 e.Cancel = true;
                 _isSavingWorkspace = true;
                 mainWindowViewModel.IsSavingWorkspace = true;
 
-                await Task.WhenAll(
-                    snapshotCoordinator.SaveAsync(),
-                    Task.Delay(500));
+                try
+                {
+                    await SaveWorkspaceForShutdownAsync(snapshotCoordinator).ConfigureAwait(true);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[Shutdown] workspace save failed: {ex}");
+                }
 
                 mainWindow.Close();
             };
@@ -100,10 +109,36 @@ public partial class App : Avalonia.Application
         if (_serviceProvider is null)
             return;
 
-        // Synchronous block required: async void does not hold the process alive long enough
-        // for the service provider to finish disposing (OmniSharp would be left as an orphan process).
-        _serviceProvider.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        _serviceProvider = null;
+        try
+        {
+            var snapshotCoordinator = _serviceProvider.GetService<WorkspaceSnapshotCoordinator>();
+            if (snapshotCoordinator is not null && !_workspaceSavedForShutdown)
+                SaveWorkspaceForShutdownAsync(snapshotCoordinator).GetAwaiter().GetResult();
+
+            // Synchronous block required: async void does not hold the process alive long enough
+            // for the service provider to finish disposing (OmniSharp would be left as an orphan process).
+            _serviceProvider.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Shutdown] graceful shutdown failed: {ex}");
+        }
+        finally
+        {
+            _serviceProvider = null;
+        }
+    }
+
+    private async Task SaveWorkspaceForShutdownAsync(WorkspaceSnapshotCoordinator snapshotCoordinator)
+    {
+        if (_workspaceSavedForShutdown)
+            return;
+
+        await Task.WhenAll(
+            snapshotCoordinator.SaveAsync(),
+            Task.Delay(500));
+
+        _workspaceSavedForShutdown = true;
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
