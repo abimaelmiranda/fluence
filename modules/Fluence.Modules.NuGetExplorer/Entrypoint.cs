@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -15,6 +17,8 @@ namespace Fluence.Modules.NuGetExplorer;
 
 public sealed class Entrypoint : IModule
 {
+    private IDisposable? _managePackagesSubscription;
+
     public string Name => "NuGetExplorer";
 
     public void Register(IServiceCollection services)
@@ -27,10 +31,17 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.SubscribeSync<ManageNuGetPackagesRequestedEvent>(e =>
+        _managePackagesSubscription = host.Events.SubscribeSync<ManageNuGetPackagesRequestedEvent>(e =>
         {
             host.Services.GetRequiredService<NuGetExplorerViewModel>().OpenForSolution(e.SolutionPath);
         });
         host.SetModuleState(Name, ModuleState.Active);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _managePackagesSubscription?.Dispose();
+        _managePackagesSubscription = null;
+        return ValueTask.CompletedTask;
     }
 }

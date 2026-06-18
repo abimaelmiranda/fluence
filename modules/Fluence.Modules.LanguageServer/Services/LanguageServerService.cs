@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
+using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Infrastructure.Protocols.Lsp;
 
@@ -12,6 +13,7 @@ namespace Fluence.Modules.LanguageServer.Services;
 internal sealed partial class LanguageServerService : ILanguageServerService, IAsyncDisposable
 {
     private readonly ILspProvisioningService _provisioning;
+    private readonly IProcessSpawner _processSpawner;
     private readonly IDiagnosticsService _diagnostics;
     private readonly IShellEventBus _events;
     private readonly LspClientHolder _holder;
@@ -24,11 +26,13 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
 
     public LanguageServerService(
         ILspProvisioningService provisioning,
+        IProcessSpawner processSpawner,
         IDiagnosticsService diagnostics,
         IShellEventBus events,
         LspClientHolder holder)
     {
         _provisioning = provisioning;
+        _processSpawner = processSpawner;
         _diagnostics = diagnostics;
         _events = events;
         _holder = holder;
@@ -42,7 +46,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         var executable = _provisioning.GetExecutablePath();
         var arguments = $"--languageserver -z -s \"{rootPath}\"";
 
-        _client = new LspClient();
+        _client = new LspClient(_processSpawner);
         _holder.Client = _client;
         _client.NotificationReceived += OnNotificationReceived;
         _client.Disconnected += OnClientDisconnected;
@@ -71,6 +75,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         _client = null;
         _holder.Client = null;
         client.NotificationReceived -= OnNotificationReceived;
+        client.Disconnected -= OnClientDisconnected;
 
         try
         {

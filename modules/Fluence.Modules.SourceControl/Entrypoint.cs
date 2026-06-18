@@ -1,5 +1,8 @@
+using System;
 using System.IO;
+using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Models.Workspace.Enums;
@@ -15,6 +18,9 @@ namespace Fluence.Modules.SourceControl;
 public sealed class Entrypoint : IModule
 {
     private string? _activeTabId;
+    private IDisposable? _activitySubscription;
+    private IWorkspaceContext? _workspace;
+    private EventHandler? _workspaceChanged;
 
     public string Name => "SourceControl";
 
@@ -27,13 +33,14 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
+        _activitySubscription = host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
         {
             _activeTabId = e.TabId;
             UpdateSidebar(host);
         });
 
-        host.Workspace.Changed += (_, _) =>
+        _workspace = host.Workspace;
+        _workspaceChanged = (_, _) =>
         {
             var vm = host.Services.GetRequiredService<SourceControlViewModel>();
             var current = host.Workspace.Current;
@@ -44,6 +51,7 @@ public sealed class Entrypoint : IModule
             vm.Initialize(root);
             UpdateSidebar(host);
         };
+        host.Workspace.Changed += _workspaceChanged;
 
         host.SetModuleState(Name, ModuleState.Active);
     }
@@ -61,5 +69,16 @@ public sealed class Entrypoint : IModule
         }
 
         host.ShellRegions.ClearContent(ShellRegion.Sidebar, "SourceControl");
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _activitySubscription?.Dispose();
+        if (_workspace is not null && _workspaceChanged is not null)
+            _workspace.Changed -= _workspaceChanged;
+        _activitySubscription = null;
+        _workspace = null;
+        _workspaceChanged = null;
+        return ValueTask.CompletedTask;
     }
 }

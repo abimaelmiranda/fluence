@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Workspace.Enums;
@@ -8,6 +10,8 @@ namespace Fluence.Modules.LspSetup;
 
 public sealed class Entrypoint : IModule
 {
+    private IDisposable? _provisioningSubscription;
+
     public string Name => "LspSetup";
 
     public void Register(IServiceCollection services)
@@ -19,7 +23,7 @@ public sealed class Entrypoint : IModule
     {
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
-        host.Events.SubscribeSync<LspProvisioningRequiredEvent>(e =>
+        _provisioningSubscription = host.Events.SubscribeSync<LspProvisioningRequiredEvent>(e =>
         {
             var vm = host.Services.GetRequiredService<LspSetupViewModel>();
             host.Workspace.OpenToolTab("tool://fluence/lsp-setup", "Language Server Setup", vm);
@@ -30,5 +34,12 @@ public sealed class Entrypoint : IModule
         });
 
         host.SetModuleState(Name, ModuleState.Active);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _provisioningSubscription?.Dispose();
+        _provisioningSubscription = null;
+        return ValueTask.CompletedTask;
     }
 }

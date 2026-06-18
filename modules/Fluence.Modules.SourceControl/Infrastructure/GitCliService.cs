@@ -4,12 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Modules.SourceControl.Abstractions;
 using Fluence.Modules.SourceControl.Models;
 
 namespace Fluence.Modules.SourceControl.Infrastructure;
 
-public sealed partial class GitCliService : IGitService
+public sealed partial class GitCliService(IProcessSpawner spawner) : IGitService
 {
     private static readonly string GitExecutable = GitExecutableResolver.Current.Resolve();
 
@@ -31,25 +32,25 @@ public sealed partial class GitCliService : IGitService
         }
     }
 
-    private static async Task<string> RunGitAsync(string workingDirectory, params string[] args)
+    private async Task<string> RunGitAsync(string workingDirectory, params string[] args)
     {
-        using var process = CreateProcess(workingDirectory, args);
-        process.Start();
+        await using var tracked = await CreateProcessAsync(workingDirectory, args).ConfigureAwait(false);
+        var process = tracked.Process;
         var output = await process.StandardOutput.ReadToEndAsync();
         await process.WaitForExitAsync();
         return output.TrimEnd(); // TrimEnd only: leading spaces are meaningful in porcelain format.
     }
 
-    private static async Task<string> RunGitWithStderrAsync(string workingDirectory, params string[] args)
+    private async Task<string> RunGitWithStderrAsync(string workingDirectory, params string[] args)
     {
         var (output, _) = await RunGitWithExitCodeAsync(workingDirectory, args);
         return output;
     }
 
-    private static async Task<(string Output, int ExitCode)> RunGitWithExitCodeAsync(string workingDirectory, params string[] args)
+    private async Task<(string Output, int ExitCode)> RunGitWithExitCodeAsync(string workingDirectory, params string[] args)
     {
-        using var process = CreateProcess(workingDirectory, args);
-        process.Start();
+        await using var tracked = await CreateProcessAsync(workingDirectory, args).ConfigureAwait(false);
+        var process = tracked.Process;
         var stdout = process.StandardOutput.ReadToEndAsync();
         var stderr = process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
@@ -57,7 +58,7 @@ public sealed partial class GitCliService : IGitService
         return (combined.Trim(), process.ExitCode);
     }
 
-    private static Process CreateProcess(string workingDirectory, IReadOnlyList<string> args)
+    private Task<ITrackedProcess> CreateProcessAsync(string workingDirectory, IReadOnlyList<string> args)
     {
         var startInfo = new ProcessStartInfo(GitExecutable)
         {
@@ -71,7 +72,7 @@ public sealed partial class GitCliService : IGitService
         foreach (var arg in args)
             startInfo.ArgumentList.Add(arg);
 
-        return new Process { StartInfo = startInfo };
+        return spawner.StartAsync(startInfo, "Git");
     }
 
     private static GitChangeStatus ParseStatus(char c) => c switch

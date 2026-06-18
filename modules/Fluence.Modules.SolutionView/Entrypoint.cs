@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
@@ -24,6 +26,9 @@ namespace Fluence.Modules.SolutionView;
 public sealed class Entrypoint : IModule
 {
     private string? _activeTabId;
+    private readonly List<IDisposable> _subscriptions = [];
+    private IWorkspaceContext? _workspace;
+    private EventHandler? _workspaceChanged;
 
     public string Name => "SolutionView";
 
@@ -45,26 +50,28 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
-        host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
         {
             _activeTabId = e.TabId;
             UpdateSidebar(host);
-        });
+        }));
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
-        host.Events.SubscribeSync<OpenSolutionRequestedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<OpenSolutionRequestedEvent>(e =>
             scheduler.Schedule("workspace.open-solution", TaskPriority.Interactive,
                 ct => OpenSolutionAsync(host, e.Path, ct),
-                correlationId: e.Path));
-        host.Events.SubscribeSync<RefreshSolutionViewRequestedEvent>(_ =>
+                correlationId: e.Path)));
+        _subscriptions.Add(host.Events.SubscribeSync<RefreshSolutionViewRequestedEvent>(_ =>
             scheduler.Schedule("solution.refresh", TaskPriority.Maintenance,
                 ct => RefreshSolutionViewAsync(host, ct),
-                correlationId: "solution.refresh"));
-        host.Events.SubscribeSync<GitCheckoutCompletedEvent>(_ =>
+                correlationId: "solution.refresh")));
+        _subscriptions.Add(host.Events.SubscribeSync<GitCheckoutCompletedEvent>(_ =>
             scheduler.Schedule("solution.refresh", TaskPriority.Maintenance,
                 ct => RefreshSolutionViewAsync(host, ct),
-                correlationId: "solution.refresh"));
-        host.Workspace.Changed += (_, _) => UpdateSidebar(host);
+                correlationId: "solution.refresh")));
+        _workspace = host.Workspace;
+        _workspaceChanged = (_, _) => UpdateSidebar(host);
+        host.Workspace.Changed += _workspaceChanged;
         UpdateSidebar(host);
         host.SetModuleState(Name, ModuleState.Active);
     }
@@ -96,5 +103,17 @@ public sealed class Entrypoint : IModule
     private static Task RefreshSolutionViewAsync(IModuleHost host, CancellationToken ct)
     {
         return host.Services.GetRequiredService<SolutionViewModel>().ReloadCurrentSolutionAsync();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        foreach (var subscription in _subscriptions)
+            subscription.Dispose();
+        _subscriptions.Clear();
+        if (_workspace is not null && _workspaceChanged is not null)
+            _workspace.Changed -= _workspaceChanged;
+        _workspace = null;
+        _workspaceChanged = null;
+        return ValueTask.CompletedTask;
     }
 }
