@@ -270,10 +270,10 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     partial void OnActiveTextChanged(string value)
     {
         if (_isRefreshingFromWorkspace) return;
-        _workspace.UpdateActiveDocumentContent(value);
-        ScheduleAutoSave(ActiveDocumentPath);
-
         var path = ActiveDocumentPath;
+        ScheduleAutoSave(path);
+        _workspace.UpdateActiveDocumentContent(value);
+
         if (path is not null && IsTextDocument(path))
         {
             if (string.Equals(path, _lastLiveSyncedPath, StringComparison.OrdinalIgnoreCase) &&
@@ -288,8 +288,20 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     private void OnWorkspaceChanged(object? sender, EventArgs e)
     {
-        CancelPendingAutoSave();
+        if (!IsActiveDocumentContentRefresh())
+        {
+            CancelPendingAutoSave();
+        }
         RefreshFromWorkspace();
+    }
+
+    private bool IsActiveDocumentContentRefresh()
+    {
+        var document = _workspace.Current.TabSession.ActiveDocument;
+        return document is { Kind: OpenDocumentKind.TextDocument, IsDirty: true } &&
+               !string.IsNullOrWhiteSpace(_pendingAutoSavePath) &&
+               string.Equals(document.Path, _pendingAutoSavePath, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(document.Content, ActiveText, StringComparison.Ordinal);
     }
 
     private void OnDebugStateChanged(object? sender, EventArgs e)
