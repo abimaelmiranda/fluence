@@ -4,7 +4,7 @@ namespace Fluence.Modules.DotnetCli.Models;
 
 internal sealed record RunTarget(
     string Executable,
-    string Arguments,
+    IReadOnlyList<string> Arguments,
     string WorkingDirectory,
     IReadOnlyDictionary<string, string>? Environment,
     RunTargetKind Kind);

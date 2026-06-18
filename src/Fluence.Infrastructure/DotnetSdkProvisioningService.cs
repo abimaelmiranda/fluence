@@ -132,7 +132,7 @@ public sealed class DotnetSdkProvisioningService(
 
         await processHost.RunAsync(
             "/bin/bash",
-            $"{Quote(scriptPath)} --channel {channel} --install-dir {Quote(installDir)} --skip-non-versioned-files",
+            [scriptPath, "--channel", channel, "--install-dir", installDir, "--skip-non-versioned-files"],
             null,
             onOutput,
             onOutput,
@@ -150,7 +150,7 @@ public sealed class DotnetSdkProvisioningService(
 
         await processHost.RunAsync(
             "powershell",
-            $"-NoProfile -ExecutionPolicy Bypass -File {Quote(scriptPath)} -Channel {channel} -InstallDir {Quote(installDir)} -SkipNonVersionedFiles",
+            ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath, "-Channel", channel, "-InstallDir", installDir, "-SkipNonVersionedFiles"],
             null,
             onOutput,
             onOutput,
@@ -176,7 +176,7 @@ public sealed class DotnetSdkProvisioningService(
         try
         {
             var command = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "where" : "which";
-            await processHost.RunAsync(command, "dotnet", null, output.Add, _ => { }, cancellationToken)
+            await processHost.RunAsync(command, ["dotnet"], null, output.Add, _ => { }, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch
@@ -191,10 +191,7 @@ public sealed class DotnetSdkProvisioningService(
 
     private string GetManagedDotnetPath()
     {
-        var executableName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            ? "dotnet.exe"
-            : "dotnet";
-        return Path.Combine(GetManagedInstallPath(), executableName);
+        return Path.Combine(GetManagedInstallPath(), PlatformTooling.Current.DotnetExecutableName);
     }
 
     private static IReadOnlyList<DotnetSdkInfo> ParseSdks(IEnumerable<string> lines)
@@ -219,11 +216,6 @@ public sealed class DotnetSdkProvisioningService(
         }
 
         return sdks;
-    }
-
-    private static string Quote(string value)
-    {
-        return "\"" + value.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
     }
 
     private static void OpenUrl(string url)

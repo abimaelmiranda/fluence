@@ -15,4 +15,13 @@ public interface IProcessHost
         Action<string> onError,
         CancellationToken cancellationToken = default,
         IReadOnlyDictionary<string, string>? environment = null);
+
+    Task RunAsync(
+        string executable,
+        IReadOnlyList<string> arguments,
+        string? workingDirectory,
+        Action<string> onOutput,
+        Action<string> onError,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string>? environment = null);
 }

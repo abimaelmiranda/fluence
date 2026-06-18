@@ -43,15 +43,22 @@ public sealed class RunTargetResolver(
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
         var workingDirectory = Path.GetDirectoryName(target.ProjectPath) ?? Directory.GetCurrentDirectory();
         var profile = await ResolveRunProfileAsync(target, cancellationToken);
-        var profileArgument = profile is null
-            ? string.Empty
-            : $" --launch-profile {QuoteArgument(profile.Name)}";
-        var args = target.Configuration?.Args is { Count: > 0 } configurationArgs
-            ? " -- " + string.Join(" ", configurationArgs.Select(QuoteArgument))
-            : string.Empty;
+        var arguments = new List<string> { "run", "--project", target.ProjectPath };
+        if (profile is not null)
+        {
+            arguments.Add("--launch-profile");
+            arguments.Add(profile.Name);
+        }
+
+        if (target.Configuration?.Args is { Count: > 0 } configurationArgs)
+        {
+            arguments.Add("--");
+            arguments.AddRange(configurationArgs);
+        }
+
         return new RunTarget(
             dotnet,
-            $"run --project {QuoteArgument(target.ProjectPath)}{profileArgument}{args}",
+            arguments,
             workingDirectory,
             CreateEnvironment(profile),
             MapKind(target.Kind));
@@ -61,7 +68,7 @@ public sealed class RunTargetResolver(
     {
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
         var workingDirectory = Path.GetDirectoryName(filePath) ?? Directory.GetCurrentDirectory();
-        return new RunTarget(dotnet, $"run --file {QuoteArgument(filePath)}", workingDirectory, null, RunTargetKind.File);
+        return new RunTarget(dotnet, ["run", "--file", filePath], workingDirectory, null, RunTargetKind.File);
     }
 
     private async Task<DotnetLaunchProfile?> ResolveRunProfileAsync(
@@ -100,8 +107,4 @@ public sealed class RunTargetResolver(
             _ => RunTargetKind.AssociatedProject,
         };
 
-    private static string QuoteArgument(string value)
-    {
-        return "\"" + value.Replace("\"", "\\\"") + "\"";
-    }
 }

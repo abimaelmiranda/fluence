@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -141,13 +142,16 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         {
             Directory.CreateDirectory(Location);
             var template = SelectedTemplate!;
-            var frameworkArg = template.SupportsFramework && !string.IsNullOrWhiteSpace(SelectedFramework)
-                ? $" -f {SelectedFramework}"
-                : string.Empty;
+            var newProjectArguments = new List<string> { "new", template.ShortName, "-n", ProjectName, "-o", projectRoot };
+            if (template.SupportsFramework && !string.IsNullOrWhiteSpace(SelectedFramework))
+            {
+                newProjectArguments.Add("-f");
+                newProjectArguments.Add(SelectedFramework);
+            }
 
             _events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
             await RunDotnetAsync(
-                $"new {template.ShortName} -n {DotnetCommandLine.Quote(ProjectName)} -o {DotnetCommandLine.Quote(projectRoot)}{frameworkArg}",
+                newProjectArguments,
                 Location,
                 cancellationToken);
 
@@ -157,11 +161,11 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
                 var solutionName = string.IsNullOrWhiteSpace(SolutionName) ? ProjectName : SolutionName.Trim();
                 solutionPath = Path.Combine(Location, $"{solutionName}.sln");
                 await RunDotnetAsync(
-                    $"new sln -n {DotnetCommandLine.Quote(solutionName)} -o {DotnetCommandLine.Quote(Location)}",
+                    ["new", "sln", "-n", solutionName, "-o", Location],
                     Location,
                     cancellationToken);
                 await RunDotnetAsync(
-                    $"sln {DotnetCommandLine.Quote(solutionPath)} add {DotnetCommandLine.Quote(FindProjectFile(projectRoot) ?? projectRoot)}",
+                    ["sln", solutionPath, "add", FindProjectFile(projectRoot) ?? projectRoot],
                     Location,
                     cancellationToken);
             }
@@ -226,10 +230,10 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
             : null;
     }
 
-    private async Task RunDotnetAsync(string arguments, string workingDirectory, CancellationToken cancellationToken)
+    private async Task RunDotnetAsync(IReadOnlyList<string> arguments, string workingDirectory, CancellationToken cancellationToken)
     {
         var dotnet = await _sdk.ResolveDotnetExecutableAsync(cancellationToken);
-        await _output.WriteAsync(OutputChannelIds.Run, $"> {DotnetCommandLine.Quote(dotnet)} {arguments}{Environment.NewLine}", cancellationToken: cancellationToken);
+        await _output.WriteAsync(OutputChannelIds.Run, $"> {DotnetCommandLine.Format(dotnet, arguments)}{Environment.NewLine}", cancellationToken: cancellationToken);
 
         await _processHost.RunAsync(
             dotnet,

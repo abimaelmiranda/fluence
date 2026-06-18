@@ -49,7 +49,7 @@ public sealed class RunProjectCommandHandler(
         events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
         await output.WriteAsync(
             OutputChannelIds.Run,
-            $"> {DotnetCommandLine.Quote(target.Executable)} {target.Arguments}{Environment.NewLine}",
+            $"> {DotnetCommandLine.Format(target.Executable, target.Arguments)}{Environment.NewLine}",
             cancellationToken: cancellationToken);
         await processHost.RunAsync(
             target.Executable,

@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Fluence.Infrastructure;
 
 namespace Fluence.Infrastructure.Protocols.Lsp;
 
@@ -110,16 +111,7 @@ public sealed partial class OmniSharpProvisioningService
 
     private static void MakeExecutable(string executable)
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return;
-
-        RunProcess("chmod", $"+x \"{executable}\"");
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            RunProcess("xattr", $"-d com.apple.quarantine \"{executable}\"");
-            RunProcess("codesign", $"--force --sign - \"{executable}\"");
-        }
+        PlatformTooling.Current.MakeExecutable(executable);
     }
 
     private static void RunProcess(string file, string arguments)
