@@ -77,6 +77,8 @@ public sealed record DebuggerProvisioningFinishedEvent : IShellEvent;
 
 public sealed record ActivityBarTabChangedEvent(string? TabId) : IShellEvent;
 
+public sealed record ActivityBarTabSelectRequestedEvent(string? TabId) : IShellEvent;
+
 // LSP — Editor → LanguageServer
 public sealed record DocumentOpenedEvent(string FilePath, string Content, string LanguageId) : IShellEvent;
 public sealed record DocumentChangedEvent(string FilePath, string Content, int Version) : IShellEvent;

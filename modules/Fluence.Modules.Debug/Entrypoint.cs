@@ -26,6 +26,8 @@ namespace Fluence.Modules.Debug;
 
 public sealed class Entrypoint : IModule
 {
+    private string? _activeTabId;
+
     public string Name => "Debug";
 
     public void Register(IServiceCollection services)
@@ -42,6 +44,12 @@ public sealed class Entrypoint : IModule
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
         var debug = host.Services.GetRequiredService<IDebugService>();
         var commands = host.Services.GetRequiredService<ICommandRegistry>();
+
+        host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
+        {
+            _activeTabId = e.TabId;
+            UpdateSidebar(host);
+        });
 
         // Iniciar sessão — Interactive: usuário espera resposta imediata
         host.Events.SubscribeSync<DebugProjectRequestedEvent>(_ =>
@@ -85,6 +93,22 @@ public sealed class Entrypoint : IModule
             _ => debug.StepOutAsync()));
 
         host.SetModuleState(Name, ModuleState.Active);
+    }
+
+    private void UpdateSidebar(IModuleHost host)
+    {
+        var session = host.Services.GetRequiredService<IDebugSessionManager>().CurrentSession;
+        if (_activeTabId == "Debug" && session is { IsActive: true })
+        {
+            host.ShellRegions.SetContent(
+                ShellRegion.Sidebar,
+                "DebugSidebar",
+                "Debug",
+                host.Services.GetRequiredService<DebugSidebarViewModel>());
+            return;
+        }
+
+        host.ShellRegions.ClearContent(ShellRegion.Sidebar, "DebugSidebar");
     }
 
     private static async Task HandleAsync(IModuleHost host, CancellationToken ct)
