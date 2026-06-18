@@ -135,6 +135,7 @@ public partial class EditorView : UserControl
     private SemanticToken[]?  _pendingSemanticTokens;
     private string?           _pendingSemanticTokensPath;
     private int               _pendingSemanticTokensVersion;
+    private readonly Dictionary<string, CachedSemanticTokens> _semanticTokensByPath = new(StringComparer.OrdinalIgnoreCase);
 
     // ── Document path tracking ──────────────────────────────────────────────
     private string? _lastKnownDocumentPath;
@@ -158,6 +159,7 @@ public partial class EditorView : UserControl
     private sealed record CompletionRequest(string FilePath, int Line, int Character, int CaretOffset, int Version);
     private sealed record HoverRequest(string FilePath, string Expression, Point HoverPoint, int Version);
     private sealed record LspHoverRequest(string FilePath, int Line, int Character, Point HoverPoint, int Version);
+    private sealed record CachedSemanticTokens(int Version, SemanticToken[] Tokens);
 
     public EditorView()
     {
@@ -320,6 +322,7 @@ public partial class EditorView : UserControl
     {
         if (_eventBus is not null)
         {
+            _eventBus.UnsubscribeSync<DocumentClosedEvent>(OnDocumentClosed);
             _eventBus.UnsubscribeSync<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
             _eventBus.UnsubscribeSync<NavigationResolvedEvent>(OnNavigationResolved);
             _eventBus.UnsubscribeSync<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
@@ -332,6 +335,7 @@ public partial class EditorView : UserControl
         _signatureHelpService = signatureHelpService;
         _codeActionService    = codeActionService;
 
+        eventBus.SubscribeSync<DocumentClosedEvent>(OnDocumentClosed);
         eventBus.SubscribeSync<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
         eventBus.SubscribeSync<NavigationResolvedEvent>(OnNavigationResolved);
         eventBus.SubscribeSync<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);

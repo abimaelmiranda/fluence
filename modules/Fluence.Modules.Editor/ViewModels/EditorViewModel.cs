@@ -114,6 +114,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         RefreshFromWorkspace();
         _workspace.Changed += OnWorkspaceChanged;
         _debugState.Changed += OnDebugStateChanged;
+        _events.SubscribeSync<LspServerReadyEvent>(OnLspServerReady);
     }
 
     public ICompletionService? CompletionService => _completionService;
@@ -429,6 +430,24 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private void OnLspServerReady(LspServerReadyEvent e)
+    {
+        RepublishOpenTextDocuments();
+    }
+
+    private void RepublishOpenTextDocuments()
+    {
+        foreach (var document in _workspace.Current.TabSession.Documents)
+        {
+            if (document.Kind != OpenDocumentKind.TextDocument || !IsTextDocument(document.Path))
+                continue;
+
+            _openTextDocumentPaths.Add(document.Path);
+            var version = EnsureDocumentVersion(document.Path);
+            _events.Publish(new DocumentOpenedEvent(document.Path, document.Content, "csharp", version));
+        }
+    }
+
     private int EnsureDocumentVersion(string path)
     {
         if (_documentVersions.TryGetValue(path, out var version))
@@ -670,5 +689,6 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _formatFeedbackTimer.Tick -= OnFormatFeedbackTimerTick;
         _workspace.Changed -= OnWorkspaceChanged;
         _debugState.Changed -= OnDebugStateChanged;
+        _events.UnsubscribeSync<LspServerReadyEvent>(OnLspServerReady);
     }
 }

@@ -45,6 +45,7 @@ public partial class EditorView
         _popupCloseTimer?.Dispose();
         _popupCloseTimer = null;
 
+        _eventBus?.UnsubscribeSync<DocumentClosedEvent>(OnDocumentClosed);
         _eventBus?.UnsubscribeSync<DiagnosticsUpdatedEvent>(OnDiagnosticsUpdated);
         _eventBus?.UnsubscribeSync<NavigationResolvedEvent>(OnNavigationResolved);
         _eventBus?.UnsubscribeSync<SemanticTokensUpdatedEvent>(OnSemanticTokensUpdated);
@@ -89,6 +90,7 @@ public partial class EditorView
         _pendingSemanticTokensVersion = 0;
         _semanticRedrawPending = false;
         _pendingCodeActionDiag = null;
+        _semanticTokensByPath.Clear();
         _pendingViewStateSavePath = null;
         _pendingViewStateSaveTransitionVersion = 0;
         _savedViewStateDuringTextSwitchPath = null;
@@ -204,6 +206,7 @@ public partial class EditorView
         }
 
         ApplyGrammarForPath(newPath);
+        TryApplyCachedSemanticTokens(newPath);
         RestoreViewStateForActiveDocument();
         UpdateDebugRendering();
     }

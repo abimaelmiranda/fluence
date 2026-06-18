@@ -16,6 +16,8 @@ public partial class EditorView
 {
     private void OnSemanticTokensUpdated(SemanticTokensUpdatedEvent e)
     {
+        _semanticTokensByPath[e.FilePath] = new CachedSemanticTokens(e.Version, e.Tokens);
+
         var activeVersion = _viewModel?.ActiveDocumentVersion ?? 0;
         if (!IsActiveSemanticTokenEvent(e, activeVersion))
             return;
@@ -45,6 +47,11 @@ public partial class EditorView
         }, DispatcherPriority.Background);
     }
 
+    private void OnDocumentClosed(DocumentClosedEvent e)
+    {
+        _semanticTokensByPath.Remove(e.FilePath);
+    }
+
     private bool IsActiveSemanticTokenEvent(SemanticTokensUpdatedEvent e, int version)
     {
         var viewModel = _viewModel;
@@ -61,6 +68,20 @@ public partial class EditorView
                version > 0 &&
                viewModel.ActiveDocumentVersion == version &&
                string.Equals(viewModel.ActiveDocumentPath, path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void TryApplyCachedSemanticTokens(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) ||
+            _viewModel is null ||
+            !_semanticTokensByPath.TryGetValue(path, out var cached) ||
+            cached.Version != _viewModel.ActiveDocumentVersion)
+        {
+            return;
+        }
+
+        _semanticColorizer.Update(cached.Tokens);
+        Editor.TextArea.TextView.Redraw();
     }
 
     private void OnNavigationResolved(NavigationResolvedEvent e) => NavigateToLocation(e, retries: 0);
