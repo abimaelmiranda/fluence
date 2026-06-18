@@ -1,0 +1,163 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.DotnetCli.ViewModels"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Fluence.Modules.DotnetCli.Views.PublishWizardView"
+             x:DataType="vm:PublishWizardViewModel"
+             Background="{StaticResource FluenceBrushShell}">
+    <UserControl.Styles>
+        <Style Selector="ComboBox.publishField">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.publishField">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="18" RowSpacing="12">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock Text="Publish"
+                       FontFamily="{StaticResource FluenceFontFamily}"
+                       FontSize="{StaticResource FluenceFontSizeTitle}"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource FluenceBrushTextPrimary}"
+                       VerticalAlignment="Center"/>
+            <Button Grid.Column="1"
+                    Classes="ideIcon"
+                    Command="{Binding OpenSdkSetupCommand}"
+                    ToolTip.Tip=".NET SDK">
+                <materialIcons:MaterialIcon Width="20"
+                                            Height="20"
+                                            Kind="Download"
+                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+            </Button>
+        </Grid>
+
+        <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="12">
+            <Grid Grid.Row="0" ColumnDefinitions="180,*" ColumnSpacing="12">
+                <TextBlock Text="Project"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="1"
+                          Classes="publishField"
+                          MinWidth="360"
+                          HorizontalAlignment="Left"
+                          ItemsSource="{Binding Projects}"
+                          SelectedItem="{Binding SelectedProject}"/>
+            </Grid>
+
+            <Grid Grid.Row="1" ColumnDefinitions="180,180,220,220,*" ColumnSpacing="12">
+                <TextBlock Text="Configuration"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="1"
+                          Classes="publishField"
+                          MinWidth="150"
+                          ItemsSource="{Binding Configurations}"
+                          SelectedItem="{Binding SelectedConfiguration}"/>
+                <ComboBox Grid.Column="2"
+                          Classes="publishField"
+                          MinWidth="190"
+                          ItemsSource="{Binding Frameworks}"
+                          SelectedItem="{Binding SelectedFramework}"/>
+                <ComboBox Grid.Column="3"
+                          Classes="publishField"
+                          MinWidth="190"
+                          ItemsSource="{Binding RuntimeIdentifiers}"
+                          SelectedItem="{Binding SelectedRuntimeIdentifier}"/>
+            </Grid>
+
+            <Grid Grid.Row="2" ColumnDefinitions="180,*,Auto" ColumnSpacing="12">
+                <TextBlock Text="Output"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1"
+                         Classes="publishField"
+                         Text="{Binding OutputPath}"/>
+                <Button Grid.Column="2"
+                        Classes="ideIcon"
+                        Command="{Binding BrowseOutputCommand}"
+                        ToolTip.Tip="Choose output folder">
+                    <materialIcons:MaterialIcon Width="20"
+                                                Height="20"
+                                                Kind="FolderOpen"
+                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                </Button>
+            </Grid>
+
+            <Grid Grid.Row="3" ColumnDefinitions="180,*" ColumnSpacing="12">
+                <TextBlock Text="Options"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           VerticalAlignment="Top"
+                           Margin="0,4,0,0"/>
+                <WrapPanel Grid.Column="1">
+                    <CheckBox Content="Self-contained"
+                              IsChecked="{Binding SelfContained}"
+                              Foreground="{StaticResource FluenceBrushTextSecondary}"
+                              Margin="0,0,18,0"/>
+                    <CheckBox Content="Single file"
+                              IsChecked="{Binding SingleFile}"
+                              Foreground="{StaticResource FluenceBrushTextSecondary}"
+                              Margin="0,0,18,0"/>
+                    <CheckBox Content="ReadyToRun"
+                              IsChecked="{Binding ReadyToRun}"
+                              Foreground="{StaticResource FluenceBrushTextSecondary}"
+                              Margin="0,0,18,0"/>
+                    <CheckBox Content="Trimmed"
+                              IsChecked="{Binding Trimmed}"
+                              Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                </WrapPanel>
+            </Grid>
+
+            <Grid Grid.Row="4" ColumnDefinitions="180,*" ColumnSpacing="12">
+                <TextBlock Text="Profile"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           VerticalAlignment="Center"/>
+                <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <CheckBox Content="Save"
+                              IsChecked="{Binding SaveProfile}"
+                              Foreground="{StaticResource FluenceBrushTextSecondary}"
+                              VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1"
+                             Classes="publishField"
+                             MinWidth="360"
+                             HorizontalAlignment="Left"
+                             Text="{Binding ProfileName}"/>
+                </Grid>
+            </Grid>
+
+            <TextBlock Grid.Row="5"
+                       Margin="192,0,0,0"
+                       Text="{Binding Status}"
+                       Foreground="{StaticResource FluenceBrushTextSecondary}"
+                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                       TextWrapping="Wrap"/>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+            <ProgressBar Width="140"
+                         Height="4"
+                         IsIndeterminate="True"
+                         IsVisible="{Binding IsRunning}"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Center"/>
+            <Button Grid.Column="1"
+                    Classes="ideToolbar ideAccent"
+                    Command="{Binding PublishCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <materialIcons:MaterialIcon Width="18"
+                                                Height="18"
+                                                Kind="PackageVariantClosed"
+                                                Foreground="{StaticResource FluenceBrushAccent}"/>
+                    <TextBlock Text="Publish"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+    </Grid>
+</UserControl>

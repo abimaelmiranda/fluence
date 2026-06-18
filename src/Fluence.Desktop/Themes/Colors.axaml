@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="FluenceColorShell">#1E1E1E</Color>
+    <Color x:Key="FluenceColorSurface">#1E1E1E</Color>
+    <Color x:Key="FluenceColorSurfaceElevated">#282828</Color>
+    <Color x:Key="FluenceColorInputBackground">#282828</Color>
+    <Color x:Key="FluenceColorBorder">#282828</Color>
+    <Color x:Key="FluenceColorTextPrimary">#F2F5F8</Color>
+    <Color x:Key="FluenceColorTextSecondary">#AAB4BF</Color>
+    <Color x:Key="FluenceColorAccent">#B05CDA</Color>
+    <Color x:Key="FluenceColorError">#FF6B6B</Color>
+    <Color x:Key="FluenceColorEditorBackground">#1E1E1E</Color>
+    <Color x:Key="FluenceColorEditorForeground">#D4D4D4</Color>
+    <Color x:Key="FluenceColorEditorSelection">#3A3D41</Color>
+    <Color x:Key="FluenceColorActivityBarBackground">#1E1E1E</Color>
+    <Color x:Key="FluenceColorActivityBarActiveBackground">#282828</Color>
+    <Color x:Key="FluenceColorActivityBarForeground">#F2F5F8</Color>
+    <Color x:Key="FluenceColorActivityBarInactiveForeground">#AAB4BF</Color>
+    <Color x:Key="FluenceColorBottomBarBackground">#602676</Color>
+    <Color x:Key="FluenceColorBottomBarDivider">#44282828</Color>
+    <Color x:Key="FluenceColorBottomBarContentBackground">#1A1D23</Color>
+
+    <SolidColorBrush x:Key="FluenceBrushShell" Color="{StaticResource FluenceColorShell}"/>
+    <SolidColorBrush x:Key="FluenceBrushSurface" Color="{StaticResource FluenceColorSurface}"/>
+    <SolidColorBrush x:Key="FluenceBrushSurfaceElevated" Color="{StaticResource FluenceColorSurfaceElevated}"/>
+    <SolidColorBrush x:Key="FluenceBrushInputBackground" Color="{StaticResource FluenceColorInputBackground}"/>
+    <SolidColorBrush x:Key="FluenceBrushBorder" Color="{StaticResource FluenceColorBorder}"/>
+    <SolidColorBrush x:Key="FluenceBrushTextPrimary" Color="{StaticResource FluenceColorTextPrimary}"/>
+    <SolidColorBrush x:Key="FluenceBrushTextSecondary" Color="{StaticResource FluenceColorTextSecondary}"/>
+    <SolidColorBrush x:Key="FluenceBrushAccent" Color="{StaticResource FluenceColorAccent}"/>
+    <SolidColorBrush x:Key="FluenceBrushError" Color="{StaticResource FluenceColorError}"/>
+    <SolidColorBrush x:Key="FluenceBrushEditorBackground" Color="{StaticResource FluenceColorEditorBackground}"/>
+    <SolidColorBrush x:Key="FluenceBrushEditorForeground" Color="{StaticResource FluenceColorEditorForeground}"/>
+    <SolidColorBrush x:Key="FluenceBrushEditorSelection" Color="{StaticResource FluenceColorEditorSelection}"/>
+    <SolidColorBrush x:Key="FluenceBrushActivityBarBackground" Color="{StaticResource FluenceColorActivityBarBackground}"/>
+    <SolidColorBrush x:Key="FluenceBrushActivityBarActiveBackground" Color="{StaticResource FluenceColorActivityBarActiveBackground}"/>
+    <SolidColorBrush x:Key="FluenceBrushActivityBarForeground" Color="{StaticResource FluenceColorActivityBarForeground}"/>
+    <SolidColorBrush x:Key="FluenceBrushActivityBarInactiveForeground" Color="{StaticResource FluenceColorActivityBarInactiveForeground}"/>
+    <SolidColorBrush x:Key="FluenceBrushBottomBarBackground" Color="{StaticResource FluenceColorBottomBarBackground}"/>
+    <SolidColorBrush x:Key="FluenceBrushBottomBarDivider" Color="{StaticResource FluenceColorBottomBarDivider}"/>
+    <SolidColorBrush x:Key="FluenceBrushBottomBarContentBackground" Color="{StaticResource FluenceColorBottomBarContentBackground}"/>
+</ResourceDictionary>

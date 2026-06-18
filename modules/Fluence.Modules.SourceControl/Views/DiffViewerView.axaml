@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.SourceControl.ViewModels"
+             xmlns:avaloniaEdit="using:AvaloniaEdit"
+             x:Class="Fluence.Modules.SourceControl.Views.DiffViewerView"
+             x:DataType="vm:DiffViewerViewModel">
+
+    <avaloniaEdit:TextEditor x:Name="Editor"
+                             IsReadOnly="True"
+                             ShowLineNumbers="True"
+                             FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                             FontSize="13"
+                             Background="{StaticResource FluenceBrushShell}"
+                             Foreground="{StaticResource FluenceBrushTextPrimary}"
+                             WordWrap="False"/>
+</UserControl>

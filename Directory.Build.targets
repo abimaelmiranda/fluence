@@ -1,0 +1,61 @@
+<Project>
+
+  <Target Name="OrganizePublishOutput"
+          AfterTargets="Publish"
+          Condition="'$(PublishDir)' != '' And '$(MSBuildProjectName)' == 'Fluence.Desktop'">
+
+    <MakeDir Directories="$(PublishDir)modules;$(PublishDir)assets/themes;$(PublishDir)assets/icons" />
+
+    <ItemGroup>
+      <_ModuleDlls Include="$(PublishDir)Fluence.Modules.*.dll" />
+      <_ModulePdbs Include="$(PublishDir)Fluence.Modules.*.pdb" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_ModuleDlls)" DestinationFolder="$(PublishDir)modules" />
+    <Copy SourceFiles="@(_ModulePdbs)" DestinationFolder="$(PublishDir)modules"
+          Condition="'@(_ModulePdbs)' != ''" />
+
+    <Delete Files="@(_ModuleDlls);@(_ModulePdbs)" />
+  </Target>
+
+  <!--
+    Creates a proper macOS .app bundle next to the flat publish directory.
+    Runs automatically when publishing with any osx-* RuntimeIdentifier.
+    Output: <publish-parent>/Fluence.app/
+  -->
+  <Target Name="CreateMacOSAppBundle"
+          DependsOnTargets="OrganizePublishOutput"
+          AfterTargets="OrganizePublishOutput"
+          Condition="'$(RuntimeIdentifier)' != '' And $(RuntimeIdentifier.StartsWith('osx-')) And '$(PublishDir)' != '' And '$(MSBuildProjectName)' == 'Fluence.Desktop'">
+
+    <PropertyGroup>
+      <_AppBundleDir>$([System.IO.Path]::GetFullPath('$(PublishDir)../Fluence.app/'))</_AppBundleDir>
+      <_AppContentsDir>$(_AppBundleDir)Contents/</_AppContentsDir>
+      <_AppMacOSDir>$(_AppContentsDir)MacOS/</_AppMacOSDir>
+      <_AppResourcesDir>$(_AppContentsDir)Resources/</_AppResourcesDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(_AppMacOSDir);$(_AppResourcesDir)" />
+
+    <!-- Copy flat publish output (already reorganized) into Contents/MacOS/ -->
+    <!-- Use cp -R to preserve directory structure including empty folders (assets/) -->
+    <Exec Command="cp -R &quot;$(PublishDir).&quot; &quot;$(_AppMacOSDir)&quot;" />
+
+    <!-- Info.plist -->
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/macos/Info.plist"
+          DestinationFolder="$(_AppContentsDir)" />
+
+    <!-- Copy .icns to Resources/ if one exists next to Info.plist -->
+    <ItemGroup>
+      <_AppIcns Include="$(MSBuildProjectDirectory)/macos/*.icns" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_AppIcns)" DestinationFolder="$(_AppResourcesDir)"
+          Condition="'@(_AppIcns)' != ''" />
+
+    <!-- Ensure executable bit is set (required on macOS) -->
+    <Exec Command="chmod +x &quot;$(_AppMacOSDir)Fluence&quot;" />
+
+    <Message Text="macOS .app bundle created at: $(_AppBundleDir)" Importance="High" />
+  </Target>
+
+</Project>

@@ -1,0 +1,174 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Desktop.ViewModels"
+             xmlns:models="using:Fluence.Core.Models.Workspace"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Fluence.Desktop.Views.WelcomeView"
+             x:DataType="vm:WelcomeViewModel">
+    <UserControl.Styles>
+        <Style Selector="Button.welcomeAction">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="MinHeight" Value="38"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.welcomeRecent">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,7"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="*,Auto,*"
+          ColumnDefinitions="*,900,*">
+        <Grid Grid.Row="1"
+              Grid.Column="1"
+              RowDefinitions="Auto,Auto,Auto"
+              RowSpacing="22">
+            <StackPanel Grid.Row="0"
+                        Spacing="8">
+                <TextBlock Text="Fluence"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeDisplay}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                <TextBlock Text="Start a focused C# workspace"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeBody}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+            </StackPanel>
+
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="320,*,460"
+                  ColumnSpacing="30">
+                <StackPanel Grid.Column="0"
+                            Spacing="10">
+                    <TextBlock Text="Start"
+                               FontFamily="{StaticResource FluenceFontFamily}"
+                               FontSize="{StaticResource FluenceFontSizeSmall}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+
+                    <Button Classes="welcomeAction"
+                            Command="{Binding NewProjectCommand}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <materialIcons:MaterialIcon Width="18"
+                                                        Height="18"
+                                                        Kind="PlusBox"
+                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                        VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="New Project"
+                                       Classes="ideValue"
+                                       FontWeight="SemiBold"/>
+                        </Grid>
+                    </Button>
+                    <Button Classes="welcomeAction"
+                            Command="{Binding OpenFileCommand}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <materialIcons:MaterialIcon Width="18"
+                                                        Height="18"
+                                                        Kind="FolderOpen"
+                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                        VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Open File"
+                                       Classes="ideValue"
+                                       FontWeight="SemiBold"/>
+                        </Grid>
+                    </Button>
+                    <Button Classes="welcomeAction"
+                            Command="{Binding OpenFolderCommand}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <materialIcons:MaterialIcon Width="18"
+                                                        Height="18"
+                                                        Kind="FolderOpen"
+                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                        VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Open Folder"
+                                       Classes="ideValue"
+                                       FontWeight="SemiBold"/>
+                        </Grid>
+                    </Button>
+                    <Button Classes="welcomeAction"
+                            Command="{Binding OpenSolutionCommand}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <materialIcons:MaterialIcon Width="18"
+                                                        Height="18"
+                                                        Kind="FolderOpen"
+                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                        VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Open Solution"
+                                       Classes="ideValue"
+                                       FontWeight="SemiBold"/>
+                        </Grid>
+                    </Button>
+                </StackPanel>
+
+                <Border Grid.Column="1"
+                        Width="1"
+                        Background="{StaticResource FluenceBrushBorder}"/>
+
+                <Grid Grid.Column="2"
+                      RowDefinitions="Auto,*"
+                      RowSpacing="10">
+                    <TextBlock Text="Recent Solutions"
+                               FontFamily="{StaticResource FluenceFontFamily}"
+                               FontSize="{StaticResource FluenceFontSizeSmall}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+
+                    <Grid Grid.Row="1">
+                        <TextBlock Text="No recent solutions"
+                                   Classes="ideLabel"
+                                   IsVisible="{Binding !HasRecentSolutions}"
+                                   VerticalAlignment="Top"/>
+
+                        <ScrollViewer IsVisible="{Binding HasRecentSolutions}"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding RecentSolutions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:RecentProject">
+                                        <Button Classes="welcomeRecent"
+                                                Command="{Binding $parent[UserControl].((vm:WelcomeViewModel)DataContext).OpenRecentCommand}"
+                                                CommandParameter="{Binding}">
+                                            <Grid ColumnDefinitions="Auto,*"
+                                                  ColumnSpacing="10">
+                                                <materialIcons:MaterialIcon Width="16"
+                                                                            Height="16"
+                                                                            Kind="FolderOpen"
+                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                                            VerticalAlignment="Center"/>
+                                                <StackPanel Grid.Column="1"
+                                                            Spacing="1">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               Classes="ideValue"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Path}"
+                                                               Classes="ideLabel"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <TextBlock Grid.Row="2"
+                       Text="{Binding Status}"
+                       Classes="ideLabel"/>
+        </Grid>
+    </Grid>
+</UserControl>

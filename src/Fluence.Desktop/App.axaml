@@ -3,26 +3,36 @@
              x:Class="Fluence.Desktop.App"
              xmlns:local="using:Fluence.Desktop"
              xmlns:semi="https://irihi.tech/semi"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:converters="using:Fluence.Desktop.Converters"
              Name="Fluence IDE"
              RequestedThemeVariant="Dark">
+    <NativeMenu.Menu>
+        <NativeMenu>
+            <NativeMenuItem Header="About Fluence..." Click="OnAboutClicked"/>
+        </NativeMenu>
+    </NativeMenu.Menu>
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.DataTemplates>
-        <local:ViewLocator/>
     </Application.DataTemplates>
 
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://Fluence.Desktop/Themes/Colors.axaml"/>
-                <ResourceInclude Source="avares://Fluence.Desktop/Themes/Typography.axaml"/>
+                <ResourceInclude Source="avares://Fluence/Themes/Colors.axaml"/>
+                <ResourceInclude Source="avares://Fluence/Themes/Typography.axaml"/>
             </ResourceDictionary.MergedDictionaries>
+            <converters:ActivityBarBgConverter x:Key="ActivityBarBgConverter"/>
+            <converters:ActivityBarFgConverter x:Key="ActivityBarFgConverter"/>
         </ResourceDictionary>
     </Application.Resources>
   
     <Application.Styles>
         <FluentTheme/>
         <semi:SemiTheme Locale="en-US"/>
+        <materialIcons:MaterialIconStyles/>
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
+        <StyleInclude Source="avares://Fluence/Themes/Controls.axaml"/>
     </Application.Styles>
 </Application>

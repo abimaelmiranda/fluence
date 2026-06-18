@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.DebuggerSetup.ViewModels"
+             x:Class="Fluence.Modules.DebuggerSetup.Views.DebuggerSetupView"
+             x:DataType="vm:DebuggerSetupViewModel"
+             Background="#0A0A0A">
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="24">
+
+    <!-- Header -->
+    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+      <TextBlock Text="Setting up C# Debugger"
+                 FontSize="18"
+                 FontWeight="SemiBold"
+                 Foreground="#9D67FF" />
+      <TextBlock Text="Please wait while Fluence installs netcoredbg. This may take several minutes."
+                 FontSize="13"
+                 Foreground="#888888"
+                 TextWrapping="Wrap" />
+    </StackPanel>
+
+    <!-- Output log -->
+    <Border Grid.Row="1"
+            Background="#111111"
+            CornerRadius="6"
+            Padding="12">
+      <ScrollViewer Name="LogScroller"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+        <TextBlock Text="{Binding Output}"
+                   FontFamily="Courier New,Consolas,monospace"
+                   FontSize="12"
+                   Foreground="#CCCCCC"
+                   TextWrapping="Wrap" />
+      </ScrollViewer>
+    </Border>
+
+    <!-- Footer -->
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                  IsVisible="{Binding IsRunning}">
+        <ProgressBar IsIndeterminate="True"
+                     Width="160"
+                     Height="4"
+                     Foreground="#9D67FF" />
+        <TextBlock Text="Installing..."
+                   FontSize="12"
+                   Foreground="#888888"
+                   VerticalAlignment="Center" />
+      </StackPanel>
+
+      <TextBlock Grid.Column="0"
+                 Text="{Binding ErrorMessage}"
+                 Foreground="#FF6B6B"
+                 FontSize="12"
+                 VerticalAlignment="Center"
+                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 TextWrapping="Wrap" />
+
+      <Button Grid.Column="1"
+              Content="Cancel"
+              Command="{Binding CancelCommand}"
+              IsVisible="{Binding IsRunning}"
+              Background="Transparent"
+              Foreground="#888888"
+              Padding="12,6"
+              VerticalAlignment="Center" />
+    </Grid>
+
+  </Grid>
+</UserControl>

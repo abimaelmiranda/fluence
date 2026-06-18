@@ -20,8 +20,10 @@
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
+artifacts/
+.fluence/
 x64/
-build/
+
 bld/
 [Bb]in/
 [Oo]bj/
@@ -197,3 +199,6 @@ coverage.opencover.xml
 
 # Uploaded files
 /src/Core/Tickeit.API/wwwroot/anexos/
+
+# Bundled third-party binaries — not versioned
+/tools/

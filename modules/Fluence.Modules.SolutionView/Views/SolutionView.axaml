@@ -1,0 +1,145 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.SolutionView.ViewModels"
+             xmlns:conv="using:Fluence.Modules.SolutionView.Views.Converters"
+             x:Class="Fluence.Modules.SolutionView.Views.SolutionView"
+             x:DataType="vm:SolutionViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+
+    <Grid RowDefinitions="Auto,*">
+        <TextBlock Grid.Row="0"
+                   Text="Loading solution..."
+                   IsVisible="{Binding IsLoading}"
+                   Margin="10,8"
+                   FontFamily="{StaticResource FluenceFontFamily}"
+                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                   Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+
+        <TextBlock Grid.Row="0"
+                   Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding HasError}"
+                   Margin="10,8"
+                   FontFamily="{StaticResource FluenceFontFamily}"
+                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                   TextWrapping="Wrap"/>
+
+        <TreeView x:Name="SolutionTree"
+                  Grid.Row="1"
+                  ItemsSource="{Binding RootItems}"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Padding="0,2"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+            <TreeView.Styles>
+                <Style Selector="TreeViewItem">
+                    <Setter Property="MinHeight" Value="20"/>
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="FontSize" Value="{StaticResource FluenceFontSizeSmall}"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu x:CompileBindings="False"
+                                         IsVisible="{Binding HasContextMenu}">
+                                <MenuItem Header="Open"
+                                          Command="{Binding OpenCommand}"
+                                          IsVisible="{Binding HasOpenCommand}"/>
+                                <MenuItem Header="New Folder"
+                                          Command="{Binding NewFolderCommand}"
+                                          IsVisible="{Binding HasNewFolderCommand}"/>
+                                <MenuItem Header="New File"
+                                          Command="{Binding NewFileCommand}"
+                                          IsVisible="{Binding HasNewFileCommand}"/>
+                                <MenuItem Header="Load Solution"
+                                          Command="{Binding LoadSolutionCommand}"
+                                          IsVisible="{Binding HasLoadSolutionCommand}"/>
+                                <MenuItem Header="Copy"
+                                          Command="{Binding CopyCommand}"
+                                          IsVisible="{Binding HasCopyCommand}"/>
+                                <MenuItem Header="Paste"
+                                          Command="{Binding PasteCommand}"
+                                          IsVisible="{Binding HasPasteCommand}"/>
+                                <MenuItem Header="Delete"
+                                          Command="{Binding DeleteCommand}"
+                                          IsVisible="{Binding HasDeleteCommand}"/>
+                                <MenuItem Header="Close Solution"
+                                          Command="{Binding CloseSolutionCommand}"
+                                          IsVisible="{Binding HasCloseSolutionCommand}"/>
+                                <MenuItem Header="Manage NuGet Packages..."
+                                          Command="{Binding ManageNuGetPackagesCommand}"
+                                          IsVisible="{Binding HasManageNuGetPackagesCommand}"/>
+                                <Separator IsVisible="{Binding HasAdvancedCommands}"/>
+                                <MenuItem Header="Build"
+                                          Command="{Binding BuildCommand}"
+                                          IsVisible="{Binding HasBuildCommand}"/>
+                                <MenuItem Header="Restore"
+                                          Command="{Binding RestoreCommand}"
+                                          IsVisible="{Binding HasRestoreCommand}"/>
+                                <MenuItem Header="Clean"
+                                          Command="{Binding CleanCommand}"
+                                          IsVisible="{Binding HasCleanCommand}"/>
+                                <MenuItem Header="Publish"
+                                          Command="{Binding PublishCommand}"
+                                          IsVisible="{Binding HasPublishCommand}"/>
+                                <MenuItem Header="Run"
+                                          Command="{Binding RunCommand}"
+                                          IsVisible="{Binding HasRunCommand}"/>
+                                <MenuItem Header="Test"
+                                          Command="{Binding TestCommand}"
+                                          IsVisible="{Binding HasTestCommand}"/>
+                                <MenuItem Header="Set as Startup Project"
+                                          Command="{Binding SetStartupProjectCommand}"
+                                          IsVisible="{Binding HasSetStartupProjectCommand}"/>
+                                <MenuItem Header="Add Project Reference"
+                                          Command="{Binding AddProjectReferenceCommand}"
+                                          IsVisible="{Binding HasAddProjectReferenceCommand}"/>
+                                <MenuItem Header="Remove"
+                                          Command="{Binding RemoveProjectReferenceCommand}"
+                                          IsVisible="{Binding HasRemoveProjectReferenceCommand}"/>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+                <Style Selector="ContextMenu">
+                    <Setter Property="FontFamily" Value="{StaticResource FluenceFontFamily}"/>
+                    <Setter Property="FontSize" Value="{StaticResource FluenceFontSizeSmall}"/>
+                </Style>
+                <Style Selector="ContextMenu MenuItem">
+                    <Setter Property="MinHeight" Value="24"/>
+                    <Setter Property="Padding" Value="10,2"/>
+                </Style>
+                <Style Selector="ContextMenu Separator">
+                    <Setter Property="Margin" Value="2,4"/>
+                </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate x:DataType="vm:SolutionTreeItem"
+                                  ItemsSource="{Binding Children}">
+                    <Grid Height="20"
+                          ColumnDefinitions="18,*"
+                          ColumnSpacing="4"
+                          Margin="-8,0,0,0"
+                          VerticalAlignment="Center">
+                        <Image Grid.Column="0"
+                               Width="16"
+                               Height="16"
+                               Source="{Binding ., Converter={x:Static conv:SolutionTreeItemIconConverter.Instance}}"
+                               Stretch="Uniform"
+                               VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding DisplayName}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                   Foreground="{Binding IsActive, Converter={x:Static conv:BoolToForegroundConverter.ActiveFile}}"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center"
+                                   Padding="0"/>
+                    </Grid>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </Grid>
+
+</UserControl>

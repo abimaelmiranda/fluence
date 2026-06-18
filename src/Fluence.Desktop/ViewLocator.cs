@@ -1,39 +1,37 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
+using System.Collections.Concurrent;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
-using Fluence.Desktop.ViewModels;
+using Fluence.Core.ViewModels;
 
 namespace Fluence.Desktop;
 
-/// <summary>
-/// Given a view model, returns the corresponding view if possible.
-/// </summary>
-[RequiresUnreferencedCode(
-    "Default implementation of ViewLocator involves reflection which may be trimmed away.",
-    Url = "https://docs.avaloniaui.net/docs/concepts/view-locator")]
-public class ViewLocator : IDataTemplate
+public sealed class ViewLocator : IDataTemplate
 {
+    private readonly ConcurrentDictionary<Type, Type?> _cache = new();
+
     public Control? Build(object? param)
     {
         if (param is null)
             return null;
-        
-        var name = param.GetType().FullName!
-            .Replace(".ViewModels.", ".Views.", StringComparison.Ordinal)
-            .Replace("ViewModel", "View", StringComparison.Ordinal);
-        var type = Type.GetType(name);
 
-        if (type != null)
-        {
-            return (Control)Activator.CreateInstance(type)!;
-        }
-        
-        return new TextBlock { Text = "Not Found: " + name };
+        var viewModelType = param.GetType();
+        var viewType = _cache.GetOrAdd(viewModelType, ResolveViewType);
+
+        if (viewType is null)
+            return new TextBlock { Text = $"View not found: {viewModelType.Name}" };
+
+        return (Control)Activator.CreateInstance(viewType)!;
     }
 
-    public bool Match(object? data)
+    public bool Match(object? data) => data is ViewModelBase;
+
+    private static Type? ResolveViewType(Type viewModelType)
     {
-        return data is ViewModelBase;
+        var viewTypeName = viewModelType.FullName!
+            .Replace(".ViewModels.", ".Views.")
+            .Replace("ViewModel", "View");
+
+        return viewModelType.Assembly.GetType(viewTypeName);
     }
 }

@@ -1,13 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Fluence.Application\Fluence.Application.csproj" />
     <ProjectReference Include="..\Fluence.Core\Fluence.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Buildalyzer" Version="9.0.0" />
-    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.6" />
+    <PackageReference Include="Porta.Pty" Version="1.0.7" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Fluence.Modules.Terminal.ViewModels"
+             xmlns:terminal="using:Fluence.Modules.Terminal.Terminal"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Fluence.Modules.Terminal.Views.TerminalView"
+             x:DataType="vm:TerminalViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch"
+             Background="{StaticResource FluenceBrushShell}">
+
+    <Grid RowDefinitions="30,*">
+        <Border Grid.Row="0"
+                Background="{StaticResource FluenceBrushSurface}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <ScrollViewer Grid.Column="0"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding Sessions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TerminalSessionViewModel">
+                                <Button Command="{Binding ActivateCommand}"
+                                        Classes="ideGhost"
+                                        MinWidth="104"
+                                        Height="30"
+                                        Padding="10,0"
+                                        HorizontalContentAlignment="Left"
+                                        ToolTip.Tip="{Binding Title}">
+                                    <TextBlock Text="{Binding Title}"
+                                               Classes="ideValue"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"/>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <Button Grid.Column="1"
+                        Classes="ideIcon"
+                        Command="{Binding CreateTerminalCommand}"
+                        Height="36"
+                        ToolTip.Tip="New terminal">
+                    <materialIcons:MaterialIcon Width="20"
+                                                Height="20"
+                                                Kind="Plus"
+                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                </Button>
+
+                <Button Grid.Column="2"
+                        Classes="ideIcon"
+                        Command="{Binding CloseTerminalCommand}"
+                        Height="36"
+                        ToolTip.Tip="Close terminal">
+                    <materialIcons:MaterialIcon Width="20"
+                                                Height="20"
+                                                Kind="Close"
+                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <terminal:TerminalControl x:Name="TerminalControl"
+                                      IsVisible="{Binding HasActiveSession}"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch"/>
+
+            <TextBlock Text="No terminal sessions"
+                       IsVisible="{Binding IsEmpty}"
+                       Classes="ideLabel"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+        </Grid>
+    </Grid>
+
+</UserControl>

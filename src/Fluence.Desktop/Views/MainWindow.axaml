@@ -1,0 +1,637 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Fluence.Desktop.ViewModels"
+        xmlns:views="using:Fluence.Desktop.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:media="using:Avalonia.Media"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="760"
+        x:Class="Fluence.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/fluence.ico"
+        Title="Fluence IDE"
+        MinWidth="920"
+        MinHeight="620"
+        Background="{StaticResource FluenceBrushShell}"
+        xmlns:converters="using:Fluence.Desktop.Converters">
+
+    <Design.DataContext>
+    </Design.DataContext>
+
+    <Window.Styles>
+        <Style Selector="Button.bottomBarClear">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="CornerRadius" Value="0"/>
+        </Style>
+        <Style Selector="Button.bottomBarClear:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+        </Style>
+        <Style Selector="Button.problemRow">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+        </Style>
+        <Style Selector="Button.problemRow:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+        </Style>
+        <Style Selector="Border.problemSeverity">
+            <Setter Property="Width" Value="3"/>
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+        <Style Selector="Border.problemSeverity.error">
+            <Setter Property="Background" Value="{DynamicResource FluenceBrushError}"/>
+        </Style>
+        <Style Selector="Border.problemSeverity.warning">
+            <Setter Property="Background" Value="{DynamicResource FluenceBrushAccent}"/>
+        </Style>
+        <Style Selector="Border.problemSeverity.information">
+            <Setter Property="Background" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+        </Style>
+        <Style Selector="Border.problemSeverity.hint">
+            <Setter Property="Background" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+            <Setter Property="Opacity" Value="0.55"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity.error">
+            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushError}"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity.warning">
+            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushAccent}"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity.information">
+            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+        </Style>
+        <Style Selector="TextBlock.problemSeverity.hint">
+            <Setter Property="Foreground" Value="{DynamicResource FluenceBrushTextSecondary}"/>
+            <Setter Property="Opacity" Value="0.7"/>
+        </Style>
+    </Window.Styles>
+
+    <Panel>
+    <Grid RowDefinitions="*,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
+            <Border Grid.Column="0"
+                    Background="{StaticResource FluenceBrushShell}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="0,0,1,0">
+                <ContentControl Content="{Binding Welcome}"
+                                IsVisible="{Binding IsWelcomeVisible}"/>
+            </Border>
+
+            <Border Grid.Column="0"
+                    Background="{StaticResource FluenceBrushShell}"
+                    IsVisible="{Binding IsWorkspaceVisible}">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0"
+                            Height="38"
+                            Background="{StaticResource FluenceBrushSurface}"
+                            BorderBrush="{StaticResource FluenceBrushBorder}"
+                            BorderThickness="0,0,0,1"
+                            IsVisible="{Binding IsWorkspaceVisible}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <ScrollViewer Grid.Column="0"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding OpenDocuments}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DocumentTabViewModel">
+                                            <Border MinWidth="160"
+                                                    MaxWidth="260"
+                                                    Height="38"
+                                                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                                                    BorderThickness="0,0,1,0"
+                                                    Classes="tab-border"
+                                                    Classes.active="{Binding IsActive}">
+                                                <Border.Styles>
+                                                    <Style Selector="Border.tab-border.active">
+                                                        <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+                                                    </Style>
+                                                    <Style Selector="Border.tab-border:not(.active)">
+                                                        <Setter Property="Background" Value="{StaticResource FluenceBrushShell}"/>
+                                                    </Style>
+                                                </Border.Styles>
+                                                <Grid RowDefinitions="*,2" Margin="6,0,8,0">
+                                                    <Grid Grid.Row="0"
+                                                          ColumnDefinitions="*,Auto"
+                                                          ColumnSpacing="6">
+                                                        <Button Grid.Column="0"
+                                                                Command="{Binding ActivateCommand}"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Padding="8,0"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Stretch"
+                                                                ToolTip.Tip="{Binding Path}">
+                                                            <TextBlock Text="{Binding DisplayTitle}"
+                                                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       VerticalAlignment="Center"
+                                                                       Classes.active="{Binding IsActive}">
+                                                                <TextBlock.Styles>
+                                                                    <Style Selector="TextBlock.active">
+                                                                        <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextPrimary}"/>
+                                                                    </Style>
+                                                                    <Style Selector="TextBlock:not(.active)">
+                                                                        <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextSecondary}"/>
+                                                                    </Style>
+                                                                </TextBlock.Styles>
+                                                            </TextBlock>
+                                                        </Button>
+                                                        <Button Grid.Column="1"
+                                                                Classes="ideIcon"
+                                                                Command="{Binding CloseCommand}"
+                                                                ToolTip.Tip="Close tab">
+                                                            <materialIcons:MaterialIcon Width="13"
+                                                                                        Height="13"
+                                                                                        Kind="Close"
+                                                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                        </Button>
+                                                    </Grid>
+                                                    <Rectangle Grid.Row="1"
+                                                               Margin="-6,0,-8,0"
+                                                               IsVisible="{Binding IsActive}"
+                                                               Fill="{StaticResource FluenceBrushAccent}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Margin="8,0"
+                                        Spacing="4"
+                                        VerticalAlignment="Center">
+                                <Button Classes="ideIcon"
+                                        Command="{Binding RunCommand}"
+                                        ToolTip.Tip="Run">
+                                    <materialIcons:MaterialIcon Width="22"
+                                                                Height="22"
+                                                                Kind="Play"
+                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                </Button>
+                                <Button Classes="ideIcon"
+                                        Command="{Binding DebugCommand}"
+                                        ToolTip.Tip="Debug">
+                                    <materialIcons:MaterialIcon Width="22"
+                                                                Height="22"
+                                                                Kind="Bug"
+                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                </Button>
+                                <Button Classes="ideIcon"
+                                        Command="{Binding StopDebugCommand}"
+                                        IsVisible="{Binding IsDebugging}"
+                                        ToolTip.Tip="Stop debug">
+                                    <materialIcons:MaterialIcon Width="22"
+                                                                Height="22"
+                                                                Kind="Stop"
+                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <ContentControl Content="{Binding MainEditorContent}"
+                                        IsVisible="{Binding HasActiveDocument}"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"/>
+                        <TextBlock Text="{Binding EditorPlaceholder}"
+                                   IsVisible="{Binding HasNoActiveDocument}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeTitle}"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Width="{Binding SidebarWidth}"
+                    Background="{StaticResource FluenceBrushSurface}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="1,0,0,0"
+                    IsVisible="{Binding IsSidebarVisible}">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0"
+                            Padding="12,8"
+                            BorderBrush="{StaticResource FluenceBrushBorder}"
+                            BorderThickness="0,0,0,1">
+                        <TextBlock Text="{Binding SidebarTitle}"
+                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <ContentControl Content="{Binding ActiveSidebarContent}"/>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- ActivityBar — fixed 48px strip on the far right -->
+            <Border Grid.Column="2"
+                    Width="48"
+                    Background="{StaticResource FluenceBrushActivityBarBackground}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="1,0,0,0"
+                    IsVisible="{Binding IsWorkspaceVisible}">
+                <StackPanel Spacing="4" Margin="0,8">
+
+                    <!-- Files -->
+                    <Button Command="{Binding ActivityBar.SelectTabCommand}"
+                            CommandParameter="Files"
+                            Width="40" Height="40" Padding="0"
+                            HorizontalAlignment="Center"
+                            Background="{Binding ActivityBar.ActiveTabId,
+                                Converter={StaticResource ActivityBarBgConverter},
+                                ConverterParameter=Files}"
+                            BorderThickness="0"
+                            CornerRadius="6"
+                            ToolTip.Tip="Files">
+                        <materialIcons:MaterialIcon Width="24" Height="24"
+                                                    Kind="Folder"
+                                                    Foreground="{Binding ActivityBar.ActiveTabId,
+                                                        Converter={StaticResource ActivityBarFgConverter},
+                                                        ConverterParameter=Files}"/>
+                    </Button>
+
+                    <!-- Source Control -->
+                    <Button Command="{Binding ActivityBar.SelectTabCommand}"
+                            CommandParameter="SourceControl"
+                            Width="40" Height="40" Padding="0"
+                            HorizontalAlignment="Center"
+                            Background="{Binding ActivityBar.ActiveTabId,
+                                Converter={StaticResource ActivityBarBgConverter},
+                                ConverterParameter=SourceControl}"
+                            BorderThickness="0"
+                            CornerRadius="6"
+                            ToolTip.Tip="Source Control">
+                        <materialIcons:MaterialIcon Width="24" Height="24"
+                                                    Kind="SourceBranch"
+                                                    Foreground="{Binding ActivityBar.ActiveTabId,
+                                                        Converter={StaticResource ActivityBarFgConverter},
+                                                        ConverterParameter=SourceControl}"/>
+                    </Button>
+
+                    <!-- Debug -->
+                    <Button Command="{Binding ActivityBar.SelectTabCommand}"
+                            CommandParameter="Debug"
+                            Width="40" Height="40" Padding="0"
+                            HorizontalAlignment="Center"
+                            Background="{Binding ActivityBar.ActiveTabId,
+                                Converter={StaticResource ActivityBarBgConverter},
+                                ConverterParameter=Debug}"
+                            BorderThickness="0"
+                            CornerRadius="6"
+                            ToolTip.Tip="Debug">
+                        <materialIcons:MaterialIcon Width="24" Height="24"
+                                                    Kind="Bug"
+                                                    Foreground="{Binding ActivityBar.ActiveTabId,
+                                                        Converter={StaticResource ActivityBarFgConverter},
+                                                        ConverterParameter=Debug}"/>
+                    </Button>
+
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Background="{StaticResource FluenceBrushBottomBarBackground}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="0,1,0,0">
+            <StackPanel>
+                <Border x:Name="TerminalResizeHandle"
+                        Height="6"
+                        Background="Transparent"
+                        Cursor="SizeNorthSouth"
+                        PointerPressed="OnTerminalResizeHandlePointerPressed"
+                        PointerMoved="OnTerminalResizeHandlePointerMoved"
+                        PointerReleased="OnTerminalResizeHandlePointerReleased"
+                        PointerCaptureLost="OnTerminalResizeHandlePointerCaptureLost">
+                    <Border Height="1"
+                            VerticalAlignment="Top"
+                            Background="{StaticResource FluenceBrushBorder}"
+                            Opacity="0.65"/>
+                </Border>
+
+                <Border Height="26"
+                        Background="{StaticResource FluenceBrushBottomBarBackground}"
+                        BorderBrush="{StaticResource FluenceBrushBorder}"
+                        BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <ItemsControl Grid.Column="0"
+                                      ItemsSource="{Binding BottomBar.Tabs}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BottomBarTabViewModel">
+                                    <Border MinWidth="96"
+                                            Height="26"
+                                            Background="Transparent"
+                                            BorderBrush="{StaticResource FluenceBrushBottomBarDivider}"
+                                            BorderThickness="0,0,1,0"
+                                            CornerRadius="0"
+                                            Cursor="Hand"
+                                            PointerReleased="OnBottomBarTabPointerReleased"
+                                            Classes="bottomBarTab"
+                                            Classes.active="{Binding IsActive}">
+                                        <TextBlock Text="{Binding Title}"
+                                                   Margin="12,0"
+                                                   FontFamily="{StaticResource FluenceFontFamily}"
+                                                   FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                   VerticalAlignment="Center"
+                                                   Classes.active="{Binding IsActive}">
+                                                <TextBlock.Styles>
+                                                    <Style Selector="TextBlock.active">
+                                                        <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextPrimary}"/>
+                                                        <Setter Property="TextDecorations">
+                                                            <media:TextDecorationCollection>
+                                                                <media:TextDecoration Location="Underline"/>
+                                                            </media:TextDecorationCollection>
+                                                        </Setter>
+                                                    </Style>
+                                                </TextBlock.Styles>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Border Grid.Column="1"
+                                Background="Transparent"
+                                PointerReleased="OnTerminalToggleHandlePointerReleased"/>
+
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding IsSemanticTokensLoading}">
+                            <TextBlock Text="{Binding SemanticTokensStatusText}"
+                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                       Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                       VerticalAlignment="Center"/>
+                            <ProgressBar IsIndeterminate="True"
+                                         Width="120"
+                                         Height="3"
+                                         Foreground="{StaticResource FluenceBrushAccent}"
+                                         VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <Border Height="{Binding TerminalHeight}"
+                        Background="{StaticResource FluenceBrushBottomBarContentBackground}"
+                        IsVisible="{Binding IsBottomBarExpanded}">
+                    <Grid>
+                        <Grid IsVisible="{Binding BottomBar.IsOutputActive}">
+                            <Grid RowDefinitions="30,*">
+                                <Border Grid.Row="0"
+                                        Background="{StaticResource FluenceBrushSurface}"
+                                        BorderBrush="{StaticResource FluenceBrushBorder}"
+                                        BorderThickness="0,0,0,1">
+                                    <Button Classes="ideIcon bottomBarClear"
+                                            Command="{Binding BottomBar.Output.ClearCommand}"
+                                            HorizontalAlignment="Right"
+                                            Height="30"
+                                            ToolTip.Tip="Clear Output">
+                                        <materialIcons:MaterialIcon Width="18"
+                                                                    Height="18"
+                                                                    Kind="Delete"
+                                                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                    </Button>
+                                </Border>
+                                <ScrollViewer Grid.Row="1"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              Background="{StaticResource FluenceBrushBottomBarContentBackground}">
+                                    <TextBlock Text="{Binding BottomBar.Output.Text, Mode=OneWay}"
+                                               TextWrapping="NoWrap"
+                                               FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                               FontSize="13"
+                                               Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                               Padding="10,8"
+                                               VerticalAlignment="Top"
+                                               HorizontalAlignment="Left"/>
+                                </ScrollViewer>
+                            </Grid>
+                        </Grid>
+
+                        <Grid IsVisible="{Binding BottomBar.IsDebugActive}">
+                            <Grid RowDefinitions="30,*">
+                                <Border Grid.Row="0"
+                                        Background="{StaticResource FluenceBrushSurface}"
+                                        BorderBrush="{StaticResource FluenceBrushBorder}"
+                                        BorderThickness="0,0,0,1">
+                                    <Button Classes="ideIcon bottomBarClear"
+                                            Command="{Binding BottomBar.Debug.ClearCommand}"
+                                            HorizontalAlignment="Right"
+                                            Height="30"
+                                            ToolTip.Tip="Clear Debug">
+                                        <materialIcons:MaterialIcon Width="18"
+                                                                    Height="18"
+                                                                    Kind="Delete"
+                                                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                    </Button>
+                                </Border>
+                                <ScrollViewer Grid.Row="1"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              Background="{StaticResource FluenceBrushBottomBarContentBackground}">
+                                    <TextBlock Text="{Binding BottomBar.Debug.Text, Mode=OneWay}"
+                                               TextWrapping="NoWrap"
+                                               FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                               FontSize="13"
+                                               Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                               Padding="10,8"
+                                               VerticalAlignment="Top"
+                                               HorizontalAlignment="Left"/>
+                                </ScrollViewer>
+                            </Grid>
+                        </Grid>
+
+                        <ContentControl Content="{Binding TerminalContent}"
+                                        IsVisible="{Binding BottomBar.IsTerminalActive}"/>
+
+                        <Grid IsVisible="{Binding BottomBar.IsRunActive}">
+                            <Grid RowDefinitions="30,*">
+                                <Border Grid.Row="0"
+                                        Background="{StaticResource FluenceBrushSurface}"
+                                        BorderBrush="{StaticResource FluenceBrushBorder}"
+                                        BorderThickness="0,0,0,1">
+                                    <Button Classes="ideIcon bottomBarClear"
+                                            Command="{Binding BottomBar.Run.ClearCommand}"
+                                            HorizontalAlignment="Right"
+                                            Height="30"
+                                            ToolTip.Tip="Clear Run">
+                                        <materialIcons:MaterialIcon Width="18"
+                                                                    Height="18"
+                                                                    Kind="Delete"
+                                                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                    </Button>
+                                </Border>
+                                <ScrollViewer Grid.Row="1"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              Background="{StaticResource FluenceBrushBottomBarContentBackground}">
+                                    <TextBlock Text="{Binding BottomBar.Run.Text, Mode=OneWay}"
+                                               TextWrapping="NoWrap"
+                                               FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                               FontSize="13"
+                                               Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                               Padding="10,8"
+                                               VerticalAlignment="Top"
+                                               HorizontalAlignment="Left"/>
+                                </ScrollViewer>
+                            </Grid>
+                        </Grid>
+
+                        <Grid IsVisible="{Binding BottomBar.IsProblemsActive}">
+                            <Grid RowDefinitions="30,*">
+                                <Border Grid.Row="0"
+                                        Background="{StaticResource FluenceBrushSurface}"
+                                        BorderBrush="{StaticResource FluenceBrushBorder}"
+                                        BorderThickness="0,0,0,1">
+                                    <TextBlock Text="Problems"
+                                               FontSize="12"
+                                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                               VerticalAlignment="Center"
+                                               Margin="10,0,0,0"/>
+                                </Border>
+                                <Grid Grid.Row="1">
+                                    <TextBlock Text="No problems"
+                                               IsVisible="{Binding BottomBar.Problems.IsEmpty}"
+                                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                               FontSize="13"
+                                               Margin="10,8"/>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  Background="{StaticResource FluenceBrushBottomBarContentBackground}">
+                                        <ItemsControl ItemsSource="{Binding BottomBar.Problems.Items}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ProblemItemViewModel">
+                                                            <Button Classes="problemRow"
+                                                            Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).BottomBar.Problems.NavigateCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <Grid ColumnDefinitions="3,82,120,72,110,*"
+                                                              MinHeight="30"
+                                                              Background="Transparent">
+                                                            <Border Grid.Column="0"
+                                                                    Classes="problemSeverity"
+                                                                    Classes.error="{Binding IsError}"
+                                                                    Classes.warning="{Binding IsWarning}"
+                                                                    Classes.information="{Binding IsInformation}"
+                                                                    Classes.hint="{Binding IsHint}"/>
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding Severity}"
+                                                                       Classes="problemSeverity"
+                                                                       Classes.error="{Binding IsError}"
+                                                                       Classes.warning="{Binding IsWarning}"
+                                                                       Classes.information="{Binding IsInformation}"
+                                                                       Classes.hint="{Binding IsHint}"
+                                                                       FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                       FontSize="12"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="10,0,8,0"/>
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding FileName}"
+                                                                       FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource FluenceBrushTextPrimary}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,0,8,0"/>
+                                                            <TextBlock Grid.Column="3"
+                                                                       Text="{Binding Location}"
+                                                                       FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource FluenceBrushTextSecondary}"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="0,0,8,0"/>
+                                                            <TextBlock Grid.Column="4"
+                                                                       Text="{Binding Source}"
+                                                                       FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource FluenceBrushTextSecondary}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,0,8,0"/>
+                                                            <TextBlock Grid.Column="5"
+                                                                       Text="{Binding Message}"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource FluenceBrushTextPrimary}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,0,10,0"/>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Grid>
+
+    <!-- Saving workspace overlay -->
+    <Border IsVisible="{Binding IsSavingWorkspace}"
+            Background="#BB000000">
+        <Border Background="{StaticResource FluenceBrushSurface}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="32,24"
+                Width="280"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <StackPanel Spacing="16" HorizontalAlignment="Center">
+                <TextBlock Text="Saving workspace..."
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeBody}"
+                           Foreground="{StaticResource FluenceBrushTextPrimary}"
+                           HorizontalAlignment="Center"/>
+                <ProgressBar IsIndeterminate="True"
+                             Height="3"
+                             Foreground="{StaticResource FluenceBrushAccent}"
+                             HorizontalAlignment="Stretch"/>
+            </StackPanel>
+        </Border>
+    </Border>
+
+    </Panel>
+
+</Window>
