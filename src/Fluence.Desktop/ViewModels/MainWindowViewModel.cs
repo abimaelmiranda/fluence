@@ -613,7 +613,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!CanRunOrDebug())
             return;
 
-        SelectBottomBarTab(BottomBarTabIds.Run);
         _eventBus.Publish(new RunProjectRequestedEvent());
         await Task.CompletedTask;
     }
@@ -624,7 +623,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!CanRunOrDebug())
             return;
 
-        SelectBottomBarTab(BottomBarTabIds.Debug);
         _eventBus.Publish(new DebugProjectRequestedEvent());
         await Task.CompletedTask;
     }

@@ -11,6 +11,7 @@ using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Jobs;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -23,6 +24,7 @@ using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Output;
+using Fluence.Core.Models.Jobs;
 using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.File;
 using Fluence.Core.Abstractions.Workspace;
@@ -48,11 +50,13 @@ public sealed class DebugService(
     IDebuggerProvisioningService provisioning,
     IDotnetSdkProvisioningService sdk,
     ISettingsService settings,
-    ITaskScheduler scheduler)
+    ITaskScheduler scheduler,
+    IExclusiveJobCoordinator jobs)
     : IDebugService, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private IDebugAdapterClient? _adapter;
+    private IExclusiveJobLease? _jobLease;
     private bool _adapterStarted;
     private int _sessionGeneration;
 
@@ -68,16 +72,30 @@ public sealed class DebugService(
         try
         {
             if (_adapter is not null)
-                await StopCoreAsync(cancellationToken).ConfigureAwait(false);
+            {
+                ShowWarning("A debug session is already running.");
+                return;
+            }
+
+            if (!jobs.TryAcquire(ExclusiveJobKind.Debug, out var lease))
+            {
+                ShowWarning(FormatJobBlockedMessage(jobs.ActiveJob, "debug"));
+                return;
+            }
+
+            _jobLease = lease;
 
             var target = await projectTargets.ResolveProjectTargetAsync(ExecutionMode.Debug, cancellationToken).ConfigureAwait(false);
             if (target is null)
             {
                 ShowWarning("No debuggable project was found for the active document.");
+                ReleaseDebugJobLease();
                 return;
             }
 
-            await StartSessionAsync(target, ExecutionMode.Debug, cancellationToken).ConfigureAwait(false);
+            var started = await StartSessionAsync(target, ExecutionMode.Debug, cancellationToken).ConfigureAwait(false);
+            if (!started)
+                ReleaseDebugJobLease();
         }
         catch (FileNotFoundException ex)
         {
@@ -122,8 +140,10 @@ public sealed class DebugService(
 
             var target = currentSession.Target;
             var mode = currentSession.ActiveMode;
-            await StopCoreAsync(cancellationToken).ConfigureAwait(false);
-            await StartSessionAsync(target, mode, cancellationToken).ConfigureAwait(false);
+            await StopCoreAsync(cancellationToken, releaseJob: false).ConfigureAwait(false);
+            var restarted = await StartSessionAsync(target, mode, cancellationToken).ConfigureAwait(false);
+            if (!restarted)
+                ReleaseDebugJobLease();
         }
         catch (FileNotFoundException ex)
         {
@@ -228,13 +248,13 @@ public sealed class DebugService(
         }
     }
 
-    private async Task StartSessionAsync(ProjectExecutionTarget target, ExecutionMode mode, CancellationToken cancellationToken)
+    private async Task<bool> StartSessionAsync(ProjectExecutionTarget target, ExecutionMode mode, CancellationToken cancellationToken)
     {
         var workspaceRoot = launchSettings.GetWorkspaceRoot(workspace.Current);
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
             ShowWarning("No workspace root was found for the debug session.");
-            return;
+            return false;
         }
 
         ExpandBottomBar();
@@ -252,7 +272,7 @@ public sealed class DebugService(
         if (programPath is null)
         {
             ShowWarning("The debug build output DLL was not found.");
-            return;
+            return false;
         }
 
         sessions.Start(target, mode);
@@ -282,9 +302,10 @@ public sealed class DebugService(
         _adapterStarted = true;
         debugState.Continue();
         await output.WriteAsync(OutputChannelIds.Debug, "[debug] Session started\r\n").ConfigureAwait(false);
+        return true;
     }
 
-    private async Task StopCoreAsync(CancellationToken cancellationToken)
+    private async Task StopCoreAsync(CancellationToken cancellationToken, bool releaseJob = true)
     {
         Interlocked.Increment(ref _sessionGeneration);
         _adapterStarted = false;
@@ -301,6 +322,9 @@ public sealed class DebugService(
             debugState.EndSession();
             sessions.Stop();
         }
+
+        if (releaseJob)
+            ReleaseDebugJobLease();
     }
 
     private void OnAdapterStopped(object? sender, DebugAdapterStoppedEvent e)
@@ -544,6 +568,24 @@ public sealed class DebugService(
         }
 
         Dispatcher.UIThread.Post(() => notifications.ShowError("Debug", message));
+    }
+
+    private void ReleaseDebugJobLease()
+    {
+        _jobLease?.Dispose();
+        _jobLease = null;
+    }
+
+    private static string FormatJobBlockedMessage(ExclusiveJobKind? activeJob, string requestedJob)
+    {
+        var activeName = activeJob switch
+        {
+            ExclusiveJobKind.Debug => "debug session",
+            ExclusiveJobKind.Run => "run process",
+            _ => "job",
+        };
+
+        return $"Cannot start {requestedJob} while a {activeName} is running.";
     }
 
     private static string? ResolveProgramPath(string projectPath, string workspaceRoot)
