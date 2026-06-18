@@ -78,6 +78,18 @@ public sealed class FluentTaskScheduler : ITaskScheduler, IDisposable
         }
     }
 
+    public void CancelAndForget(string ownerId)
+    {
+        if (!_owners.TryRemove(ownerId, out var entry))
+            return;
+
+        lock (entry)
+        {
+            entry.Cts.Cancel();
+            entry.Cts.Dispose();
+        }
+    }
+
     private void Enqueue(ScheduledWork item)
     {
         var priority = item.Priority;

@@ -20,4 +20,6 @@ public interface ITaskScheduler
         object? correlationId = null);
 
     void Cancel(string ownerId);
+
+    void CancelAndForget(string ownerId);
 }

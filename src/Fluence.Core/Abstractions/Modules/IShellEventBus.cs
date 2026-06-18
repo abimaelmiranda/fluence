@@ -84,7 +84,7 @@ public sealed record ActivityBarTabChangedEvent(string? TabId) : IShellEvent;
 public sealed record ActivityBarTabSelectRequestedEvent(string? TabId) : IShellEvent;
 
 // LSP — Editor → LanguageServer
-public sealed record DocumentOpenedEvent(string FilePath, string Content, string LanguageId) : IShellEvent;
+public sealed record DocumentOpenedEvent(string FilePath, string Content, string LanguageId, int Version) : IShellEvent;
 public sealed record DocumentChangedEvent(string FilePath, string Content, int Version) : IShellEvent;
 public sealed record DocumentLiveChangedEvent(string FilePath, string Content, int Version, bool FlushImmediately) : IShellEvent;
 public sealed record DocumentClosedEvent(string FilePath) : IShellEvent;
@@ -96,7 +96,7 @@ public sealed record LspInteractiveRequestStartedEvent(string FilePath) : IShell
 // LSP — LanguageServer → Editor
 public sealed record DiagnosticsUpdatedEvent(string FilePath, System.Collections.Generic.IReadOnlyList<Core.Models.LanguageServer.LspDiagnostic> Diagnostics) : IShellEvent;
 public sealed record NavigationResolvedEvent(string FilePath, int Line, int Character) : IShellEvent;
-public sealed record SemanticTokensUpdatedEvent(string FilePath, Core.Models.LanguageServer.SemanticToken[] Tokens) : IShellEvent;
+public sealed record SemanticTokensUpdatedEvent(string FilePath, int Version, Core.Models.LanguageServer.SemanticToken[] Tokens) : IShellEvent;
 public sealed record SemanticTokensRefreshStartedEvent(string FilePath) : IShellEvent;
 public sealed record SemanticTokensRefreshFinishedEvent(string FilePath) : IShellEvent;
 public sealed record SemanticTokensRefreshFailedEvent(string FilePath) : IShellEvent;

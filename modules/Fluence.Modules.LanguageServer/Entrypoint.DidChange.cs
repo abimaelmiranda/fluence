@@ -94,6 +94,10 @@ public sealed partial class Entrypoint
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { Debug.WriteLine($"[LS] didClose failed: {ex.Message}"); }
+        finally
+        {
+            _scheduler?.CancelAndForget($"lsp.close.{filePath}");
+        }
     }
 
     private async Task SendLatestDidChangeAsync(string filePath, CancellationToken ct)

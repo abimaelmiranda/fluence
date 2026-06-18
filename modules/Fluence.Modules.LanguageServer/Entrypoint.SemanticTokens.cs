@@ -34,7 +34,7 @@ public sealed partial class Entrypoint
 
     private async Task SendSemanticTokensAsync(SemanticTokensService service, IShellEventBus events, string filePath, CancellationToken ct)
     {
-        if (!ShouldRequestSemanticTokens(filePath))
+        if (!TryGetSemanticTokenRequestVersion(filePath, out var requestVersion))
             return;
 
         events.Publish(new SemanticTokensRefreshStartedEvent(filePath));
@@ -45,40 +45,80 @@ public sealed partial class Entrypoint
             return;
         }
 
+        if (!IsSemanticTokenVersionCurrent(filePath, requestVersion))
+        {
+            events.Publish(new SemanticTokensRefreshFinishedEvent(filePath));
+            return;
+        }
+
         if (tokens.Length == 0)
         {
-            if (TryScheduleSemanticRetry(filePath))
+            if (TryScheduleSemanticRetry(filePath, requestVersion, out var versionCurrent))
             {
                 events.Publish(new SemanticTokensRefreshFinishedEvent(filePath));
                 QueueSemanticTokens(filePath);
             }
             else
             {
-                events.Publish(new SemanticTokensRefreshFailedEvent(filePath));
+                if (versionCurrent)
+                    events.Publish(new SemanticTokensRefreshFailedEvent(filePath));
+                else
+                    events.Publish(new SemanticTokensRefreshFinishedEvent(filePath));
             }
             return;
         }
 
-        MarkSemanticTokensFinished(filePath);
-        events.Publish(new SemanticTokensUpdatedEvent(filePath, tokens));
+        if (!MarkSemanticTokensFinished(filePath, requestVersion))
+        {
+            events.Publish(new SemanticTokensRefreshFinishedEvent(filePath));
+            return;
+        }
+
+        events.Publish(new SemanticTokensUpdatedEvent(filePath, requestVersion, tokens));
         events.Publish(new SemanticTokensRefreshFinishedEvent(filePath));
     }
 
-    private bool ShouldRequestSemanticTokens(string filePath)
+    private bool TryGetSemanticTokenRequestVersion(string filePath, out int version)
+    {
+        lock (_documentGate)
+        {
+            if (_documents.TryGetValue(filePath, out var state) &&
+                state.IsOpenInServer &&
+                state.TokensPending)
+            {
+                version = state.Version;
+                return true;
+            }
+        }
+
+        version = 0;
+        return false;
+    }
+
+    private bool IsSemanticTokenVersionCurrent(string filePath, int version)
     {
         lock (_documentGate)
         {
             return _documents.TryGetValue(filePath, out var state) &&
                    state.IsOpenInServer &&
-                   state.TokensPending;
+                   state.TokensPending &&
+                   state.Version == version;
         }
     }
 
-    private bool TryScheduleSemanticRetry(string filePath)
+    private bool TryScheduleSemanticRetry(string filePath, int version, out bool versionCurrent)
     {
         lock (_documentGate)
         {
-            if (!_documents.TryGetValue(filePath, out var state) || !state.TokensPending)
+            if (!_documents.TryGetValue(filePath, out var state) ||
+                state.Version != version)
+            {
+                versionCurrent = false;
+                return false;
+            }
+
+            versionCurrent = true;
+            if (!state.TokensPending)
                 return false;
 
             state.SemanticAttempt++;
@@ -90,15 +130,18 @@ public sealed partial class Entrypoint
         }
     }
 
-    private void MarkSemanticTokensFinished(string filePath)
+    private bool MarkSemanticTokensFinished(string filePath, int version)
     {
         lock (_documentGate)
         {
             if (!_documents.TryGetValue(filePath, out var state))
-                return;
+                return false;
+            if (state.Version != version)
+                return false;
 
             state.TokensPending = false;
             state.SemanticAttempt = 0;
+            return true;
         }
     }
 }
