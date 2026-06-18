@@ -41,12 +41,15 @@ public sealed partial class LspSetupViewModel : ViewModelBase
         _eventBus = eventBus;
     }
 
-    public async Task StartProvisioningAsync()
+    public async Task StartProvisioningAsync(CancellationToken cancellationToken = default)
     {
-        _cts = new CancellationTokenSource();
-        IsRunning = true;
-        ErrorMessage = null;
-        Output = string.Empty;
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            IsRunning = true;
+            ErrorMessage = null;
+            Output = string.Empty;
+        });
 
         try
         {
@@ -62,16 +65,16 @@ public sealed partial class LspSetupViewModel : ViewModelBase
         catch (OperationCanceledException)
         {
             AppendOutput("[Fluence] Setup cancelled.");
-            ErrorMessage = "Setup was cancelled.";
+            await SetErrorAsync("Setup was cancelled.").ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             AppendOutput($"[Fluence] Setup failed: {ex.Message}");
-            ErrorMessage = "Setup failed. Click Retry to try again.";
+            await SetErrorAsync("Setup failed. Click Retry to try again.").ConfigureAwait(false);
         }
         finally
         {
-            IsRunning = false;
+            await Dispatcher.UIThread.InvokeAsync(() => IsRunning = false);
             _cts?.Dispose();
             _cts = null;
         }
@@ -94,5 +97,10 @@ public sealed partial class LspSetupViewModel : ViewModelBase
     private void AppendOutput(string line)
     {
         Dispatcher.UIThread.Post(() => Output += line + "\n");
+    }
+
+    private async Task SetErrorAsync(string message)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = message);
     }
 }

@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Infrastructure;
-using Fluence.Core.Models.Infrastructure;
 
 namespace Fluence.Infrastructure;
 
@@ -30,6 +29,41 @@ public sealed class ProcessHost : IProcessHost
             CreateNoWindow = true,
         };
 
+        await RunCoreAsync(startInfo, onOutput, onError, cancellationToken, environment).ConfigureAwait(false);
+    }
+
+    public async Task RunAsync(
+        string executable,
+        IReadOnlyList<string> arguments,
+        string? workingDirectory,
+        Action<string> onOutput,
+        Action<string> onError,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string>? environment = null)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executable,
+            WorkingDirectory = workingDirectory ?? string.Empty,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+
+        foreach (var argument in arguments)
+            startInfo.ArgumentList.Add(argument);
+
+        await RunCoreAsync(startInfo, onOutput, onError, cancellationToken, environment).ConfigureAwait(false);
+    }
+
+    private static async Task RunCoreAsync(
+        ProcessStartInfo startInfo,
+        Action<string> onOutput,
+        Action<string> onError,
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, string>? environment)
+    {
         if (environment is not null)
         {
             foreach (var item in environment)
@@ -61,6 +95,6 @@ public sealed class ProcessHost : IProcessHost
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        await tcs.Task;
+        await tcs.Task.ConfigureAwait(false);
     }
 }

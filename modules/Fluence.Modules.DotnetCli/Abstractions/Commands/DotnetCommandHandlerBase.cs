@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
+using Fluence.Modules.DotnetCli.Services;
 
 namespace Fluence.Modules.DotnetCli.Abstractions.Commands;
 
@@ -36,8 +38,8 @@ public abstract class DotnetCommandHandlerBase(
 
         var targetPath = Workspace.Current.CurrentSolutionPath ?? workingDirectory;
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
-        var arguments = $"{subcommand} \"{targetPath}\"";
-        await output.WriteAsync(OutputChannelIds.Run, $"> {Quote(dotnet)} {arguments}{System.Environment.NewLine}", cancellationToken: cancellationToken);
+        var arguments = CreateArguments(subcommand, targetPath);
+        await output.WriteAsync(OutputChannelIds.Run, $"> {DotnetCommandLine.Format(dotnet, arguments)}{System.Environment.NewLine}", cancellationToken: cancellationToken);
         void OnOutput(string line)
         {
             inspectLine?.Invoke(line, workingDirectory);
@@ -59,6 +61,10 @@ public abstract class DotnetCommandHandlerBase(
             cancellationToken);
     }
 
-    private static string Quote(string value) =>
-        "\"" + value.Replace("\"", "\\\"", System.StringComparison.Ordinal) + "\"";
+    private static IReadOnlyList<string> CreateArguments(string subcommand, string targetPath)
+    {
+        var arguments = new List<string>(subcommand.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        arguments.Add(targetPath);
+        return arguments;
+    }
 }

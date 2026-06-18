@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -223,32 +224,47 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
         return true;
     }
 
-    private string BuildPublishArguments()
+    private IReadOnlyList<string> BuildPublishArguments()
     {
-        var command = $"publish {DotnetCommandLine.Quote(SelectedProject!.Path)} -c {SelectedConfiguration} -o {DotnetCommandLine.Quote(OutputPath)}";
+        var arguments = new List<string>
+        {
+            "publish",
+            SelectedProject!.Path,
+            "-c",
+            SelectedConfiguration,
+            "-o",
+            OutputPath,
+        };
 
         if (!IsDefaultFramework(SelectedFramework))
-            command += $" -f {SelectedFramework}";
+        {
+            arguments.Add("-f");
+            arguments.Add(SelectedFramework);
+        }
 
         if (!IsPortableRuntime(SelectedRuntimeIdentifier))
-            command += $" -r {SelectedRuntimeIdentifier}";
+        {
+            arguments.Add("-r");
+            arguments.Add(SelectedRuntimeIdentifier);
+        }
 
-        command += $" --self-contained {SelfContained.ToString().ToLowerInvariant()}";
+        arguments.Add("--self-contained");
+        arguments.Add(SelfContained.ToString().ToLowerInvariant());
 
         if (SingleFile)
-            command += " /p:PublishSingleFile=true";
+            arguments.Add("/p:PublishSingleFile=true");
         if (ReadyToRun)
-            command += " /p:PublishReadyToRun=true";
+            arguments.Add("/p:PublishReadyToRun=true");
         if (Trimmed)
-            command += " /p:PublishTrimmed=true";
+            arguments.Add("/p:PublishTrimmed=true");
 
-        return command;
+        return arguments;
     }
 
-    private async Task RunDotnetAsync(string arguments, string workingDirectory, CancellationToken cancellationToken)
+    private async Task RunDotnetAsync(IReadOnlyList<string> arguments, string workingDirectory, CancellationToken cancellationToken)
     {
         var dotnet = await _sdk.ResolveDotnetExecutableAsync(cancellationToken);
-        await _output.WriteAsync(OutputChannelIds.Run, $"> {DotnetCommandLine.Quote(dotnet)} {arguments}{Environment.NewLine}", cancellationToken: cancellationToken);
+        await _output.WriteAsync(OutputChannelIds.Run, $"> {DotnetCommandLine.Format(dotnet, arguments)}{Environment.NewLine}", cancellationToken: cancellationToken);
 
         await _processHost.RunAsync(
             dotnet,
