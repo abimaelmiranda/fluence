@@ -19,8 +19,16 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
             ["enumMember"] = "#51B6C4",
             ["typeParameter"] = "#B8D7A3",
             ["method"] = "#DCDCAA",
+            ["methodName"] = "#DCDCAA",
+            ["extensionMethodName"] = "#DCDCAA",
+            ["property"] = "#D4D4D4",
+            ["propertyName"] = "#D4D4D4",
             ["field"] = "#D4D4D4",
-            ["staticSymbol"] = "#51B6C4",
+            ["fieldName"] = "#D4D4D4",
+            ["constant"] = "#D4D4D4",
+            ["constantName"] = "#D4D4D4",
+            ["eventName"] = "#DCDCAA",
+            ["staticSymbol"] = "#D4D4D4",
             ["variable"] = "#9CDCFE",
         };
 
@@ -37,6 +45,11 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
             list.Add(token);
         }
         _tokensByLine = map;
+    }
+
+    public void Clear()
+    {
+        _tokensByLine = [];
     }
 
     public IBrush? GetBrush(string tokenType) =>
@@ -95,12 +108,16 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
             "namespace" or "module"                => null,
 
             // Members — OmniSharp names
-            "method" or "extensionMethod"          => "method",
-            "property"                             => null,
+            "method" or "methodName" or
+            "extensionMethod" or "extensionMethodName"
+                                                   => "method",
+            "property" or "propertyName"           => "property",
+            "constant" or "constantName"           => "constant",
+            "fieldName"                            => "field",
             "field" when isStatic                  => "staticSymbol",
             "field"                                => "field",
             "enumMember"                           => "enumMember",
-            "event"                                => "method",
+            "event" or "eventName"                 => "method",
 
             // Locals — OmniSharp uses "local" for local variables
             "local" or "parameter"                 => "variable",
@@ -136,7 +153,11 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
         {
             "class" or "delegateName" or "record" => "type",
             "recordStruct" => "struct",
-            "extensionMethod" => "method",
+            "methodName" or "extensionMethod" or "extensionMethodName" => "method",
+            "propertyName" => "property",
+            "fieldName" => "field",
+            "constantName" => "constant",
+            "eventName" => "method",
             "local" or "parameter" => "variable",
             _ => string.IsNullOrWhiteSpace(tokenType) ? null : tokenType,
         };
