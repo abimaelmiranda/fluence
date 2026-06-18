@@ -134,7 +134,6 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         SaveSettings();
         SaveKeybindings();
         Status = "Saved";
-        Reload();
     }
 
     [RelayCommand]
@@ -182,9 +181,6 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
             var properties = SettingsReflectionScaffolder.BuildProperties(
                 section.SettingsType, current, ThemeOptions);
             var sectionViewModel = new SettingsSectionViewModel(section.SectionName, section.SettingsType, properties);
-            foreach (var property in sectionViewModel.Properties)
-                property.PropertyChanged += (_, _) => RefreshSettingsFilter();
-
             Sections.Add(sectionViewModel);
         }
 
