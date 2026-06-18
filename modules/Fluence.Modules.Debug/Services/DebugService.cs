@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -258,11 +259,13 @@ public sealed class DebugService(
         _adapter.Continued += OnAdapterContinued;
         _adapter.OutputReceived += OnAdapterOutputReceived;
 
+        var configuration = await CreateDebugConfigurationAsync(target, cancellationToken).ConfigureAwait(false);
+        var workingDirectory = ResolveWorkingDirectory(target.ProjectPath, workspaceRoot, configuration.WorkingDirectory);
         var request = new DebugLaunchRequest(
             ProjectPath: target.ProjectPath,
             ProgramPath: programPath,
-            WorkingDirectory: Path.GetDirectoryName(target.ProjectPath) ?? workspaceRoot,
-            Configuration: target.Configuration ?? new LaunchConfiguration(),
+            WorkingDirectory: workingDirectory,
+            Configuration: configuration,
             Breakpoints: debugState.Snapshot.Breakpoints,
             WorkspaceRoot: workspaceRoot);
         await _adapter.StartAsync(request, cancellationToken).ConfigureAwait(false);
@@ -503,6 +506,111 @@ public sealed class DebugService(
             .FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.OrdinalIgnoreCase))
             ?.Value
             .Trim();
+    }
+
+    private async Task<LaunchConfiguration> CreateDebugConfigurationAsync(
+        ProjectExecutionTarget target,
+        CancellationToken cancellationToken)
+    {
+        var source = target.Configuration ?? new LaunchConfiguration();
+        var configuration = new LaunchConfiguration
+        {
+            Name = source.Name,
+            RunProfileName = source.RunProfileName,
+            DebugProfileName = source.DebugProfileName,
+            Architecture = source.Architecture,
+            WorkingDirectory = source.WorkingDirectory,
+            Args = source.Args.ToList(),
+            Env = new Dictionary<string, string>(source.Env, StringComparer.OrdinalIgnoreCase),
+        };
+
+        var profile = await ResolveDebugProfileAsync(target, cancellationToken).ConfigureAwait(false);
+        if (profile is not null)
+        {
+            foreach (var item in profile.EnvironmentVariables)
+                configuration.Env[item.Key] = item.Value;
+
+            if (!string.IsNullOrWhiteSpace(profile.ApplicationUrl) &&
+                !configuration.Env.ContainsKey("ASPNETCORE_URLS"))
+                configuration.Env["ASPNETCORE_URLS"] = profile.ApplicationUrl;
+
+            if (!string.IsNullOrWhiteSpace(profile.CommandLineArgs))
+                configuration.Args.InsertRange(0, SplitCommandLine(profile.CommandLineArgs));
+
+            if (!string.IsNullOrWhiteSpace(profile.WorkingDirectory))
+                configuration.WorkingDirectory = profile.WorkingDirectory;
+
+            if (!configuration.Env.ContainsKey("ASPNETCORE_ENVIRONMENT"))
+                configuration.Env["ASPNETCORE_ENVIRONMENT"] = "Development";
+            if (!configuration.Env.ContainsKey("DOTNET_ENVIRONMENT"))
+                configuration.Env["DOTNET_ENVIRONMENT"] = "Development";
+        }
+
+        return configuration;
+    }
+
+    private async Task<DotnetLaunchProfile?> ResolveDebugProfileAsync(
+        ProjectExecutionTarget target,
+        CancellationToken cancellationToken)
+    {
+        var profileName = target.Configuration?.DebugProfileName;
+        if (string.IsNullOrWhiteSpace(profileName))
+            return null;
+
+        var profiles = await launchSettings.DiscoverLaunchProfilesAsync(target.ProjectPath, cancellationToken).ConfigureAwait(false);
+        return profiles.FirstOrDefault(profile =>
+            string.Equals(profile.Name, profileName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string ResolveWorkingDirectory(
+        string projectPath,
+        string workspaceRoot,
+        string? configuredWorkingDirectory)
+    {
+        var projectDirectory = Path.GetDirectoryName(projectPath) ?? workspaceRoot;
+        if (string.IsNullOrWhiteSpace(configuredWorkingDirectory))
+            return projectDirectory;
+
+        return Path.IsPathRooted(configuredWorkingDirectory)
+            ? configuredWorkingDirectory
+            : Path.GetFullPath(Path.Combine(projectDirectory, configuredWorkingDirectory));
+    }
+
+    private static IReadOnlyList<string> SplitCommandLine(string commandLine)
+    {
+        var args = new List<string>();
+        var current = new System.Text.StringBuilder();
+        var inQuotes = false;
+
+        for (var i = 0; i < commandLine.Length; i++)
+        {
+            var ch = commandLine[i];
+            if (ch == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(ch) && !inQuotes)
+            {
+                AddCurrent();
+                continue;
+            }
+
+            current.Append(ch);
+        }
+
+        AddCurrent();
+        return args;
+
+        void AddCurrent()
+        {
+            if (current.Length == 0)
+                return;
+
+            args.Add(current.ToString());
+            current.Clear();
+        }
     }
 
     public async ValueTask DisposeAsync()

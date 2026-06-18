@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -14,6 +16,7 @@ namespace Fluence.Modules.DotnetCli.Services;
 public sealed class RunTargetResolver(
     IWorkspaceContext workspace,
     IProjectExecutionTargetResolver projectTargets,
+    ILaunchSettingsService launchSettings,
     IDotnetSdkProvisioningService sdk)
 {
     internal async Task<RunTarget?> ResolveAsync(CancellationToken cancellationToken = default)
@@ -39,13 +42,18 @@ public sealed class RunTargetResolver(
     {
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
         var workingDirectory = Path.GetDirectoryName(target.ProjectPath) ?? Directory.GetCurrentDirectory();
+        var profile = await ResolveRunProfileAsync(target, cancellationToken);
+        var profileArgument = profile is null
+            ? string.Empty
+            : $" --launch-profile {QuoteArgument(profile.Name)}";
         var args = target.Configuration?.Args is { Count: > 0 } configurationArgs
             ? " -- " + string.Join(" ", configurationArgs.Select(QuoteArgument))
             : string.Empty;
         return new RunTarget(
             dotnet,
-            $"run --project {QuoteArgument(target.ProjectPath)}{args}",
+            $"run --project {QuoteArgument(target.ProjectPath)}{profileArgument}{args}",
             workingDirectory,
+            CreateEnvironment(profile),
             MapKind(target.Kind));
     }
 
@@ -53,7 +61,33 @@ public sealed class RunTargetResolver(
     {
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
         var workingDirectory = Path.GetDirectoryName(filePath) ?? Directory.GetCurrentDirectory();
-        return new RunTarget(dotnet, $"run --file {QuoteArgument(filePath)}", workingDirectory, RunTargetKind.File);
+        return new RunTarget(dotnet, $"run --file {QuoteArgument(filePath)}", workingDirectory, null, RunTargetKind.File);
+    }
+
+    private async Task<DotnetLaunchProfile?> ResolveRunProfileAsync(
+        ProjectExecutionTarget target,
+        CancellationToken cancellationToken)
+    {
+        var profileName = target.Configuration?.RunProfileName;
+        if (string.IsNullOrWhiteSpace(profileName))
+            return null;
+
+        var profiles = await launchSettings.DiscoverLaunchProfilesAsync(target.ProjectPath, cancellationToken);
+        return profiles.FirstOrDefault(profile =>
+            string.Equals(profile.Name, profileName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IReadOnlyDictionary<string, string>? CreateEnvironment(DotnetLaunchProfile? profile)
+    {
+        if (profile is null)
+            return null;
+
+        var env = new Dictionary<string, string>(profile.EnvironmentVariables, StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(profile.ApplicationUrl) &&
+            !env.ContainsKey("ASPNETCORE_URLS"))
+            env["ASPNETCORE_URLS"] = profile.ApplicationUrl;
+
+        return env.Count == 0 ? null : env;
     }
 
     private static RunTargetKind MapKind(ProjectExecutionTargetKind kind) =>

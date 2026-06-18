@@ -49,7 +49,7 @@ public sealed class DotnetProjectExecutionTargetResolver(
         CancellationToken cancellationToken)
     {
         var settings = mode == ExecutionMode.Debug
-            ? await launchSettings.EnsureAsync(cancellationToken)
+            ? await launchSettings.EnsureAsync(mode, cancellationToken)
             : await launchSettings.LoadExistingAsync(cancellationToken);
         if (settings is null || string.IsNullOrWhiteSpace(settings.StartupProject))
             return null;
