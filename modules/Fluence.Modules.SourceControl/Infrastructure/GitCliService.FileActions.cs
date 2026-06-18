@@ -54,7 +54,7 @@ public sealed partial class GitCliService
             : await RunGitAsync(repoRoot, "diff", "--", NormalizePath(filePath));
     }
 
-    private static async Task RevertRenameAsync(GitFileChange change, string repoRoot)
+    private async Task RevertRenameAsync(GitFileChange change, string repoRoot)
     {
         var currentPath = NormalizePath(change.FilePath);
         var originalPath = NormalizePath(change.OriginalPath!);

@@ -1,3 +1,6 @@
+using System;
+using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -13,6 +16,8 @@ namespace Fluence.Modules.Terminal;
 
 public sealed class Entrypoint : IModule
 {
+    private ITerminalService? _terminalService;
+
     public string Name => "Terminal";
 
     public void Register(IServiceCollection services)
@@ -22,11 +27,28 @@ public sealed class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
+        _terminalService = host.Services.GetRequiredService<ITerminalService>();
         host.ShellRegions.SetContent(
             ShellRegion.BottomBar,
             Name,
             "Terminal",
             host.Services.GetRequiredService<TerminalViewModel>());
         host.SetModuleState(Name, ModuleState.Active);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_terminalService is IAsyncDisposable asyncDisposable)
+        {
+            try
+            {
+                await asyncDisposable.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Terminal module shutdown failed/timed out: {ex}");
+                // Terminal teardown is best-effort; shutdown fallback continues with process cleanup.
+            }
+        }
     }
 }

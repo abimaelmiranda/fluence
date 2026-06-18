@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Settings;
@@ -43,4 +44,6 @@ public sealed class Entrypoint : IModule
         host.Services.GetRequiredService<ThemeRuntimeCoordinator>().Start();
         host.SetModuleState(Name, ModuleState.Active);
     }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

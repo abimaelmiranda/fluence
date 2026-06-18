@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
@@ -27,6 +28,9 @@ namespace Fluence.Modules.Editor;
 
 public sealed class Entrypoint : IModule
 {
+    private readonly List<IDisposable> _subscriptions = [];
+    private EditorViewModel? _editorViewModel;
+
     public string Name => "Editor";
 
     public void Register(IServiceCollection services)
@@ -47,25 +51,26 @@ public sealed class Entrypoint : IModule
         host.Services.GetRequiredService<ISettingsService>()
             .Get<EditorSettings>();
 
+        _editorViewModel = host.Services.GetRequiredService<EditorViewModel>();
         host.ShellRegions.SetContent(
             ShellRegion.Main,
             Name,
             "Editor",
-            host.Services.GetRequiredService<EditorViewModel>());
+            _editorViewModel);
 
-        host.Events.SubscribeSync<OpenFileRequestedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<OpenFileRequestedEvent>(e =>
             scheduler.Schedule("editor.open", TaskPriority.Interactive,
                 ct => OpenFileAsync(host, e.Path, ct),
-                correlationId: e.Path));
+                correlationId: e.Path)));
 
-        host.Events.SubscribeSync<OpenFileAtLocationRequestedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<OpenFileAtLocationRequestedEvent>(e =>
             scheduler.Schedule("editor.open-location", TaskPriority.Interactive,
                 ct => OpenFileAtLocationAsync(host, e.Path, e.Line, e.Character, ct),
-                correlationId: $"{e.Path}:{e.Line}:{e.Character}"));
+                correlationId: $"{e.Path}:{e.Line}:{e.Character}")));
 
-        host.Events.SubscribeSync<SaveActiveDocumentRequestedEvent>(_ =>
+        _subscriptions.Add(host.Events.SubscribeSync<SaveActiveDocumentRequestedEvent>(_ =>
             scheduler.Schedule("editor.save", TaskPriority.Critical,
-                ct => SaveActiveDocumentAsync(host, ct)));
+                ct => SaveActiveDocumentAsync(host, ct))));
 
         host.SetModuleState(Name, ModuleState.Active);
     }
@@ -101,5 +106,15 @@ public sealed class Entrypoint : IModule
     {
         var editor = host.Services.GetRequiredService<EditorViewModel>();
         await editor.SaveManuallyAsync(ct);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        foreach (var subscription in _subscriptions)
+            subscription.Dispose();
+        _subscriptions.Clear();
+        _editorViewModel?.Dispose();
+        _editorViewModel = null;
+        return ValueTask.CompletedTask;
     }
 }

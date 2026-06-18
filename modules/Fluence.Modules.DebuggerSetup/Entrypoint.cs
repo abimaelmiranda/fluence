@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
@@ -14,6 +16,8 @@ namespace Fluence.Modules.DebuggerSetup;
 
 public sealed class Entrypoint : IModule
 {
+    private IDisposable? _provisioningSubscription;
+
     public string Name => "DebuggerSetup";
 
     public void Register(IServiceCollection services)
@@ -25,7 +29,7 @@ public sealed class Entrypoint : IModule
     {
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
-        host.Events.SubscribeSync<DebuggerProvisioningRequiredEvent>(e =>
+        _provisioningSubscription = host.Events.SubscribeSync<DebuggerProvisioningRequiredEvent>(e =>
         {
             var vm = host.Services.GetRequiredService<DebuggerSetupViewModel>();
             host.Workspace.OpenToolTab("tool://fluence/debugger-setup", "Debugger Setup", vm);
@@ -36,5 +40,12 @@ public sealed class Entrypoint : IModule
         });
 
         host.SetModuleState(Name, ModuleState.Active);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _provisioningSubscription?.Dispose();
+        _provisioningSubscription = null;
+        return ValueTask.CompletedTask;
     }
 }

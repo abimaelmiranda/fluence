@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
+using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Problems;
 using Fluence.Core.Abstractions.Tasks;
@@ -17,7 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.LanguageServer;
 
-public sealed partial class Entrypoint : IModule, IDisposable
+public sealed partial class Entrypoint : IModule
 {
     private static readonly TimeSpan DidChangeDebounceDelay = TimeSpan.FromMilliseconds(750);
     private static readonly TimeSpan SemanticTokensDebounceDelay = TimeSpan.FromMilliseconds(800);
@@ -30,6 +31,9 @@ public sealed partial class Entrypoint : IModule, IDisposable
     private SemanticTokensService? _semanticTokensService;
     private IShellEventBus? _eventBus;
     private ITaskScheduler? _scheduler;
+    private IWorkspaceContext? _workspace;
+    private EventHandler? _workspaceChanged;
+    private readonly List<IDisposable> _subscriptions = [];
 
     public string Name => "LanguageServer";
 
@@ -40,6 +44,7 @@ public sealed partial class Entrypoint : IModule, IDisposable
         services.AddSingleton<ILanguageServerService>(provider =>
             new LanguageServerService(
                 provider.GetRequiredService<ILspProvisioningService>(),
+                provider.GetRequiredService<IProcessSpawner>(),
                 provider.GetRequiredService<IDiagnosticsService>(),
                 provider.GetRequiredService<IShellEventBus>(),
                 provider.GetRequiredService<LspClientHolder>()));
@@ -73,8 +78,30 @@ public sealed partial class Entrypoint : IModule, IDisposable
                 provider.GetRequiredService<LspClientHolder>()));
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        _scheduler?.CancelAndForget("lsp.start");
+        _scheduler?.CancelAndForget("lsp.problems");
+
+        foreach (var subscription in _subscriptions)
+            subscription.Dispose();
+        _subscriptions.Clear();
+
+        if (_workspace is not null && _workspaceChanged is not null)
+            _workspace.Changed -= _workspaceChanged;
+        _workspaceChanged = null;
+        _workspace = null;
+
+        foreach (var path in SnapshotDocumentPaths())
+            UnregisterDocument(path);
+
+        if (_languageServer is IAsyncDisposable asyncDisposable)
+            await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+
+        _languageServer = null;
+        _semanticTokensService = null;
+        _eventBus = null;
+        _scheduler = null;
     }
 
     public void Initialize(IModuleHost host)
@@ -87,10 +114,12 @@ public sealed partial class Entrypoint : IModule, IDisposable
         _semanticTokensService = host.Services.GetRequiredService<SemanticTokensService>();
         _eventBus = host.Events;
         _scheduler = host.Services.GetRequiredService<ITaskScheduler>();
+        _workspace = host.Workspace;
 
-        host.Workspace.Changed += (_, _) => TryStartOrRestart(host, lsp, provisioning, fromProvisioning: false);
+        _workspaceChanged = (_, _) => TryStartOrRestart(host, lsp, provisioning, fromProvisioning: false);
+        host.Workspace.Changed += _workspaceChanged;
 
-        host.Events.SubscribeSync<DocumentOpenedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<DocumentOpenedEvent>(e =>
         {
             RegisterDocument(e.FilePath, e.Content, e.LanguageId, e.Version);
             if (!lsp.IsRunning) return;
@@ -99,19 +128,19 @@ public sealed partial class Entrypoint : IModule, IDisposable
                 TaskPriority.Interactive,
                 ct => EnsureDocumentOpenAndQueueSemanticTokensAsync(lsp, e.FilePath, ct),
                 correlationId: e.FilePath);
-        });
+        }));
 
-        host.Events.SubscribeSync<DocumentChangedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<DocumentChangedEvent>(e =>
         {
             HandleDocumentContentChanged(lsp, e.FilePath, e.Content, e.Version, flushImmediately: false);
-        });
+        }));
 
-        host.Events.SubscribeSync<DocumentLiveChangedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<DocumentLiveChangedEvent>(e =>
         {
             HandleDocumentContentChanged(lsp, e.FilePath, e.Content, e.Version, e.FlushImmediately);
-        });
+        }));
 
-        host.Events.SubscribeSync<DocumentClosedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<DocumentClosedEvent>(e =>
         {
             UnregisterDocument(e.FilePath);
             if (!lsp.IsRunning) return;
@@ -119,9 +148,9 @@ public sealed partial class Entrypoint : IModule, IDisposable
                 $"lsp.close.{e.FilePath}",
                 TaskPriority.Interactive,
                 ct => FlushPendingDidChangeAndCloseAsync(lsp, e.FilePath, ct));
-        });
+        }));
 
-        host.Events.SubscribeSync<LspServerReadyEvent>(_ =>
+        _subscriptions.Add(host.Events.SubscribeSync<LspServerReadyEvent>(_ =>
         {
             foreach (var path in SnapshotDocumentPaths())
                 _scheduler.Schedule(
@@ -129,10 +158,10 @@ public sealed partial class Entrypoint : IModule, IDisposable
                     TaskPriority.Interactive,
                     ct => EnsureDocumentOpenAndQueueSemanticTokensAsync(lsp, path, ct),
                     correlationId: path);
-        });
+        }));
 
         // Diagnostics signal OmniSharp finished analyzing — safe moment to fetch semantic tokens
-        host.Events.SubscribeSync<DiagnosticsUpdatedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<DiagnosticsUpdatedEvent>(e =>
         {
             var diagnostics = e.Diagnostics;
             _scheduler.ScheduleLatest(
@@ -161,42 +190,42 @@ public sealed partial class Entrypoint : IModule, IDisposable
                 correlationId: e.FilePath);
             if (!lsp.IsRunning) return;
             QueueSemanticTokens(e.FilePath);
-        });
+        }));
 
-        host.Events.SubscribeSync<FlushDocumentSyncEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<FlushDocumentSyncEvent>(e =>
         {
             if (!lsp.IsRunning) return;
             _scheduler.Schedule(
                 $"lsp.flush.{e.FilePath}",
                 TaskPriority.Critical,
                 ct => FlushPendingDidChangeImmediatelyAsync(lsp, e.FilePath, ct));
-        });
+        }));
 
-        host.Events.SubscribeSync<LspInteractiveRequestStartedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<LspInteractiveRequestStartedEvent>(e =>
         {
             CancelSemanticTokens(e.FilePath);
-        });
+        }));
 
-        host.Events.SubscribeSync<GoToDefinitionRequestedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<GoToDefinitionRequestedEvent>(e =>
             _scheduler.Schedule("lsp.navigation", TaskPriority.Interactive,
                 ct => HandleNavigation(host, nav, "definition", e.FilePath, e.Line, e.Character, ct),
-                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}"));
+                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}")));
 
-        host.Events.SubscribeSync<GoToImplementationRequestedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<GoToImplementationRequestedEvent>(e =>
             _scheduler.Schedule("lsp.navigation", TaskPriority.Interactive,
                 ct => HandleNavigation(host, nav, "implementation", e.FilePath, e.Line, e.Character, ct),
-                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}"));
+                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}")));
 
-        host.Events.SubscribeSync<GoToTypeDefinitionRequestedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<GoToTypeDefinitionRequestedEvent>(e =>
             _scheduler.Schedule("lsp.navigation", TaskPriority.Interactive,
                 ct => HandleNavigation(host, nav, "typeDefinition", e.FilePath, e.Line, e.Character, ct),
-                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}"));
+                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}")));
 
-        host.Events.SubscribeSync<LspProvisioningCompletedEvent>(_ =>
+        _subscriptions.Add(host.Events.SubscribeSync<LspProvisioningCompletedEvent>(_ =>
         {
             _provisioningPending = false;
             TryStartOrRestart(host, lsp, provisioning, fromProvisioning: true);
-        });
+        }));
 
         host.SetModuleState(Name, ModuleState.Active);
     }

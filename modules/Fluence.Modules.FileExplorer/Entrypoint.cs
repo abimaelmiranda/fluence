@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
@@ -17,6 +18,10 @@ namespace Fluence.Modules.FileExplorer;
 public sealed class Entrypoint : IModule
 {
     private string? _activeTabId;
+    private IDisposable? _activitySubscription;
+    private IDisposable? _openFolderSubscription;
+    private IWorkspaceContext? _workspace;
+    private EventHandler? _workspaceChanged;
 
     public string Name => "FileExplorer";
 
@@ -30,16 +35,18 @@ public sealed class Entrypoint : IModule
     {
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
-        host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
+        _activitySubscription = host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
         {
             _activeTabId = e.TabId;
             UpdateSidebar(host);
         });
-        host.Events.SubscribeSync<OpenFolderRequestedEvent>(e =>
+        _openFolderSubscription = host.Events.SubscribeSync<OpenFolderRequestedEvent>(e =>
             scheduler.Schedule("workspace.open-folder", TaskPriority.Interactive,
                 ct => OpenFolderAsync(host, e.Path, ct),
                 correlationId: e.Path));
-        host.Workspace.Changed += (_, _) => UpdateSidebar(host);
+        _workspace = host.Workspace;
+        _workspaceChanged = (_, _) => UpdateSidebar(host);
+        host.Workspace.Changed += _workspaceChanged;
         UpdateSidebar(host);
         host.SetModuleState(Name, ModuleState.Active);
     }
@@ -66,5 +73,18 @@ public sealed class Entrypoint : IModule
     {
         var handler = host.Services.GetRequiredService<ICommandHandler<OpenFolderWorkspaceCommand>>();
         await handler.HandleAsync(new OpenFolderWorkspaceCommand(path), ct);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _activitySubscription?.Dispose();
+        _openFolderSubscription?.Dispose();
+        if (_workspace is not null && _workspaceChanged is not null)
+            _workspace.Changed -= _workspaceChanged;
+        _activitySubscription = null;
+        _openFolderSubscription = null;
+        _workspace = null;
+        _workspaceChanged = null;
+        return ValueTask.CompletedTask;
     }
 }

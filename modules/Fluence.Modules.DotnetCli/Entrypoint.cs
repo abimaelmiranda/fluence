@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Dotnet;
@@ -35,6 +36,8 @@ namespace Fluence.Modules.DotnetCli;
 
 public sealed class Entrypoint : IModule
 {
+    private readonly List<IDisposable> _subscriptions = [];
+
     public string Name => "DotnetCli";
 
     public void Register(IServiceCollection services)
@@ -61,43 +64,43 @@ public sealed class Entrypoint : IModule
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
         // Build/Test/Restore/Clean são pesadas — Maintenance para não competir com o editor
-        host.Events.SubscribeSync<BuildWorkspaceRequestedEvent>(_ =>
+        _subscriptions.Add(host.Events.SubscribeSync<BuildWorkspaceRequestedEvent>(_ =>
             scheduler.Schedule("dotnet.build", TaskPriority.Maintenance,
-                ct => HandleAsync(host, new BuildWorkspaceCommand(), ct)));
-        host.Events.SubscribeSync<TestWorkspaceRequestedEvent>(_ =>
+                ct => HandleAsync(host, new BuildWorkspaceCommand(), ct))));
+        _subscriptions.Add(host.Events.SubscribeSync<TestWorkspaceRequestedEvent>(_ =>
             scheduler.Schedule("dotnet.test", TaskPriority.Maintenance,
-                ct => HandleAsync(host, new TestWorkspaceCommand(), ct)));
-        host.Events.SubscribeSync<RestoreWorkspaceRequestedEvent>(_ =>
+                ct => HandleAsync(host, new TestWorkspaceCommand(), ct))));
+        _subscriptions.Add(host.Events.SubscribeSync<RestoreWorkspaceRequestedEvent>(_ =>
             scheduler.Schedule("dotnet.restore", TaskPriority.Maintenance,
-                ct => HandleAsync(host, new RestoreWorkspaceCommand(), ct)));
-        host.Events.SubscribeSync<CleanWorkspaceRequestedEvent>(_ =>
+                ct => HandleAsync(host, new RestoreWorkspaceCommand(), ct))));
+        _subscriptions.Add(host.Events.SubscribeSync<CleanWorkspaceRequestedEvent>(_ =>
             scheduler.Schedule("dotnet.clean", TaskPriority.Maintenance,
-                ct => HandleAsync(host, new CleanWorkspaceCommand(), ct)));
-        host.Events.SubscribeSync<BuildProjectRequestedEvent>(e =>
+                ct => HandleAsync(host, new CleanWorkspaceCommand(), ct))));
+        _subscriptions.Add(host.Events.SubscribeSync<BuildProjectRequestedEvent>(e =>
             scheduler.Schedule("dotnet.build", TaskPriority.Maintenance,
-                ct => HandleAsync(host, new BuildProjectCommand(e.ProjectPath), ct)));
-        host.Events.SubscribeSync<TestProjectRequestedEvent>(e =>
+                ct => HandleAsync(host, new BuildProjectCommand(e.ProjectPath), ct))));
+        _subscriptions.Add(host.Events.SubscribeSync<TestProjectRequestedEvent>(e =>
             scheduler.Schedule("dotnet.test", TaskPriority.Maintenance,
-                ct => HandleAsync(host, new TestProjectCommand(e.ProjectPath), ct)));
-        host.Events.SubscribeSync<RestoreProjectRequestedEvent>(e =>
+                ct => HandleAsync(host, new TestProjectCommand(e.ProjectPath), ct))));
+        _subscriptions.Add(host.Events.SubscribeSync<RestoreProjectRequestedEvent>(e =>
             scheduler.Schedule("dotnet.restore", TaskPriority.Maintenance,
-                ct => HandleAsync(host, new RestoreProjectCommand(e.ProjectPath), ct)));
-        host.Events.SubscribeSync<CleanProjectRequestedEvent>(e =>
+                ct => HandleAsync(host, new RestoreProjectCommand(e.ProjectPath), ct))));
+        _subscriptions.Add(host.Events.SubscribeSync<CleanProjectRequestedEvent>(e =>
             scheduler.Schedule("dotnet.clean", TaskPriority.Maintenance,
-                ct => HandleAsync(host, new CleanProjectCommand(e.ProjectPath), ct)));
+                ct => HandleAsync(host, new CleanProjectCommand(e.ProjectPath), ct))));
 
         // Run é Interactive — usuário quer feedback imediato
-        host.Events.SubscribeSync<RunProjectRequestedEvent>(_ =>
+        _subscriptions.Add(host.Events.SubscribeSync<RunProjectRequestedEvent>(_ =>
             scheduler.Schedule("dotnet.run", TaskPriority.Interactive,
-                ct => RunAsync(host, ct)));
-        host.Events.SubscribeSync<RunSpecificProjectRequestedEvent>(e =>
+                ct => RunAsync(host, ct))));
+        _subscriptions.Add(host.Events.SubscribeSync<RunSpecificProjectRequestedEvent>(e =>
             scheduler.Schedule("dotnet.run", TaskPriority.Interactive,
-                ct => RunSpecificAsync(host, e.ProjectPath, ct)));
+                ct => RunSpecificAsync(host, e.ProjectPath, ct))));
 
         // UI-only: abrem tool tabs, sem trabalho pesado
-        host.Events.SubscribeSync<NewProjectRequestedEvent>(_ => OpenNewProjectWizard(host));
-        host.Events.SubscribeSync<PublishProjectRequestedEvent>(e => OpenPublishWizard(host, e.ProjectPath));
-        host.Events.SubscribeSync<DotnetSdkSetupRequestedEvent>(_ => OpenSdkSetup(host));
+        _subscriptions.Add(host.Events.SubscribeSync<NewProjectRequestedEvent>(_ => OpenNewProjectWizard(host)));
+        _subscriptions.Add(host.Events.SubscribeSync<PublishProjectRequestedEvent>(e => OpenPublishWizard(host, e.ProjectPath)));
+        _subscriptions.Add(host.Events.SubscribeSync<DotnetSdkSetupRequestedEvent>(_ => OpenSdkSetup(host)));
 
         host.SetModuleState(Name, ModuleState.Active);
     }
@@ -188,5 +191,13 @@ public sealed class Entrypoint : IModule
 
         host.Events.Publish(new DotnetSdkSetupRequestedEvent());
         return false;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        foreach (var subscription in _subscriptions)
+            subscription.Dispose();
+        _subscriptions.Clear();
+        return ValueTask.CompletedTask;
     }
 }

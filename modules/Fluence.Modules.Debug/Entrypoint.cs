@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
@@ -29,6 +31,8 @@ namespace Fluence.Modules.Debug;
 public sealed class Entrypoint : IModule
 {
     private string? _activeTabId;
+    private readonly List<IDisposable> _subscriptions = [];
+    private IDebugService? _debugService;
 
     public string Name => "Debug";
 
@@ -45,6 +49,7 @@ public sealed class Entrypoint : IModule
     {
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
         var debug = host.Services.GetRequiredService<IDebugService>();
+        _debugService = debug;
         var commands = host.Services.GetRequiredService<ICommandRegistry>();
 
         host.Services.GetRequiredService<ISettingsRegistry>()
@@ -52,39 +57,39 @@ public sealed class Entrypoint : IModule
         host.Services.GetRequiredService<ISettingsService>()
             .Get<DebugSettings>();
 
-        host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
+        _subscriptions.Add(host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
         {
             _activeTabId = e.TabId;
             UpdateSidebar(host);
-        });
+        }));
 
         // Iniciar sessão — Interactive: usuário espera resposta imediata
-        host.Events.SubscribeSync<DebugProjectRequestedEvent>(_ =>
+        _subscriptions.Add(host.Events.SubscribeSync<DebugProjectRequestedEvent>(_ =>
             scheduler.Schedule("debug.start", TaskPriority.Interactive,
-                ct => HandleAsync(host, ct)));
+                ct => HandleAsync(host, ct))));
 
         // Controles de sessão — Critical: inputs diretos do usuário no debugger
-        host.Events.SubscribeSync<StopDebugRequestedEvent>(_ =>
+        _subscriptions.Add(host.Events.SubscribeSync<StopDebugRequestedEvent>(_ =>
             scheduler.Schedule("debug.stop", TaskPriority.Critical,
-                _ => debug.StopAsync()));
-        host.Events.SubscribeSync<ReloadDebugRequestedEvent>(_ =>
+                _ => debug.StopAsync())));
+        _subscriptions.Add(host.Events.SubscribeSync<ReloadDebugRequestedEvent>(_ =>
             scheduler.Schedule("debug.reload", TaskPriority.Critical,
-                _ => debug.RestartAsync()));
-        host.Events.SubscribeSync<ContinueDebugRequestedEvent>(_ =>
+                _ => debug.RestartAsync())));
+        _subscriptions.Add(host.Events.SubscribeSync<ContinueDebugRequestedEvent>(_ =>
             scheduler.Schedule("debug.continue", TaskPriority.Critical,
-                _ => debug.ContinueAsync()));
-        host.Events.SubscribeSync<StepOverDebugRequestedEvent>(_ =>
+                _ => debug.ContinueAsync())));
+        _subscriptions.Add(host.Events.SubscribeSync<StepOverDebugRequestedEvent>(_ =>
             scheduler.Schedule("debug.step-over", TaskPriority.Critical,
-                _ => debug.StepOverAsync()));
-        host.Events.SubscribeSync<StepIntoDebugRequestedEvent>(_ =>
+                _ => debug.StepOverAsync())));
+        _subscriptions.Add(host.Events.SubscribeSync<StepIntoDebugRequestedEvent>(_ =>
             scheduler.Schedule("debug.step-into", TaskPriority.Critical,
-                _ => debug.StepIntoAsync()));
-        host.Events.SubscribeSync<StepOutDebugRequestedEvent>(_ =>
+                _ => debug.StepIntoAsync())));
+        _subscriptions.Add(host.Events.SubscribeSync<StepOutDebugRequestedEvent>(_ =>
             scheduler.Schedule("debug.step-out", TaskPriority.Critical,
-                _ => debug.StepOutAsync()));
-        host.Events.SubscribeSync<ToggleBreakpointRequestedEvent>(e =>
+                _ => debug.StepOutAsync())));
+        _subscriptions.Add(host.Events.SubscribeSync<ToggleBreakpointRequestedEvent>(e =>
             scheduler.Schedule("debug.breakpoint", TaskPriority.Interactive,
-                _ => debug.ToggleBreakpointAsync(e.FilePath, e.Line)));
+                _ => debug.ToggleBreakpointAsync(e.FilePath, e.Line))));
 
         commands.Register(new IdeCommandDefinition(
             CommandIds.DebugContinue, "Continue", KeybindingScope.Global, "F5",
@@ -122,5 +127,17 @@ public sealed class Entrypoint : IModule
     {
         var handler = host.Services.GetRequiredService<ICommandHandler<DebugProjectCommand>>();
         await handler.HandleAsync(new DebugProjectCommand(), ct);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var subscription in _subscriptions)
+            subscription.Dispose();
+        _subscriptions.Clear();
+
+        if (_debugService is not null)
+            await _debugService.StopAsync().ConfigureAwait(false);
+
+        _debugService = null;
     }
 }
