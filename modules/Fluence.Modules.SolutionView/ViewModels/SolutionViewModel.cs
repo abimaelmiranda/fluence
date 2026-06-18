@@ -19,6 +19,7 @@ using Fluence.Core.ViewModels;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.SolutionView.Abstractions;
 using Fluence.Modules.SolutionView.Commands;
@@ -342,7 +343,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
     private ICommand CreateTerminalCommand(Action execute) =>
         new RelayCommand(() =>
         {
-            _eventBus.Publish(new ExpandPanelEvent("Terminal"));
+            _eventBus.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
             execute();
         });
 

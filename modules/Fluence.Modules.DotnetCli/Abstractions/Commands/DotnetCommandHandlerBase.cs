@@ -3,7 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Infrastructure;
-using Fluence.Core.Models.Infrastructure;
+using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -13,12 +14,11 @@ namespace Fluence.Modules.DotnetCli.Abstractions.Commands;
 
 public abstract class DotnetCommandHandlerBase(
     IWorkspaceContext workspace,
-    ITerminalService terminal,
+    IProcessHost processHost,
+    IOutputChannelService output,
     IDotnetSdkProvisioningService sdk)
 {
     protected IWorkspaceContext Workspace { get; } = workspace;
-
-    protected ITerminalService Terminal { get; } = terminal;
 
     protected async Task RunDotnetAsync(string subcommand, CancellationToken cancellationToken)
     {
@@ -32,7 +32,15 @@ public abstract class DotnetCommandHandlerBase(
 
         var targetPath = Workspace.Current.CurrentSolutionPath ?? workingDirectory;
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
-        await Terminal.ExecuteAsync($"{Quote(dotnet)} {subcommand} \"{targetPath}\"", workingDirectory, cancellationToken);
+        var arguments = $"{subcommand} \"{targetPath}\"";
+        await output.WriteAsync(OutputChannelIds.Run, $"> {Quote(dotnet)} {arguments}{System.Environment.NewLine}", cancellationToken: cancellationToken);
+        await processHost.RunAsync(
+            dotnet,
+            arguments,
+            workingDirectory,
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine, OutputChannelEntryKind.Error),
+            cancellationToken);
     }
 
     private static string Quote(string value) =>

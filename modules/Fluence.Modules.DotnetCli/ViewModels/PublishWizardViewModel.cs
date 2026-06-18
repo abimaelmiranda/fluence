@@ -13,7 +13,10 @@ using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Output;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.ViewModels;
 using Fluence.Modules.DotnetCli.Services;
 
@@ -23,7 +26,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
 {
     private readonly IWorkspaceContext _workspace;
     private readonly IWorkspaceDialogService _dialogs;
-    private readonly ITerminalService _terminal;
+    private readonly IOutputChannelService _output;
     private readonly IProcessHost _processHost;
     private readonly IShellEventBus _events;
     private readonly IDotnetSdkProvisioningService _sdk;
@@ -33,7 +36,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
     public PublishWizardViewModel(
         IWorkspaceContext workspace,
         IWorkspaceDialogService dialogs,
-        ITerminalService terminal,
+        IOutputChannelService output,
         IProcessHost processHost,
         IShellEventBus events,
         IDotnetSdkProvisioningService sdk,
@@ -42,7 +45,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
     {
         _workspace = workspace;
         _dialogs = dialogs;
-        _terminal = terminal;
+        _output = output;
         _processHost = processHost;
         _events = events;
         _sdk = sdk;
@@ -181,7 +184,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
             if (SaveProfile)
                 SavePublishProfile();
 
-            _events.Publish(new ExpandPanelEvent("Terminal"));
+            _events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
             await RunDotnetAsync(BuildPublishArguments(), Path.GetDirectoryName(SelectedProject!.Path)!, cancellationToken);
 
             Status = "Publish completed.";
@@ -245,14 +248,14 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
     private async Task RunDotnetAsync(string arguments, string workingDirectory, CancellationToken cancellationToken)
     {
         var dotnet = await _sdk.ResolveDotnetExecutableAsync(cancellationToken);
-        await _terminal.WriteOutputAsync($"> {DotnetCommandLine.Quote(dotnet)} {arguments}{Environment.NewLine}", cancellationToken: cancellationToken);
+        await _output.WriteAsync(OutputChannelIds.Run, $"> {DotnetCommandLine.Quote(dotnet)} {arguments}{Environment.NewLine}", cancellationToken: cancellationToken);
 
         await _processHost.RunAsync(
             dotnet,
             arguments,
             workingDirectory,
-            line => _ = _terminal.WriteOutputAsync(line + Environment.NewLine),
-            line => _ = _terminal.WriteOutputAsync(line + Environment.NewLine, isError: true),
+            line => _ = _output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
+            line => _ = _output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
             cancellationToken);
     }
 

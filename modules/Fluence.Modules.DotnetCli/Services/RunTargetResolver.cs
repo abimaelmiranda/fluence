@@ -43,7 +43,8 @@ public sealed class RunTargetResolver(
             ? " -- " + string.Join(" ", configurationArgs.Select(QuoteArgument))
             : string.Empty;
         return new RunTarget(
-            $"{QuoteArgument(dotnet)} run --project {QuoteArgument(target.ProjectPath)}{args}",
+            dotnet,
+            $"run --project {QuoteArgument(target.ProjectPath)}{args}",
             workingDirectory,
             MapKind(target.Kind));
     }
@@ -52,7 +53,7 @@ public sealed class RunTargetResolver(
     {
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken);
         var workingDirectory = Path.GetDirectoryName(filePath) ?? Directory.GetCurrentDirectory();
-        return new RunTarget($"{QuoteArgument(dotnet)} run --file {QuoteArgument(filePath)}", workingDirectory, RunTargetKind.File);
+        return new RunTarget(dotnet, $"run --file {QuoteArgument(filePath)}", workingDirectory, RunTargetKind.File);
     }
 
     private static RunTargetKind MapKind(ProjectExecutionTargetKind kind) =>
@@ -67,6 +68,6 @@ public sealed class RunTargetResolver(
 
     private static string QuoteArgument(string value)
     {
-        return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        return "\"" + value.Replace("\"", "\\\"") + "\"";
     }
 }
