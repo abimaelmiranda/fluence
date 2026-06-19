@@ -28,6 +28,8 @@ public abstract class DotnetCommandHandlerBase(
         CancellationToken cancellationToken,
         Action<string, string?>? inspectLine = null)
     {
+        output.Clear(OutputChannelIds.Run);
+
         var workingDirectory = Workspace.Current.CurrentFolderPath
                                ?? Path.GetDirectoryName(Workspace.Current.CurrentSolutionPath);
 

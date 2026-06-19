@@ -1,7 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Output;
 using Fluence.Core.ViewModels;
 using Fluence.Modules.SourceControl.Abstractions;
 using Fluence.Modules.SourceControl.Models;
@@ -14,6 +16,7 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
     private readonly ISourceControlDialogService _dialogs;
     private readonly IWorkspaceContext _workspace;
     private readonly IShellEventBus _events;
+    private readonly IOutputChannelService _output;
     private System.IO.FileSystemWatcher? _watcher;
     private System.Threading.CancellationTokenSource? _debounce;
     private string? _repoRoot;
@@ -36,16 +39,19 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
         IGitService git,
         ISourceControlDialogService dialogs,
         IWorkspaceContext workspace,
-        IShellEventBus events)
+        IShellEventBus events,
+        IOutputChannelService output)
     {
         _git = git;
         _dialogs = dialogs;
         _workspace = workspace;
         _events = events;
+        _output = output;
     }
 
     public void Initialize(string? workspaceRoot)
     {
+        WriteOutput("[SourceControl] Initializing\r\n");
         DisposeWatcher();
         _ = InitializeCoreAsync(workspaceRoot);
     }
@@ -56,4 +62,7 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
         _debounce?.Dispose();
         DisposeWatcher();
     }
+
+    private void WriteOutput(string text, OutputChannelEntryKind kind = OutputChannelEntryKind.Information) =>
+        _ = _output.WriteAsync(OutputChannelIds.Output, text, kind);
 }

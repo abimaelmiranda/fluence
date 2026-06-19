@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Modules.SourceControl.Models;
 
 namespace Fluence.Modules.SourceControl.ViewModels;
@@ -22,12 +23,14 @@ public sealed partial class SourceControlViewModel
         var root = await _git.GetRepositoryRootAsync(workspaceRoot);
         if (root is null)
         {
+            WriteOutput("[SourceControl] No Git repository found\r\n", OutputChannelEntryKind.Warning);
             SetNoRepository();
             return;
         }
 
         _repoRoot = root;
         IsGitRepository = true;
+        WriteOutput($"[SourceControl] Repository: {root}\r\n");
         await RefreshCoreAsync();
         StartWatcher(Path.Combine(root, ".git"));
     }
@@ -43,6 +46,7 @@ public sealed partial class SourceControlViewModel
 
         try
         {
+            WriteOutput("[SourceControl] Refreshing status\r\n");
             var statusTask = _git.GetStatusAsync(repoRoot);
             var branchesTask = _git.GetBranchesAsync(repoRoot);
             var aheadBehindTask = _git.GetAheadBehindAsync(repoRoot);
@@ -71,6 +75,7 @@ public sealed partial class SourceControlViewModel
         catch (Exception ex)
         {
             Debug.WriteLine($"Source control refresh failed: {ex}");
+            WriteOutput($"[SourceControl] Refresh failed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
         }
     }
 

@@ -7,8 +7,8 @@ using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Problems;
 using Fluence.Core.Models.Problems;
+using Fluence.Core.Services.Problems;
 using Fluence.Modules.DotnetCli.Abstractions.Commands;
-using Fluence.Modules.DotnetCli.Services;
 
 namespace Fluence.Modules.DotnetCli.Commands.Project.Build;
 
@@ -22,17 +22,21 @@ public sealed class BuildProjectCommandHandler(
     public async Task HandleAsync(BuildProjectCommand command, CancellationToken cancellationToken = default)
     {
         var buildProblems = new List<ProblemItem>();
-        problems.ClearSource("Build");
+        var buildProblemsGate = new object();
+        problems.ClearSource(ProblemSourceIds.Build);
         await RunDotnetAsync(
             "build",
             command.ProjectPath,
             cancellationToken,
             (line, workingDirectory) =>
             {
-                var problem = BuildProblemParser.TryParse(line, workingDirectory);
+                var problem = MsBuildProblemParser.TryParse(line, workingDirectory);
                 if (problem is not null)
-                    buildProblems.Add(problem);
+                {
+                    lock (buildProblemsGate)
+                        buildProblems.Add(problem);
+                }
             });
-        problems.ReplaceSource("Build", buildProblems);
+        problems.ReplaceSource(ProblemSourceIds.Build, buildProblems);
     }
 }

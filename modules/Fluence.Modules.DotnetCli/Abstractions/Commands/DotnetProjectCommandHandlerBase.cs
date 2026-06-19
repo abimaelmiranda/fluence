@@ -22,6 +22,8 @@ public abstract class DotnetProjectCommandHandlerBase(
         CancellationToken cancellationToken,
         Action<string, string?>? inspectLine = null)
     {
+        output.Clear(OutputChannelIds.Run);
+
         if (string.IsNullOrWhiteSpace(projectPath))
         {
             return;
