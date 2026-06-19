@@ -5,6 +5,7 @@ using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Events.Ui;
 
 namespace Fluence.Desktop.Services;
 

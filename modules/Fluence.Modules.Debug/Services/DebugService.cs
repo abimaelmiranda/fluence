@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Avalonia.Threading;
 using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
@@ -34,6 +33,9 @@ using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Debug.Abstractions.Session;
+using Fluence.Core.Events.Provisioning;
+using Fluence.Core.Events.Ui;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.Debug;
 
@@ -54,7 +56,8 @@ public sealed class DebugService(
     IProblemService problems,
     ISettingsService settings,
     ITaskScheduler scheduler,
-    IExclusiveJobCoordinator jobs)
+    IExclusiveJobCoordinator jobs,
+    IUiDispatcher dispatcher)
     : IDebugService, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -464,13 +467,13 @@ public sealed class DebugService(
         if (!File.Exists(filePath))
             return;
 
-        if (Dispatcher.UIThread.CheckAccess())
+        if (dispatcher.CheckAccess())
         {
             events.Publish(new OpenFileRequestedEvent(filePath));
             return;
         }
 
-        Dispatcher.UIThread.Post(() => events.Publish(new OpenFileRequestedEvent(filePath)));
+        dispatcher.Post(() => events.Publish(new OpenFileRequestedEvent(filePath)));
     }
 
     private static bool IsExceptionStop(DebugAdapterStoppedEvent e) =>
@@ -565,13 +568,13 @@ public sealed class DebugService(
     {
         events.Publish(new SelectBottomBarTabEvent(tabId));
 
-        if (Dispatcher.UIThread.CheckAccess())
+        if (dispatcher.CheckAccess())
         {
             shellRegions.Expand(ShellRegion.BottomBar);
             return;
         }
 
-        Dispatcher.UIThread.Post(() => shellRegions.Expand(ShellRegion.BottomBar));
+        dispatcher.Post(() => shellRegions.Expand(ShellRegion.BottomBar));
     }
 
     private void ScheduleRunOutput(
@@ -613,24 +616,24 @@ public sealed class DebugService(
 
     private void ShowWarning(string message)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        if (dispatcher.CheckAccess())
         {
             notifications.ShowWarning("Debug", message);
             return;
         }
 
-        Dispatcher.UIThread.Post(() => notifications.ShowWarning("Debug", message));
+        dispatcher.Post(() => notifications.ShowWarning("Debug", message));
     }
 
     private void ShowError(string message)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        if (dispatcher.CheckAccess())
         {
             notifications.ShowError("Debug", message);
             return;
         }
 
-        Dispatcher.UIThread.Post(() => notifications.ShowError("Debug", message));
+        dispatcher.Post(() => notifications.ShowError("Debug", message));
     }
 
     private void ReleaseDebugJobLease()

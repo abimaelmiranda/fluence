@@ -1,8 +1,8 @@
 using System;
 using Avalonia;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Fluence.Core.Abstractions.Settings;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Theming;
 using Fluence.Core.Models.Settings;
 using Fluence.Core.Models.Theming;
@@ -16,16 +16,19 @@ public sealed class ThemeRuntimeCoordinator : IDisposable
     private readonly IThemeLoader _themeLoader;
     private readonly ISettingsService _settings;
     private readonly ILogger<ThemeRuntimeCoordinator> _logger;
+    private readonly IUiDispatcher _dispatcher;
     private IDisposable? _settingsSubscription;
 
     public ThemeRuntimeCoordinator(
         IThemeLoader themeLoader,
         ISettingsService settings,
-        ILogger<ThemeRuntimeCoordinator> logger)
+        ILogger<ThemeRuntimeCoordinator> logger,
+        IUiDispatcher dispatcher)
     {
         _themeLoader = themeLoader;
         _settings = settings;
         _logger = logger;
+        _dispatcher = dispatcher;
     }
 
     public void Start()
@@ -40,10 +43,10 @@ public sealed class ThemeRuntimeCoordinator : IDisposable
 
     private void ApplyOnUiThread(IdeTheme theme, GlobalSettings settings)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        if (_dispatcher.CheckAccess())
             Apply(theme, settings);
         else
-            Dispatcher.UIThread.Post(() => Apply(theme, settings));
+            _dispatcher.Post(() => Apply(theme, settings));
     }
 
     public void Dispose()
