@@ -276,17 +276,18 @@ public partial class EditorView
 
     private async void OnEditorLostFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (_viewModel is not null)
+        var viewModel = _viewModel;
+        if (viewModel is null) return;
+
+        try
         {
-            try
-            {
-                await SaveCurrentViewStateAsync();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[EditorViewState] Save failed: {ex.Message}");
-            }
-            await _viewModel.SaveIfDirtyAsync();
+            await SaveCurrentViewStateAsync();
+            await viewModel.SaveIfDirtyAsync();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[EditorView] OnEditorLostFocus failed: {ex.Message}");
         }
     }
 
