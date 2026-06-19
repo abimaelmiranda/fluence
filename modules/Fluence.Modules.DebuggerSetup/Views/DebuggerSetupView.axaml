@@ -10,11 +10,11 @@
 
     <!-- Header -->
     <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
-      <TextBlock Text="{ReflectionBinding [DebuggerSetup.Header.Title], Source={x:Static loc:Locale.Current}}"
+      <TextBlock Text="{Binding [DebuggerSetup.Header.Title], Source={x:Static loc:Locale.Current}}"
                  FontSize="18"
                  FontWeight="SemiBold"
                  Foreground="#9D67FF" />
-      <TextBlock Text="{ReflectionBinding [DebuggerSetup.Header.Subtitle], Source={x:Static loc:Locale.Current}}"
+      <TextBlock Text="{Binding [DebuggerSetup.Header.Subtitle], Source={x:Static loc:Locale.Current}}"
                  FontSize="13"
                  Foreground="#888888"
                  TextWrapping="Wrap" />
@@ -44,7 +44,7 @@
                      Width="160"
                      Height="4"
                      Foreground="#9D67FF" />
-        <TextBlock Text="{ReflectionBinding [DebuggerSetup.Status.Installing], Source={x:Static loc:Locale.Current}}"
+        <TextBlock Text="{Binding [DebuggerSetup.Status.Installing], Source={x:Static loc:Locale.Current}}"
                    FontSize="12"
                    Foreground="#888888"
                    VerticalAlignment="Center" />
@@ -59,7 +59,7 @@
                  TextWrapping="Wrap" />
 
       <Button Grid.Column="1"
-              Content="{ReflectionBinding [DebuggerSetup.Action.Cancel], Source={x:Static loc:Locale.Current}}"
+              Content="{Binding [DebuggerSetup.Action.Cancel], Source={x:Static loc:Locale.Current}}"
               Command="{Binding CancelCommand}"
               IsVisible="{Binding IsRunning}"
               Background="Transparent"
