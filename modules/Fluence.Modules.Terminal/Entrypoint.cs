@@ -14,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.Terminal;
 
-public sealed class Entrypoint : IModule
+public sealed class Entrypoint : IModule, IModuleShutdownParticipant
 {
     private ITerminalService? _terminalService;
 
@@ -38,7 +38,9 @@ public sealed class Entrypoint : IModule
 
     public async ValueTask DisposeAsync()
     {
-        if (_terminalService is IAsyncDisposable asyncDisposable)
+        var service = _terminalService;
+        _terminalService = null;
+        if (service is IAsyncDisposable asyncDisposable)
         {
             try
             {
@@ -47,8 +49,16 @@ public sealed class Entrypoint : IModule
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Terminal module shutdown failed/timed out: {ex}");
-                // Terminal teardown is best-effort; shutdown fallback continues with process cleanup.
             }
         }
+    }
+
+    public Task StopAsync(ModuleShutdownContext context)
+    {
+        var service = _terminalService;
+        _terminalService = null;
+        if (service is IAsyncDisposable asyncDisposable)
+            return asyncDisposable.DisposeAsync().AsTask().WaitAsync(context.CancellationToken);
+        return Task.CompletedTask;
     }
 }

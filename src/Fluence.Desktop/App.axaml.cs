@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -12,9 +13,9 @@ using Fluence.Desktop.Services;
 using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
+using Fluence.Core.Abstractions.Lifecycle;
 using Fluence.Core.Abstractions.Keybindings;
-using Fluence.Core.Abstractions.Modules;
-using Fluence.Core.Services.Modules;
+using Fluence.Core.Models.Lifecycle;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Desktop;
@@ -25,8 +26,6 @@ public partial class App : Avalonia.Application
 
     private ServiceProvider? _serviceProvider;
     private int _isShowingFatalException;
-    private bool _isShuttingDown;
-    private bool _shutdownCompleted;
 
     public override void Initialize()
     {
@@ -45,7 +44,10 @@ public partial class App : Avalonia.Application
             Bootstrapper.InitializeModules(_serviceProvider);
 
             // Resolve eagerly to subscribe to workspace.Changed for auto-save
-            var snapshotCoordinator = _serviceProvider.GetRequiredService<WorkspaceSnapshotCoordinator>();
+            _serviceProvider.GetRequiredService<WorkspaceSnapshotCoordinator>();
+            var lifecycle = _serviceProvider.GetRequiredService<AvaloniaApplicationLifecycleService>();
+            lifecycle.Attach(desktop);
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             var mainWindowViewModel = _serviceProvider.GetRequiredService<MainWindowViewModel>();
             var mainWindow = new MainWindow
@@ -61,56 +63,38 @@ public partial class App : Avalonia.Application
                     _serviceProvider.GetRequiredService<IKeybindingService>()));
 
 
+            lifecycle.StatusChanged += (_, e) =>
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    mainWindowViewModel.ShutdownStatusText = e.Message;
+                });
+            };
+
             mainWindow.Closing += async (_, e) =>
             {
-                if (_shutdownCompleted)
-                    return;
-
-                e.Cancel = true;
-                if (_isShuttingDown)
-                    return;
-
-                _isShuttingDown = true;
-                mainWindowViewModel.IsShutdownOverlayVisible = true;
-                mainWindowViewModel.ShutdownStatusText = "Saving workspace...";
-
                 try
                 {
-                    var serviceProvider = _serviceProvider;
-                    if (serviceProvider is null)
-                    {
-                        _shutdownCompleted = true;
-                        mainWindow.Close();
+                    if (lifecycle.IsShutdownComplete)
                         return;
-                    }
 
-                    if (snapshotCoordinator.HasWorkspaceToSave)
-                    {
-                        await Task.WhenAll(
-                            snapshotCoordinator.SaveAsync(),
-                            Task.Delay(500));
-                    }
+                    e.Cancel = true;
+                    if (lifecycle.IsShutdownInProgress)
+                        return;
 
-                    mainWindowViewModel.ShutdownStatusText = "Stopping modules...";
-                    using var shutdownCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                    var progress = new Progress<ModuleShutdownProgress>(p =>
-                    {
-                        mainWindowViewModel.ShutdownStatusText = p.Message;
-                    });
-
-                    await serviceProvider.GetRequiredService<IShutdownCoordinator>()
-                        .ShutdownAsync(progress, shutdownCts.Token);
-
-                    mainWindowViewModel.ShutdownStatusText = "Finalizing shutdown...";
+                    mainWindowViewModel.IsShutdownOverlayVisible = true;
+                    await lifecycle.RequestShutdownAsync(
+                        new ApplicationShutdownRequest(ApplicationShutdownReason.WindowClose));
                 }
-                finally
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
                 {
-                    _shutdownCompleted = true;
-                    mainWindow.Close();
+                    Debug.WriteLine($"[lifecycle] Closing handler failed: {ex}");
                 }
             };
 
             desktop.MainWindow = mainWindow;
+            desktop.ShutdownRequested += OnDesktopShutdownRequested;
             desktop.Exit += OnDesktopExit;
         }
 
@@ -127,23 +111,49 @@ public partial class App : Avalonia.Application
             dialog.Show();
     }
 
+    private void OnDesktopShutdownRequested(
+        object? sender,
+        Avalonia.Controls.ApplicationLifetimes.ShutdownRequestedEventArgs e)
+    {
+        if (_serviceProvider is null)
+            return;
+
+        var lifecycle = _serviceProvider.GetRequiredService<IApplicationLifecycleService>();
+        if (lifecycle.IsShutdownComplete)
+            return;
+
+        e.Cancel = true;
+
+        if (lifecycle.IsShutdownInProgress)
+            return;
+
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow.DataContext: MainWindowViewModel vm })
+            vm.IsShutdownOverlayVisible = true;
+
+        try
+        {
+            var task = lifecycle.RequestShutdownAsync(new ApplicationShutdownRequest(ApplicationShutdownReason.ApplicationQuit));
+            task.ContinueWith(
+                t => Debug.WriteLine($"[lifecycle] shutdown request faulted: {t.Exception}"),
+                TaskContinuationOptions.OnlyOnFaulted);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[lifecycle] OnDesktopShutdownRequested failed synchronously: {ex}");
+        }
+    }
+
     private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            desktop.ShutdownRequested -= OnDesktopShutdownRequested;
+
         Dispatcher.UIThread.UnhandledException -= OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException -= OnAppDomainUnhandledException;
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
 
         if (_serviceProvider is null)
             return;
-
-        var shutdown = _serviceProvider.GetRequiredService<IShutdownCoordinator>();
-        if (!shutdown.IsShutdownComplete)
-        {
-            shutdown.ShutdownAsync()
-                .GetAwaiter()
-                .GetResult();
-            _shutdownCompleted = true;
-        }
 
         DisposeServiceProviderBestEffort(_serviceProvider);
         _serviceProvider = null;
@@ -173,6 +183,12 @@ public partial class App : Avalonia.Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        if (IsExpectedShutdownCancellation(e.Exception))
+        {
+            e.Handled = true;
+            return;
+        }
+
         e.Handled = true;
         ShowFatalException(e.Exception);
     }
@@ -180,13 +196,34 @@ public partial class App : Avalonia.Application
     private void OnAppDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
         var exception = e.ExceptionObject as Exception ?? new InvalidOperationException(e.ExceptionObject?.ToString());
+        if (IsExpectedShutdownCancellation(exception))
+            return;
+
         Dispatcher.UIThread.Post(() => ShowFatalException(exception));
     }
 
     private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
         e.SetObserved();
+        if (IsExpectedShutdownCancellation(e.Exception))
+            return;
+
         Dispatcher.UIThread.Post(() => ShowFatalException(e.Exception));
+    }
+
+    private bool IsExpectedShutdownCancellation(Exception exception)
+    {
+        if (_serviceProvider?.GetService<IApplicationLifecycleService>() is not { } lifecycle)
+            return false;
+
+        if (!lifecycle.IsShutdownInProgress && !lifecycle.IsShutdownComplete)
+            return false;
+
+        if (exception is OperationCanceledException)
+            return true;
+
+        return exception is AggregateException aggregate &&
+            aggregate.Flatten().InnerExceptions.All(static ex => ex is OperationCanceledException);
     }
 
     private void ShowFatalException(Exception exception)
