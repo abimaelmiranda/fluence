@@ -15,7 +15,6 @@ using Fluence.Core.Abstractions.Jobs;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.File;

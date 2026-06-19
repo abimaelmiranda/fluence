@@ -107,6 +107,9 @@ internal static class Bootstrapper
         services.AddSingleton<IRecentProjectsService, RecentProjectsService>();
         services.AddSingleton<IWorkspaceSnapshotService, WorkspaceSnapshotService>();
         services.AddSingleton<WorkspaceSnapshotCoordinator>();
+        services.AddSingleton<ApplicationStartupCoordinator>();
+        services.AddSingleton<IStartupCoordinator>(provider =>
+            provider.GetRequiredService<ApplicationStartupCoordinator>());
         services.AddSingleton<WelcomeViewModel>();
         services.AddSingleton<ActivityBarViewModel>();
         services.AddSingleton<ProblemsViewModel>();
@@ -136,30 +139,7 @@ internal static class Bootstrapper
 
         services.AddSingleton<IReadOnlyList<IModule>>(modules);
 
-        var serviceProvider = services.BuildServiceProvider();
-        serviceProvider.GetRequiredService<IProcessSpawner>()
-            .CleanupPreviousSessionAsync()
-            .GetAwaiter()
-            .GetResult();
-        return serviceProvider;
-    }
-
-    public static void InitializeModules(IServiceProvider serviceProvider)
-    {
-        var host = serviceProvider.GetRequiredService<IModuleHost>();
-        var modules = serviceProvider.GetRequiredService<IReadOnlyList<IModule>>();
-
-        foreach (var module in modules)
-        {
-            try
-            {
-                module.Initialize(host);
-            }
-            catch
-            {
-                host.SetModuleState(module.Name, ModuleState.Faulted);
-            }
-        }
+        return services.BuildServiceProvider();
     }
 
     public static Task ShutdownModulesAsync(

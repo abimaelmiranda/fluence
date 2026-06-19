@@ -16,9 +16,9 @@ public interface IShellRegionHost
 
     ShellRegionContent? BottomBarContent { get; }
 
-    void SetContent(ShellRegion region, string contentId, string title, object viewModel);
+    void RegisterPanels(IEnumerable<ShellPanelContribution> panels);
 
-    void ClearContent(ShellRegion region, string contentId);
+    void Refresh();
 
     void Expand(ShellRegion region);
 }

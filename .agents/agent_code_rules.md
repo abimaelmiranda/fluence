@@ -35,18 +35,21 @@ Every module must implement `IIdeModule` / `IModule` and participate in async sh
 ```csharp
 public interface IModule : IAsyncDisposable
 {
-    string Name { get; }
+    string Id { get; }
+    string DisplayName { get; }
+    int StartupOrder { get; }
     void Register(IServiceCollection services);
-    void RegisterViews(IViewRegistry registry) { }
-    IReadOnlyList<IPanelDescriptor> GetPanelDescriptors() => [];
-    void Initialize(IModuleHost host);
+    ModuleContributions GetContributions() => ModuleContributions.Empty;
+    Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken);
 }
 ```
 
+- `Id` — stable module identity used for `ModuleState`, logs, ordering diagnostics, and contribution IDs where appropriate.
+- `DisplayName` — user-facing module label for UI/progress text.
+- `StartupOrder` — explicit startup ordering key; lower values start first, shutdown runs in descending startup order.
 - `Register` — registers all module-owned services, handlers, and implementations into the DI container.
-- `RegisterViews` — registers ViewModel → View type mappings in `IViewRegistry`.
-- `GetPanelDescriptors` — declares panels this module contributes to the shell (slot, visibility, order).
-- `Initialize` — post-DI startup logic (sets `ModuleState.Active` when ready).
+- `GetContributions` — declares static shell contributions such as panels without starting runtime work.
+- `InitializeAsync` — post-DI runtime activation: subscriptions, settings, watchers, and background work; sets `ModuleState.Active` when ready.
 - `DisposeAsync` — stops module-owned runtime work and releases module-owned resources.
 
 No module should bypass this contract and self-register in an ad hoc way.
@@ -82,11 +85,11 @@ var modules = new IIdeModule[]
 foreach (var module in modules)
 {
     module.Register(services);
-    module.RegisterViews(viewRegistry);
 }
 ```
 
 Do not scatter module registration across the codebase.
+Startup effects are coordinated by `IStartupCoordinator` / `ApplicationStartupCoordinator`, which collects module contributions before calling `InitializeAsync` in `StartupOrder`.
 
 ### 2.4 Module Boundaries and Allowed Extensions
 
@@ -118,12 +121,12 @@ Module calls from the Core shell must be wrapped with error handling:
 ```csharp
 try
 {
-    await module.InitializeAsync();
+    await module.InitializeAsync(host, cancellationToken);
 }
 catch (Exception ex)
 {
-    _logger.LogError(ex, "Module {Name} failed to initialize.", module.Name);
-    _workspace.SetModuleState(module.Name, ModuleState.Faulted);
+    _logger.LogError(ex, "Module {ModuleId} failed to initialize.", module.Id);
+    _workspace.SetModuleState(module.Id, ModuleState.Faulted);
 }
 ```
 
@@ -156,11 +159,11 @@ See `.agents/module_catalog.md` for full details on each module's responsibiliti
 ```
 src/
   Fluence.Core          ← genuinely shared contracts only:
-                          IIdeModule / IModuleHost / IPanelDescriptor / IViewRegistry / IShellEventBus
+                          IIdeModule / IModuleHost / ModuleContributions / ShellPanelContribution / IShellEventBus
                           IWorkspaceContext / Workspace / WorkspaceMode / TabSession / OpenDocument
                           ICommandHandler<T> / IQueryHandler<T,R>
                           ITerminalService / IProcessHost / IProcessSpawner / ITrackedProcess / IPtyHost
-                          IShutdownCoordinator  (cross-module platform/lifecycle contracts)
+                          IStartupCoordinator / IShutdownCoordinator  (cross-module platform/lifecycle contracts)
                           IWorkspaceDialogService / IUserNotificationService  (cross-cutting ports)
                           FluenceException  (base for all module domain exceptions)
                           Shell request events (BuildWorkspaceRequestedEvent, RunProjectRequestedEvent…)
@@ -217,11 +220,12 @@ Forbidden:
 
 ## 3.3 Shell Architecture
 
-- `IViewRegistry` maps ViewModel → View types. Modules call `RegisterViews(IViewRegistry)` to register their pairs. `ViewLocator` resolves views from the registry — no reflection over namespaces.
+- `IViewRegistry` maps shell-owned ViewModel → View types. Module UI may use XAML/code-behind directly or contribute panels through `ModuleContributions`.
 - `IShellEventBus` is the cross-module event channel. Modules publish; the shell and other modules subscribe. Shell-level actions (build, run, test) are dispatched as **shell request events** defined in Core — `MainWindowViewModel` publishes them without knowing any module-specific command type.
-- `IPanelDescriptor` declares a module panel (Slot, VisibilityMode, Order, DisplayLabel, ResolveViewModel). The shell uses this to build `ShellPanelViewModel` wrappers.
-- `MainWindowViewModel` holds no module-specific types — it receives `ShellPanelViewModel` objects from `Bootstrapper.InitializeModules` and exposes them as `ActiveSidebarContent`, `MainEditorContent`, `TerminalContent`.
-- Panels are visible or hidden based on `PanelVisibilityMode` and current `WorkspaceMode`. The XAML binds to shell-level content properties, not module types.
+- `ShellPanelContribution` declares a module panel (region, visibility, order, title, view-model resolver). `ShellRegionHost` resolves visible contributions from workspace mode and activity tab state.
+- `IShellRegionHost` exposes declarative panel registration plus `Refresh` and `Expand`; modules must not insert or remove shell content imperatively.
+- `MainWindowViewModel` holds no module-specific types — it reads shell-region content and exposes `ActiveSidebarContent`, `MainEditorContent`, `TerminalContent`.
+- Panels are visible or hidden based on `PanelVisibilityRule`, current `WorkspaceMode`, and active activity tab. The XAML binds to shell-level content properties, not module types.
 
 **Shell request events** (defined in Core, published by the shell, handled by modules):
 ```
@@ -492,8 +496,7 @@ Use this checklist on every meaningful PR or agent delivery:
 - [ ] Theme values are tokenized instead of hardcoded.
 - [ ] Module errors are caught at the boundary and reflected in ModuleState.
 - [ ] New modules implement IIdeModule and are registered at startup in Bootstrapper.
-- [ ] New module ViewModel→View pairs are registered via `IModule.RegisterViews`.
-- [ ] New module panels are declared via `Iodule.GetPanelDescriptors`.
+- [ ] New module shell panels are declared via `IModule.GetContributions`.
 - [ ] Modules do not reference Infrastructure directly — they use Core contracts via DI.
 - [ ] Raw LSP/DAP DTOs are not leaking through unrelated layers.
 - [ ] CLI commands are explicit and safely constructed.
@@ -519,4 +522,4 @@ When in doubt, prefer the simpler design that preserves the architecture and mod
 
 ---
 
-> ⚠️ **This architecture is subject to future changes.** The `IModule` contract and the three-layer structure (Core / Infrastructure / Desktop + modules) are stable. Details such as `IViewRegistry`, `IPanelDescriptor`, and `IShellEventBus` may evolve as new modules (Git, Lsp, Debug, Agent) are introduced and their requirements become clear.
+> ⚠️ **This architecture is subject to future changes.** The `IModule` contract and the three-layer structure (Core / Infrastructure / Desktop + modules) are stable. Details such as `ModuleContributions`, `ShellPanelContribution`, `IViewRegistry`, and `IShellEventBus` may evolve as new modules (Git, Lsp, Debug, Agent) are introduced and their requirements become clear.

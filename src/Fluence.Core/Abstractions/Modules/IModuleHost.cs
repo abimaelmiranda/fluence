@@ -14,5 +14,5 @@ public interface IModuleHost
 
     IShellRegionHost ShellRegions { get; }
 
-    void SetModuleState(string moduleName, ModuleState state);
+    void SetModuleState(string moduleId, ModuleState state);
 }

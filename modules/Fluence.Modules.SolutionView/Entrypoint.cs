@@ -7,7 +7,6 @@ using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
@@ -25,12 +24,13 @@ namespace Fluence.Modules.SolutionView;
 
 public sealed class Entrypoint : IModule
 {
-    private string? _activeTabId;
     private readonly List<IDisposable> _subscriptions = [];
-    private IWorkspaceContext? _workspace;
-    private EventHandler? _workspaceChanged;
 
-    public string Name => "SolutionView";
+    public string Id => "SolutionView";
+
+    public string DisplayName => "Solution View";
+
+    public int StartupOrder => 300;
 
     public void Register(IServiceCollection services)
     {
@@ -48,13 +48,25 @@ public sealed class Entrypoint : IModule
         services.AddSingleton<ICommandHandler<SetStartupProjectCommand>, SetStartupProjectCommandHandler>();
     }
 
-    public void Initialize(IModuleHost host)
-    {
-        _subscriptions.Add(host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
+    public ModuleContributions GetContributions() =>
+        new()
         {
-            _activeTabId = e.TabId;
-            UpdateSidebar(host);
-        }));
+            Panels =
+            [
+                new ShellPanelContribution(
+                    ShellRegion.Sidebar,
+                    Id,
+                    "Solution",
+                    services => services.GetRequiredService<SolutionViewModel>(),
+                    PanelVisibilityRule.Custom((workspace, activeTabId, _) =>
+                        activeTabId == "Files" &&
+                        workspace.NavigationMode == WorkspaceMode.Solution)),
+            ],
+        };
+
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
         _subscriptions.Add(host.Events.SubscribeSync<OpenSolutionRequestedEvent>(e =>
@@ -69,29 +81,8 @@ public sealed class Entrypoint : IModule
             scheduler.Schedule("solution.refresh", TaskPriority.Maintenance,
                 ct => RefreshSolutionViewAsync(host, ct),
                 correlationId: "solution.refresh")));
-        _workspace = host.Workspace;
-        _workspaceChanged = (_, _) => UpdateSidebar(host);
-        host.Workspace.Changed += _workspaceChanged;
-        UpdateSidebar(host);
-        host.SetModuleState(Name, ModuleState.Active);
-    }
-
-    private void UpdateSidebar(IModuleHost host)
-    {
-        bool shouldShow = _activeTabId == "Files"
-                       && host.Workspace.Current.NavigationMode == WorkspaceMode.Solution;
-
-        if (shouldShow)
-        {
-            host.ShellRegions.SetContent(
-                ShellRegion.Sidebar,
-                "SolutionView",
-                "Solution",
-                host.Services.GetRequiredService<SolutionViewModel>());
-            return;
-        }
-
-        host.ShellRegions.ClearContent(ShellRegion.Sidebar, "SolutionView");
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     private static async Task OpenSolutionAsync(IModuleHost host, string path, CancellationToken ct)
@@ -110,10 +101,6 @@ public sealed class Entrypoint : IModule
         foreach (var subscription in _subscriptions)
             subscription.Dispose();
         _subscriptions.Clear();
-        if (_workspace is not null && _workspaceChanged is not null)
-            _workspace.Changed -= _workspaceChanged;
-        _workspace = null;
-        _workspaceChanged = null;
         return ValueTask.CompletedTask;
     }
 }

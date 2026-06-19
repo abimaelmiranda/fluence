@@ -11,7 +11,6 @@ using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;

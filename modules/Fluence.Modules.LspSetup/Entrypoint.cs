@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
@@ -12,15 +13,20 @@ public sealed class Entrypoint : IModule
 {
     private IDisposable? _provisioningSubscription;
 
-    public string Name => "LspSetup";
+    public string Id => "LspSetup";
+
+    public string DisplayName => "LSP Setup";
+
+    public int StartupOrder => 800;
 
     public void Register(IServiceCollection services)
     {
         services.AddSingleton<LspSetupViewModel>();
     }
 
-    public void Initialize(IModuleHost host)
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
         _provisioningSubscription = host.Events.SubscribeSync<LspProvisioningRequiredEvent>(e =>
@@ -33,7 +39,8 @@ public sealed class Entrypoint : IModule
                 ct => vm.StartProvisioningAsync(ct));
         });
 
-        host.SetModuleState(Name, ModuleState.Active);
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     public ValueTask DisposeAsync()

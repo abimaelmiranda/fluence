@@ -11,15 +11,17 @@ The shared kernel. Owns contracts, workspace state, and shell abstractions.
 
 Key types:
 - `IIdeModule` — contract every module must implement
-- `IModuleHost` — provided to modules during `Initialize`
+- `IModuleHost` — provided to modules during `InitializeAsync`
 - `IWorkspaceContext` — read/write access to Workspace state
 - `Workspace` — single source of truth for all IDE runtime state
 - `WorkspaceMode` — Empty / FileOnly / Folder / Solution
 - `TabSession` / `OpenDocument` — tab and document state
 - `IShellEventBus` — publish/subscribe channel for cross-module events
-- `IPanelDescriptor` / `IViewRegistry` — panel declaration and view registration
+- `ModuleContributions` / `ShellPanelContribution` — static shell contribution declaration
+- `IViewRegistry` — shell ViewModel→View mapping where needed
 - `ICommandHandler<T>` / `IQueryHandler<T,R>` — internal use-case contracts
 - `ITerminalService` / `IProcessHost` — platform process contracts
+- `IStartupCoordinator` — ordered, async startup contract
 - `IShutdownCoordinator` — ordered, bounded module shutdown contract
 - `IProcessSpawner` / `ITrackedProcess` — tracked long-lived process ownership contract
 - Shell request events: `BuildWorkspaceRequestedEvent`, `RunProjectRequestedEvent`, `TestWorkspaceRequestedEvent`, `RestoreWorkspaceRequestedEvent`, `CleanWorkspaceRequestedEvent`
@@ -43,6 +45,7 @@ Avalonia shell. Bootstraps and hosts modules. Owns no domain logic.
 
 Key files:
 - `Bootstrapper.cs` — module registration and DI composition root
+- `ApplicationStartupCoordinator.cs` — ordered startup loader for cleanup, contributions, and module activation
 - `MainWindow.axaml/.cs` — shell layout
 - `MainWindowViewModel.cs` — shell state, panel hosting, workspace mode reactions
 - `ViewLocator.cs` — resolves ViewModel→View via `IViewRegistry`
