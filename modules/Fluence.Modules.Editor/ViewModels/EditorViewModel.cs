@@ -33,7 +33,7 @@ namespace Fluence.Modules.Editor.ViewModels;
 
 public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 {
-    private static readonly TimeSpan AutoSaveDelay = TimeSpan.FromMilliseconds(750);
+    private static readonly TimeSpan AutoSaveDelay = TimeSpan.FromMilliseconds(1_000);
 
     private readonly IWorkspaceContext _workspace;
     private readonly ICommandHandler<SaveActiveDocumentCommand> _saveHandler;
