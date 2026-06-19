@@ -352,7 +352,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     private void SaveSettings()
     {
-        foreach (var section in Sections)
+        foreach (var section in Sections.ToArray())
         {
             var values = new Dictionary<string, object?>(StringComparer.Ordinal);
             foreach (var item in section.Properties)
