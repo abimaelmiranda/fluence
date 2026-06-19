@@ -39,6 +39,9 @@ public sealed class TerminalControl : Avalonia.Controls.Control
     private Typeface _typefaceBold;
     private Typeface _typefaceItalic;
     private Typeface _typefaceBoldItalic;
+    private (int Col, int Row)? _selectionStart;
+    private (int Col, int Row)? _selectionEnd;
+    private bool _isSelecting;
 
     public Func<string, Task>? TerminalTextInput { get; set; }
     public Action<int, int>? Resized { get; set; }
@@ -297,12 +300,62 @@ public sealed class TerminalControl : Avalonia.Controls.Control
                 }
             }
         }
+
+        // Selection highlight — drawn on top of everything else
+        if (_selectionStart is { } ss && _selectionEnd is { } se)
+        {
+            var (normStart, normEnd) = NormalizeSelection(ss, se);
+            var highlightBrush = new SolidColorBrush(Color.FromArgb(80, 100, 160, 255));
+            for (int r = normStart.Row; r <= normEnd.Row; r++)
+            {
+                int colFrom = r == normStart.Row ? normStart.Col : 0;
+                int colTo   = r == normEnd.Row   ? normEnd.Col   : (_lastCols - 1);
+                ctx.FillRectangle(highlightBrush,
+                    new Rect(colFrom * _charWidth, r * _charHeight,
+                             (colTo - colFrom + 1) * _charWidth, _charHeight));
+            }
+        }
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
         Focus();
+
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            _selectionStart = _selectionEnd = PixelToCell(e.GetPosition(this));
+            _isSelecting = true;
+            e.Pointer.Capture(this);
+            InvalidateVisual();
+        }
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        if (_isSelecting)
+        {
+            _selectionEnd = PixelToCell(e.GetPosition(this));
+            InvalidateVisual();
+        }
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        if (_isSelecting)
+        {
+            _isSelecting = false;
+            _selectionEnd = PixelToCell(e.GetPosition(this));
+            e.Pointer.Capture(null);
+
+            // Clear zero-length selection (single click without drag)
+            if (_selectionStart == _selectionEnd)
+                _selectionStart = _selectionEnd = null;
+
+            InvalidateVisual();
+        }
     }
 
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
@@ -334,6 +387,17 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         // e.g. Cmd+Delete is not dispatched as plain Delete.
         if (e.KeyModifiers.HasFlag(AvaloniaKeyModifiers.Meta))
         {
+            // Cmd+C: copy selection if active, otherwise let macOS handle it (e.g. app menu).
+            if (e.Key == AvaloniaKey.C && _selectionStart is not null && _selectionEnd is not null)
+            {
+                e.Handled = true;
+                var selectedText = GetSelectedText();
+                _selectionStart = _selectionEnd = null;
+                InvalidateVisual();
+                _ = CopyToClipboardAsync(selectedText);
+                return;
+            }
+
             var metaSeq = e.Key switch
             {
                 AvaloniaKey.Back   => "\x15",   // Cmd+Backspace → delete to beginning of line
@@ -395,6 +459,14 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         // Ctrl+letter shortcuts not covered by GenerateKeyInput
         if (e.KeyModifiers.HasFlag(AvaloniaKeyModifiers.Control))
         {
+            // Ctrl+V: paste — used by Codex CLI
+            if (e.Key == AvaloniaKey.V)
+            {
+                e.Handled = true;
+                _ = PasteCtrlVAsync();
+                return;
+            }
+
             var ctrlSeq = e.Key switch
             {
                 AvaloniaKey.C => terminal.GenerateCharInput('\x03', xMod),
@@ -405,6 +477,11 @@ public sealed class TerminalControl : Avalonia.Controls.Control
                 AvaloniaKey.W => terminal.GenerateCharInput('\x17', xMod),
                 AvaloniaKey.A => terminal.GenerateCharInput('\x01', xMod),
                 AvaloniaKey.E => terminal.GenerateCharInput('\x05', xMod),
+                AvaloniaKey.K => terminal.GenerateCharInput('\x0b', xMod),
+                AvaloniaKey.R => terminal.GenerateCharInput('\x12', xMod),
+                AvaloniaKey.T => terminal.GenerateCharInput('\x14', xMod),
+                AvaloniaKey.N => terminal.GenerateCharInput('\x0e', xMod),
+                AvaloniaKey.P => terminal.GenerateCharInput('\x10', xMod),
                 _ => null,
             };
             if (ctrlSeq is not null)
@@ -412,6 +489,74 @@ public sealed class TerminalControl : Avalonia.Controls.Control
                 e.Handled = true;
                 TerminalTextInput?.Invoke(ctrlSeq);
             }
+        }
+    }
+
+    private (int Col, int Row) PixelToCell(Point p) =>
+        (Math.Clamp((int)(p.X / _charWidth),  0, (_lastCols > 0 ? _lastCols : 80) - 1),
+         Math.Clamp((int)(p.Y / _charHeight), 0, (_lastRows > 0 ? _lastRows : 24) - 1));
+
+    private static ((int Col, int Row) Start, (int Col, int Row) End) NormalizeSelection(
+        (int Col, int Row) a, (int Col, int Row) b)
+    {
+        if (a.Row < b.Row || (a.Row == b.Row && a.Col <= b.Col))
+            return (a, b);
+        return (b, a);
+    }
+
+    private string GetSelectedText()
+    {
+        if (_selectionStart is not { } ss || _selectionEnd is not { } se || Terminal is null)
+            return string.Empty;
+
+        var (start, end) = NormalizeSelection(ss, se);
+        var sb = new System.Text.StringBuilder();
+        var buffer = Terminal.Buffer;
+
+        for (int r = start.Row; r <= end.Row; r++)
+        {
+            int colFrom = r == start.Row ? start.Col : 0;
+            int colTo   = r == end.Row   ? end.Col   : (Terminal.Cols - 1);
+            var line = buffer.Lines[buffer.YDisp + r];
+            if (line is null) { if (r < end.Row) sb.AppendLine(); continue; }
+
+            var rowText = new System.Text.StringBuilder();
+            for (int c = colFrom; c <= colTo; c++)
+                rowText.Append(line[c].Content ?? " ");
+
+            sb.Append(rowText.ToString().TrimEnd());
+            if (r < end.Row) sb.AppendLine();
+        }
+
+        return sb.ToString();
+    }
+
+    private async Task CopyToClipboardAsync(string text)
+    {
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null || string.IsNullOrEmpty(text)) return;
+        await clipboard.SetTextAsync(text);
+    }
+
+    // TODO: revisit paste strategy — currently we bifurcate based on whether the clipboard
+    // has text. Text → bracketed paste (works for Codex + shells). Image-only → raw \x16
+    // so Codex reads NSPasteboard directly. This is functional but fragile: other apps may
+    // need a different trigger, and we should consider using IClipboard.GetFormatsAsync()
+    // to inspect available formats more precisely before deciding what to send.
+    private async Task PasteCtrlVAsync()
+    {
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null) return;
+        var text = await clipboard.TryGetTextAsync();
+        if (!string.IsNullOrEmpty(text))
+        {
+            var content = $"\x1b[200~{text}\x1b[201~";
+            await (TerminalTextInput?.Invoke(content) ?? Task.CompletedTask);
+        }
+        else
+        {
+            // Image-only clipboard: raw \x16 lets Codex CLI read NSPasteboard directly.
+            await (TerminalTextInput?.Invoke("\x16") ?? Task.CompletedTask);
         }
     }
 
