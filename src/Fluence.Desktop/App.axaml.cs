@@ -8,7 +8,9 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Desktop.Composition;
+using Fluence.Desktop.Markup;
 using Fluence.Desktop.Services;
 using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
@@ -41,6 +43,7 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             _serviceProvider = Bootstrapper.BuildServices();
+            Locale.Initialize(_serviceProvider.GetRequiredService<ILocalizationService>());
             DataTemplates.Add(new ViewLocator());
 
             // Resolve eagerly to subscribe to workspace.Changed for auto-save

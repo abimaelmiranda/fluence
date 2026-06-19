@@ -1,6 +1,8 @@
+using System.Resources;
 using System.Threading.Tasks;
 using System.Threading;
 using Fluence.Core.Abstractions.Keybindings;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Theming;
@@ -45,6 +47,7 @@ public sealed class Entrypoint : IModule
         services.AddSingleton<ThemeRuntimeCoordinator>();
         services.AddSingleton<ICommandRegistry, CommandRegistry>();
 
+        services.AddSingleton<LanguageRuntimeCoordinator>();
         services.AddSingleton<ISettingsTool, SettingsToolViewModel>();
         services.AddSingleton<SettingsToolViewModel>(
             sp => (SettingsToolViewModel)sp.GetRequiredService<ISettingsTool>());
@@ -54,6 +57,13 @@ public sealed class Entrypoint : IModule
     {
         cancellationToken.ThrowIfCancellationRequested();
         host.Services.GetRequiredService<ThemeRuntimeCoordinator>().Start();
+        host.Services.GetRequiredService<LanguageRuntimeCoordinator>().Start();
+
+        host.Services.GetRequiredService<ILocalizationService>()
+            .Register(new ResourceManager(
+                "Fluence.Modules.Settings.Resources.Strings",
+                typeof(Entrypoint).Assembly));
+
         host.SetModuleState(Id, ModuleState.Active);
         return Task.CompletedTask;
     }
