@@ -2,7 +2,6 @@ using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Modules;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.ViewModels;
 
 namespace Fluence.Desktop.ViewModels;

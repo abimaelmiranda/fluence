@@ -98,9 +98,9 @@ public sealed class WorkspaceContext : IWorkspaceContext
         FireChanged();
     }
 
-    public void SetModuleState(string moduleName, ModuleState state)
+    public void SetModuleState(string moduleId, ModuleState state)
     {
-        Current.SetModuleState(moduleName, state);
+        Current.SetModuleState(moduleId, state);
         FireChanged();
     }
 }

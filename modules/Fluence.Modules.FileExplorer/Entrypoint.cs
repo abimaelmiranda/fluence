@@ -6,7 +6,6 @@ using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
@@ -17,13 +16,13 @@ namespace Fluence.Modules.FileExplorer;
 
 public sealed class Entrypoint : IModule
 {
-    private string? _activeTabId;
-    private IDisposable? _activitySubscription;
     private IDisposable? _openFolderSubscription;
-    private IWorkspaceContext? _workspace;
-    private EventHandler? _workspaceChanged;
 
-    public string Name => "FileExplorer";
+    public string Id => "FileExplorer";
+
+    public string DisplayName => "File Explorer";
+
+    public int StartupOrder => 200;
 
     public void Register(IServiceCollection services)
     {
@@ -31,42 +30,33 @@ public sealed class Entrypoint : IModule
         services.AddSingleton<ICommandHandler<OpenFolderWorkspaceCommand>, OpenFolderWorkspaceCommandHandler>();
     }
 
-    public void Initialize(IModuleHost host)
+    public ModuleContributions GetContributions() =>
+        new()
+        {
+            Panels =
+            [
+                new ShellPanelContribution(
+                    ShellRegion.Sidebar,
+                    Id,
+                    "Files",
+                    services => services.GetRequiredService<FileExplorerViewModel>(),
+                    PanelVisibilityRule.Custom((workspace, activeTabId, _) =>
+                        activeTabId == "Files" &&
+                        workspace.NavigationMode == WorkspaceMode.Folder)),
+            ],
+        };
+
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
-        _activitySubscription = host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
-        {
-            _activeTabId = e.TabId;
-            UpdateSidebar(host);
-        });
         _openFolderSubscription = host.Events.SubscribeSync<OpenFolderRequestedEvent>(e =>
             scheduler.Schedule("workspace.open-folder", TaskPriority.Interactive,
                 ct => OpenFolderAsync(host, e.Path, ct),
                 correlationId: e.Path));
-        _workspace = host.Workspace;
-        _workspaceChanged = (_, _) => UpdateSidebar(host);
-        host.Workspace.Changed += _workspaceChanged;
-        UpdateSidebar(host);
-        host.SetModuleState(Name, ModuleState.Active);
-    }
-
-    private void UpdateSidebar(IModuleHost host)
-    {
-        bool shouldShow = _activeTabId == "Files"
-                       && host.Workspace.Current.NavigationMode == WorkspaceMode.Folder;
-
-        if (shouldShow)
-        {
-            host.ShellRegions.SetContent(
-                ShellRegion.Sidebar,
-                "FileExplorer",
-                "Files",
-                host.Services.GetRequiredService<FileExplorerViewModel>());
-            return;
-        }
-
-        host.ShellRegions.ClearContent(ShellRegion.Sidebar, "FileExplorer");
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     private static async Task OpenFolderAsync(IModuleHost host, string path, CancellationToken ct)
@@ -77,14 +67,8 @@ public sealed class Entrypoint : IModule
 
     public ValueTask DisposeAsync()
     {
-        _activitySubscription?.Dispose();
         _openFolderSubscription?.Dispose();
-        if (_workspace is not null && _workspaceChanged is not null)
-            _workspace.Changed -= _workspaceChanged;
-        _activitySubscription = null;
         _openFolderSubscription = null;
-        _workspace = null;
-        _workspaceChanged = null;
         return ValueTask.CompletedTask;
     }
 }

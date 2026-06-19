@@ -14,7 +14,6 @@ using Fluence.Core.Services.Debugging;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -30,11 +29,14 @@ namespace Fluence.Modules.Debug;
 
 public sealed class Entrypoint : IModule, IModuleShutdownParticipant
 {
-    private string? _activeTabId;
     private readonly List<IDisposable> _subscriptions = [];
     private IDebugService? _debugService;
 
-    public string Name => "Debug";
+    public string Id => "Debug";
+
+    public string DisplayName => "Debug";
+
+    public int StartupOrder => 1100;
 
     public void Register(IServiceCollection services)
     {
@@ -45,8 +47,25 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
         services.AddSingleton<ICommandHandler<DebugProjectCommand>, DebugProjectCommandHandler>();
     }
 
-    public void Initialize(IModuleHost host)
+    public ModuleContributions GetContributions() =>
+        new()
+        {
+            Panels =
+            [
+                new ShellPanelContribution(
+                    ShellRegion.Sidebar,
+                    "DebugSidebar",
+                    "Debug",
+                    services => services.GetRequiredService<DebugSidebarViewModel>(),
+                    PanelVisibilityRule.Custom((_, activeTabId, services) =>
+                        activeTabId == "Debug" &&
+                        services.GetRequiredService<IDebugSessionManager>().CurrentSession is { IsActive: true })),
+            ],
+        };
+
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
         var debug = host.Services.GetRequiredService<IDebugService>();
         _debugService = debug;
@@ -56,12 +75,6 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
             .Register(DebugSettingsJsonContext.Default.DebugSettings);
         host.Services.GetRequiredService<ISettingsService>()
             .Get<DebugSettings>();
-
-        _subscriptions.Add(host.Events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
-        {
-            _activeTabId = e.TabId;
-            UpdateSidebar(host);
-        }));
 
         // Iniciar sessão — Interactive: usuário espera resposta imediata
         _subscriptions.Add(host.Events.SubscribeSync<DebugProjectRequestedEvent>(_ =>
@@ -104,23 +117,8 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
             CommandIds.DebugStepOut, "Step Out", KeybindingScope.Global, "Shift+F11",
             _ => debug.StepOutAsync()));
 
-        host.SetModuleState(Name, ModuleState.Active);
-    }
-
-    private void UpdateSidebar(IModuleHost host)
-    {
-        var session = host.Services.GetRequiredService<IDebugSessionManager>().CurrentSession;
-        if (_activeTabId == "Debug" && session is { IsActive: true })
-        {
-            host.ShellRegions.SetContent(
-                ShellRegion.Sidebar,
-                "DebugSidebar",
-                "Debug",
-                host.Services.GetRequiredService<DebugSidebarViewModel>());
-            return;
-        }
-
-        host.ShellRegions.ClearContent(ShellRegion.Sidebar, "DebugSidebar");
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     private static async Task HandleAsync(IModuleHost host, CancellationToken ct)

@@ -93,7 +93,7 @@ Level 2 provides logical isolation with contained error handling at module bound
 
 ```
 Core                  ← workspace, DI contracts, module host, shell contracts
-                        IViewRegistry, IShellEventBus, IPanelDescriptor
+                        IShellEventBus, ModuleContributions, ShellPanelContribution
 Infrastructure        ← OS/platform adapters: ProcessHost, Pty, TerminalService,
                         LSP/DAP protocol utilities, DotnetSdkProvisioningService
 Desktop               ← Avalonia shell, Bootstrapper, WelcomeScreen, UI adapters
@@ -114,17 +114,19 @@ Desktop               ← Avalonia shell, Bootstrapper, WelcomeScreen, UI adapte
 
 For full module details see `.agents/module_catalog.md`.
 
-Each module registers its own services, views, and panels. The shell knows only `IIdeModule` — no module concrete types leak into `Desktop`.
+Each module registers its own services and declares static shell contributions such as panels. The shell knows only `IIdeModule` / `IModule` — no module concrete types leak into `Desktop`.
 
 ### 3.4 Module Lifecycle
 Each module goes through:
 1. `Register` — registers its services, handlers, and domain implementations into DI
-2. `RegisterViews` — registers ViewModel → View pairs in `IViewRegistry`
-3. `Initialize` — subscribes to shell events (`IShellEventBus`), performs startup logic, sets `ModuleState.Active`
+2. `GetContributions` — declares static shell contributions without starting runtime work
+3. `InitializeAsync` — subscribes to shell events (`IShellEventBus`), performs runtime activation, sets `ModuleState.Active`
 4. Runtime — active, faulted, or disabled state
 
+Modules expose explicit identity and order through `Id`, `DisplayName`, and `StartupOrder`. `Id` is the stable key for module state, logs, and contributions; `DisplayName` is for UI; `StartupOrder` makes startup order intentional while shutdown remains the reverse lifecycle.
+
 ### 3.4.1 Shell Events as the Action Bridge
-The shell (`MainWindowViewModel`) does not know about module-specific command types. IDE-level actions (build, run, test) are dispatched as **shell request events** via `IShellEventBus`. Modules subscribe in `Initialize` and handle them internally. This keeps the shell ViewModel free of all module dependencies.
+The shell (`MainWindowViewModel`) does not know about module-specific command types. IDE-level actions (build, run, test) are dispatched as **shell request events** via `IShellEventBus`. Modules subscribe in `InitializeAsync` and handle them internally. This keeps the shell ViewModel free of all module dependencies.
 
 ### 3.5 Module State
 - `Active` — running normally, panel visible

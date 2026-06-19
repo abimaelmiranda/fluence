@@ -41,7 +41,11 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
     private EventHandler? _workspaceChanged;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public string Name => "LanguageServer";
+    public string Id => "LanguageServer";
+
+    public string DisplayName => "Language Server";
+
+    public int StartupOrder => 900;
 
     public void Register(IServiceCollection services)
     {
@@ -127,8 +131,9 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
                 .ConfigureAwait(false);
     }
 
-    public void Initialize(IModuleHost host)
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         host.Services.GetRequiredService<ISettingsRegistry>()
             .Register(LanguageServerSettingsJsonContext.Default.LanguageServerSettings);
         host.Services.GetRequiredService<ISettingsService>()
@@ -263,7 +268,8 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
             TryStartOrRestart(host, lsp, provisioning, output, fromProvisioning: true);
         }));
 
-        host.SetModuleState(Name, ModuleState.Active);
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     private static ProblemSeverity ToProblemSeverity(LspDiagnosticSeverity severity) => severity switch

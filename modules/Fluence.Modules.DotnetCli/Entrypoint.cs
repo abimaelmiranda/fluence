@@ -11,7 +11,6 @@ using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Jobs;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -38,7 +37,11 @@ public sealed class Entrypoint : IModule
 {
     private readonly List<IDisposable> _subscriptions = [];
 
-    public string Name => "DotnetCli";
+    public string Id => "DotnetCli";
+
+    public string DisplayName => ".NET CLI";
+
+    public int StartupOrder => 700;
 
     public void Register(IServiceCollection services)
     {
@@ -59,8 +62,9 @@ public sealed class Entrypoint : IModule
         services.AddSingleton<ICommandHandler<CleanProjectCommand>, CleanProjectCommandHandler>();
     }
 
-    public void Initialize(IModuleHost host)
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
         // Build/Test/Restore/Clean são pesadas — Maintenance para não competir com o editor
@@ -102,7 +106,8 @@ public sealed class Entrypoint : IModule
         _subscriptions.Add(host.Events.SubscribeSync<PublishProjectRequestedEvent>(e => OpenPublishWizard(host, e.ProjectPath)));
         _subscriptions.Add(host.Events.SubscribeSync<DotnetSdkSetupRequestedEvent>(_ => OpenSdkSetup(host)));
 
-        host.SetModuleState(Name, ModuleState.Active);
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     private static void OpenNewProjectWizard(IModuleHost host)

@@ -6,7 +6,6 @@ using Fluence.Core.Services.Workspace;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Modules.Debug.ViewModels;
 using Fluence.Modules.Debug.Abstractions.Session;
 using Fluence.Modules.Debug.Models;
@@ -53,7 +52,7 @@ public sealed class DebugSessionManager(
 
         CurrentSession = null;
         sidebar.Clear();
-        shellRegions.ClearContent(ShellRegion.Sidebar, "DebugSidebar");
+        shellRegions.Refresh();
 
         var previousMode = workspace.Current.ModeBeforeDebugging;
         if (workspace.Current.Mode == WorkspaceMode.Debugging && previousMode is not null)

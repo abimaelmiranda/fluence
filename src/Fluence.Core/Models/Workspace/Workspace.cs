@@ -152,9 +152,9 @@ public sealed class Workspace
         TabSession = TabSession.Empty;
     }
 
-    public void SetModuleState(string moduleName, ModuleState state)
+    public void SetModuleState(string moduleId, ModuleState state)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(moduleName);
-        _moduleStates[moduleName] = state;
+        ArgumentException.ThrowIfNullOrWhiteSpace(moduleId);
+        _moduleStates[moduleId] = state;
     }
 }
