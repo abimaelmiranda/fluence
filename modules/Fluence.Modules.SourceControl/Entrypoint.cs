@@ -21,6 +21,8 @@ public sealed class Entrypoint : IModule
     private IDisposable? _activitySubscription;
     private IWorkspaceContext? _workspace;
     private EventHandler? _workspaceChanged;
+    private string? _lastWorkspaceRoot;
+    private bool _hasInitializedWorkspaceRoot;
 
     public string Name => "SourceControl";
 
@@ -42,13 +44,16 @@ public sealed class Entrypoint : IModule
         _workspace = host.Workspace;
         _workspaceChanged = (_, _) =>
         {
-            var vm = host.Services.GetRequiredService<SourceControlViewModel>();
-            var current = host.Workspace.Current;
-            var root = current.CurrentFolderPath
-                    ?? (current.CurrentSolutionPath is not null
-                        ? Path.GetDirectoryName(current.CurrentSolutionPath)
-                        : null);
-            vm.Initialize(root);
+            var root = GetWorkspaceRoot(host.Workspace);
+            if (!HasWorkspaceRootChanged(root))
+            {
+                UpdateSidebar(host);
+                return;
+            }
+
+            _hasInitializedWorkspaceRoot = true;
+            _lastWorkspaceRoot = root;
+            host.Services.GetRequiredService<SourceControlViewModel>().Initialize(root);
             UpdateSidebar(host);
         };
         host.Workspace.Changed += _workspaceChanged;
@@ -71,6 +76,19 @@ public sealed class Entrypoint : IModule
         host.ShellRegions.ClearContent(ShellRegion.Sidebar, "SourceControl");
     }
 
+    private static string? GetWorkspaceRoot(IWorkspaceContext workspace)
+    {
+        var current = workspace.Current;
+        return current.CurrentFolderPath
+            ?? (current.CurrentSolutionPath is not null
+                ? Path.GetDirectoryName(current.CurrentSolutionPath)
+                : null);
+    }
+
+    private bool HasWorkspaceRootChanged(string? root) =>
+        !_hasInitializedWorkspaceRoot ||
+        !string.Equals(_lastWorkspaceRoot, root, StringComparison.OrdinalIgnoreCase);
+
     public ValueTask DisposeAsync()
     {
         _activitySubscription?.Dispose();
@@ -79,6 +97,8 @@ public sealed class Entrypoint : IModule
         _activitySubscription = null;
         _workspace = null;
         _workspaceChanged = null;
+        _lastWorkspaceRoot = null;
+        _hasInitializedWorkspaceRoot = false;
         return ValueTask.CompletedTask;
     }
 }
