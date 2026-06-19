@@ -10,6 +10,7 @@ using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Lifecycle;
 using Fluence.Core.Models.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
@@ -76,6 +77,9 @@ internal static class Bootstrapper
         services.AddSingleton<IWorkspaceContext>(provider => new WorkspaceContext(provider.GetRequiredService<IUiDispatcher>()));
         services.AddSingleton<IModuleHost, ModuleHost>();
         services.AddSingleton<IShutdownCoordinator, ShutdownCoordinator>();
+        services.AddSingleton<AvaloniaApplicationLifecycleService>();
+        services.AddSingleton<IApplicationLifecycleService>(provider =>
+            provider.GetRequiredService<AvaloniaApplicationLifecycleService>());
         services.AddSingleton<IWorkspaceDialogService, AvaloniaWorkspaceDialogService>();
         services.AddSingleton<ILaunchSetupDialogService, AvaloniaLaunchSetupDialogService>();
         services.AddSingleton<AvaloniaUserNotificationService>();
