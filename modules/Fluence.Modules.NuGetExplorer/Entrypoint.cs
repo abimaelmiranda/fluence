@@ -1,6 +1,8 @@
 using System;
+using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -37,6 +39,8 @@ public sealed class Entrypoint : IModule
     public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        host.Services.GetRequiredService<ILocalizationService>()
+            .Register(new ResourceManager("Fluence.Modules.NuGetExplorer.Resources.Strings", typeof(Entrypoint).Assembly));
         _managePackagesSubscription = host.Events.SubscribeSync<ManageNuGetPackagesRequestedEvent>(e =>
         {
             host.Services.GetRequiredService<NuGetExplorerViewModel>().OpenForSolution(e.SolutionPath);

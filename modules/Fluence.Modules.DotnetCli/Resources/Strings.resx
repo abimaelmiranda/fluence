@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="DotnetCli.Title.NewProject" xml:space="preserve"><value>New Project</value></data>
+  <data name="DotnetCli.Title.Publish" xml:space="preserve"><value>Publish</value></data>
+  <data name="DotnetCli.Title.Sdk" xml:space="preserve"><value>.NET SDK</value></data>
+  <data name="DotnetCli.ToolTip.Sdk" xml:space="preserve"><value>.NET SDK</value></data>
+  <data name="DotnetCli.ToolTip.ChooseLocation" xml:space="preserve"><value>Choose location</value></data>
+  <data name="DotnetCli.ToolTip.ChooseOutputFolder" xml:space="preserve"><value>Choose output folder</value></data>
+  <data name="DotnetCli.Action.Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="DotnetCli.Action.InstallSelected" xml:space="preserve"><value>Install selected</value></data>
+  <data name="DotnetCli.Action.SystemWide" xml:space="preserve"><value>System-wide</value></data>
+  <data name="DotnetCli.Action.Create" xml:space="preserve"><value>Create</value></data>
+  <data name="DotnetCli.Action.Publish" xml:space="preserve"><value>Publish</value></data>
+  <data name="DotnetCli.Label.Templates" xml:space="preserve"><value>Templates</value></data>
+  <data name="DotnetCli.Label.ProjectName" xml:space="preserve"><value>Project name</value></data>
+  <data name="DotnetCli.Label.Location" xml:space="preserve"><value>Location</value></data>
+  <data name="DotnetCli.Label.Framework" xml:space="preserve"><value>Framework</value></data>
+  <data name="DotnetCli.Label.Solution" xml:space="preserve"><value>Solution</value></data>
+  <data name="DotnetCli.Label.SolutionName" xml:space="preserve"><value>Solution name</value></data>
+  <data name="DotnetCli.Label.SolutionLocation" xml:space="preserve"><value>Solution location</value></data>
+  <data name="DotnetCli.Label.AfterCreate" xml:space="preserve"><value>After create</value></data>
+  <data name="DotnetCli.Label.Project" xml:space="preserve"><value>Project</value></data>
+  <data name="DotnetCli.Label.Configuration" xml:space="preserve"><value>Configuration</value></data>
+  <data name="DotnetCli.Label.Output" xml:space="preserve"><value>Output</value></data>
+  <data name="DotnetCli.Label.Options" xml:space="preserve"><value>Options</value></data>
+  <data name="DotnetCli.Label.Profile" xml:space="preserve"><value>Profile</value></data>
+  <data name="DotnetCli.Label.ActiveDotnet" xml:space="preserve"><value>Active dotnet</value></data>
+  <data name="DotnetCli.Label.Sdks" xml:space="preserve"><value>SDKs</value></data>
+  <data name="DotnetCli.Label.InstallLog" xml:space="preserve"><value>Install Log</value></data>
+  <data name="DotnetCli.Option.CreateSolution" xml:space="preserve"><value>Create solution</value></data>
+  <data name="DotnetCli.Option.PlaceSolutionInProjectFolder" xml:space="preserve"><value>Place solution in project folder</value></data>
+  <data name="DotnetCli.Option.OpenWorkspace" xml:space="preserve"><value>Open workspace</value></data>
+  <data name="DotnetCli.Option.SelfContained" xml:space="preserve"><value>Self-contained</value></data>
+  <data name="DotnetCli.Option.SingleFile" xml:space="preserve"><value>Single file</value></data>
+  <data name="DotnetCli.Option.ReadyToRun" xml:space="preserve"><value>ReadyToRun</value></data>
+  <data name="DotnetCli.Option.Trimmed" xml:space="preserve"><value>Trimmed</value></data>
+  <data name="DotnetCli.Option.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="DotnetCli.Option.ProjectDefault" xml:space="preserve"><value>Project default</value></data>
+  <data name="DotnetCli.Option.Portable" xml:space="preserve"><value>Portable</value></data>
+  <data name="DotnetCli.Sdk.Description.Net10" xml:space="preserve"><value>Recommended for Fluence projects targeting net10.0.</value></data>
+  <data name="DotnetCli.Sdk.Description.Net9" xml:space="preserve"><value>Install when working with net9.0 projects.</value></data>
+  <data name="DotnetCli.Sdk.Description.Net8" xml:space="preserve"><value>Install for LTS projects targeting net8.0.</value></data>
+  <data name="DotnetCli.Template.ConsoleApp" xml:space="preserve"><value>Console App</value></data>
+  <data name="DotnetCli.Template.ConsoleApp.Description" xml:space="preserve"><value>Command-line application</value></data>
+  <data name="DotnetCli.Template.ClassLibrary" xml:space="preserve"><value>Class Library</value></data>
+  <data name="DotnetCli.Template.ClassLibrary.Description" xml:space="preserve"><value>Reusable C# library</value></data>
+  <data name="DotnetCli.Template.WorkerService" xml:space="preserve"><value>Worker Service</value></data>
+  <data name="DotnetCli.Template.WorkerService.Description" xml:space="preserve"><value>Background service</value></data>
+  <data name="DotnetCli.Template.WebApi" xml:space="preserve"><value>ASP.NET Core Web API</value></data>
+  <data name="DotnetCli.Template.WebApi.Description" xml:space="preserve"><value>HTTP API service</value></data>
+  <data name="DotnetCli.Template.Mvc" xml:space="preserve"><value>ASP.NET Core MVC</value></data>
+  <data name="DotnetCli.Template.Mvc.Description" xml:space="preserve"><value>MVC web application</value></data>
+  <data name="DotnetCli.Template.RazorPages" xml:space="preserve"><value>Razor Pages</value></data>
+  <data name="DotnetCli.Template.RazorPages.Description" xml:space="preserve"><value>Page-focused web app</value></data>
+  <data name="DotnetCli.Template.BlazorWebApp" xml:space="preserve"><value>Blazor Web App</value></data>
+  <data name="DotnetCli.Template.BlazorWebApp.Description" xml:space="preserve"><value>Interactive web UI</value></data>
+  <data name="DotnetCli.Template.XUnit" xml:space="preserve"><value>xUnit Test Project</value></data>
+  <data name="DotnetCli.Template.XUnit.Description" xml:space="preserve"><value>xUnit test project</value></data>
+  <data name="DotnetCli.Template.NUnit" xml:space="preserve"><value>NUnit Test Project</value></data>
+  <data name="DotnetCli.Template.NUnit.Description" xml:space="preserve"><value>NUnit test project</value></data>
+  <data name="DotnetCli.Template.MSTest" xml:space="preserve"><value>MSTest Test Project</value></data>
+  <data name="DotnetCli.Template.MSTest.Description" xml:space="preserve"><value>MSTest test project</value></data>
+  <data name="DotnetCli.Status.Checking" xml:space="preserve"><value>Checking .NET SDK...</value></data>
+  <data name="DotnetCli.Status.NotDetected" xml:space="preserve"><value>Not detected</value></data>
+  <data name="DotnetCli.Status.UsingDotnetFrom" xml:space="preserve"><value>Using {0} from {1}</value></data>
+  <data name="DotnetCli.Status.NoSdkDetected" xml:space="preserve"><value>No .NET SDK detected.</value></data>
+  <data name="DotnetCli.Status.Installed" xml:space="preserve"><value>Installed</value></data>
+  <data name="DotnetCli.Status.InstalledWithVersion" xml:space="preserve"><value>Installed {0}</value></data>
+  <data name="DotnetCli.Status.Available" xml:space="preserve"><value>Available</value></data>
+  <data name="DotnetCli.Status.ChooseTemplateAndLocation" xml:space="preserve"><value>Choose a template and location.</value></data>
+  <data name="DotnetCli.Status.SdkRequiredCreate" xml:space="preserve"><value>.NET SDK is required before creating projects.</value></data>
+  <data name="DotnetCli.Status.CreatingProject" xml:space="preserve"><value>Creating project...</value></data>
+  <data name="DotnetCli.Status.ProjectCreated" xml:space="preserve"><value>Project created.</value></data>
+  <data name="DotnetCli.Status.UnableToCreateProject" xml:space="preserve"><value>Unable to create project.</value></data>
+  <data name="DotnetCli.Status.NoProjectFound" xml:space="preserve"><value>No C# project was found in the current workspace.</value></data>
+  <data name="DotnetCli.Status.ChooseProjectAndPublishOptions" xml:space="preserve"><value>Choose a project and publish options.</value></data>
+  <data name="DotnetCli.Status.SdkRequiredPublish" xml:space="preserve"><value>.NET SDK is required before publishing.</value></data>
+  <data name="DotnetCli.Status.Publishing" xml:space="preserve"><value>Publishing...</value></data>
+  <data name="DotnetCli.Status.PublishCompleted" xml:space="preserve"><value>Publish completed.</value></data>
+  <data name="DotnetCli.Status.UnableToPublish" xml:space="preserve"><value>Unable to publish.</value></data>
+  <data name="DotnetCli.Status.LoadedPublishProfilePrefix" xml:space="preserve"><value>Loaded publish profile</value></data>
+  <data name="DotnetCli.Status.LoadedPublishProfile" xml:space="preserve"><value>Loaded publish profile {0}.</value></data>
+  <data name="DotnetCli.Status.UnableToLoadPublishProfile" xml:space="preserve"><value>Unable to load publish profile: {0}</value></data>
+  <data name="DotnetCli.Validation.SelectTemplate" xml:space="preserve"><value>Select a template.</value></data>
+  <data name="DotnetCli.Validation.ValidProjectName" xml:space="preserve"><value>Enter a valid project name.</value></data>
+  <data name="DotnetCli.Validation.ProjectLocation" xml:space="preserve"><value>Choose a project location.</value></data>
+  <data name="DotnetCli.Validation.TargetFolderNotEmpty" xml:space="preserve"><value>The target project folder is not empty.</value></data>
+  <data name="DotnetCli.Validation.SelectProject" xml:space="preserve"><value>Select a valid project.</value></data>
+  <data name="DotnetCli.Validation.OutputFolder" xml:space="preserve"><value>Choose an output folder.</value></data>
+  <data name="DotnetCli.Validation.PublishProfileName" xml:space="preserve"><value>Enter a publish profile name.</value></data>
+  <data name="DotnetCli.Error.SolutionFileNotCreated" xml:space="preserve"><value>The solution file was not created in '{0}'.</value></data>
+  <data name="DotnetCli.Error.CreateProjectTitle" xml:space="preserve"><value>Unable to create project</value></data>
+  <data name="DotnetCli.Error.PublishTitle" xml:space="preserve"><value>Unable to publish</value></data>
+</root>

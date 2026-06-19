@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Dotnet;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Dotnet;
 using Fluence.Core.ViewModels;
@@ -19,19 +20,26 @@ public sealed partial class DotnetSdkSetupViewModel : ViewModelBase
 {
     private readonly IDotnetSdkProvisioningService _provisioning;
     private readonly IShellEventBus _events;
+    private readonly ILocalizationService _loc;
 
-    public DotnetSdkSetupViewModel(IDotnetSdkProvisioningService provisioning, IShellEventBus events)
+    public DotnetSdkSetupViewModel(
+        IDotnetSdkProvisioningService provisioning,
+        IShellEventBus events,
+        ILocalizationService loc)
     {
         _provisioning = provisioning;
         _events = events;
+        _loc = loc;
+        SdkOptions =
+        [
+            new(".NET 10 SDK", "10.0", _loc.Get("DotnetCli.Sdk.Description.Net10"), true, _loc),
+            new(".NET 9 SDK", "9.0", _loc.Get("DotnetCli.Sdk.Description.Net9"), false, _loc),
+            new(".NET 8 SDK", "8.0", _loc.Get("DotnetCli.Sdk.Description.Net8"), false, _loc),
+        ];
+        Status = _loc.Get("DotnetCli.Status.Checking");
     }
 
-    public ObservableCollection<DotnetSdkOptionViewModel> SdkOptions { get; } =
-    [
-        new(".NET 10 SDK", "10.0", "Recommended for Fluence projects targeting net10.0.", true),
-        new(".NET 9 SDK", "9.0", "Install when working with net9.0 projects.", false),
-        new(".NET 8 SDK", "8.0", "Install for LTS projects targeting net8.0.", false),
-    ];
+    public ObservableCollection<DotnetSdkOptionViewModel> SdkOptions { get; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(InstallOfficialCommand))]
@@ -41,13 +49,13 @@ public sealed partial class DotnetSdkSetupViewModel : ViewModelBase
     private string _recommendedVersion = ".NET SDK";
 
     [ObservableProperty]
-    private string _dotnetPath = "Not detected";
+    private string _dotnetPath = string.Empty;
 
     [ObservableProperty]
     private string _ideManagedInstallPath = string.Empty;
 
     [ObservableProperty]
-    private string _status = "Checking .NET SDK...";
+    private string _status = string.Empty;
 
     [ObservableProperty]
     private string _output = string.Empty;
@@ -64,7 +72,7 @@ public sealed partial class DotnetSdkSetupViewModel : ViewModelBase
         SelectedSdkOption ??= SdkOptions.FirstOrDefault(option => option.IsRecommended)
                               ?? SdkOptions.FirstOrDefault();
         IsRunning = true;
-        Status = "Checking .NET SDK...";
+        Status = _loc.Get("DotnetCli.Status.Checking");
 
         try
         {
@@ -140,12 +148,12 @@ public sealed partial class DotnetSdkSetupViewModel : ViewModelBase
         }
 
         RecommendedVersion = sdkStatus.RecommendedVersion;
-        DotnetPath = sdkStatus.DotnetPath ?? "Not detected";
+        DotnetPath = sdkStatus.DotnetPath ?? _loc.Get("DotnetCli.Status.NotDetected");
         IdeManagedInstallPath = sdkStatus.IdeManagedInstallPath;
         HasSdk = sdkStatus.InstalledSdks.Count > 0;
         Status = HasSdk
-            ? $"Using {Path.GetFileName(DotnetPath)} from {Path.GetDirectoryName(DotnetPath)}"
-            : "No .NET SDK detected.";
+            ? string.Format(_loc.Get("DotnetCli.Status.UsingDotnetFrom"), Path.GetFileName(DotnetPath), Path.GetDirectoryName(DotnetPath))
+            : _loc.Get("DotnetCli.Status.NoSdkDetected");
 
         if (!string.IsNullOrWhiteSpace(sdkStatus.ErrorMessage))
             AppendOutput($"[dotnet] {sdkStatus.ErrorMessage}");

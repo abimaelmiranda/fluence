@@ -1,9 +1,11 @@
 using System;
+using System.Resources;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Settings;
@@ -76,6 +78,9 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
             .Register(DebugSettingsJsonContext.Default.DebugSettings);
         host.Services.GetRequiredService<ISettingsService>()
             .Get<DebugSettings>();
+
+        host.Services.GetRequiredService<ILocalizationService>()
+            .Register(new ResourceManager("Fluence.Modules.Debug.Resources.Strings", typeof(Entrypoint).Assembly));
 
         // Iniciar sessão — Interactive: usuário espera resposta imediata
         _subscriptions.Add(host.Events.SubscribeSync<DebugProjectRequestedEvent>(_ =>

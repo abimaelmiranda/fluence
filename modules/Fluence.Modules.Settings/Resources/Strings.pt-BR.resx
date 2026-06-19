@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Settings.Tab.Settings" xml:space="preserve">
+    <value>Configurações</value>
+  </data>
+  <data name="Settings.Tab.Keybindings" xml:space="preserve">
+    <value>Atalhos de Teclado</value>
+  </data>
+  <data name="Settings.Label.Preferences" xml:space="preserve">
+    <value>Preferências</value>
+  </data>
+  <data name="Settings.Section.global" xml:space="preserve">
+    <value>Geral</value>
+  </data>
+  <data name="Settings.Section.editor" xml:space="preserve">
+    <value>Editor</value>
+  </data>
+  <data name="Settings.Section.languageServer" xml:space="preserve">
+    <value>Servidor de Linguagem</value>
+  </data>
+  <data name="Settings.Section.shell" xml:space="preserve">
+    <value>Shell</value>
+  </data>
+  <data name="Settings.Section.problems" xml:space="preserve">
+    <value>Problemas</value>
+  </data>
+  <data name="Settings.Section.debug" xml:space="preserve">
+    <value>Depuração</value>
+  </data>
+  <data name="Settings.Property.global.FontFamily" xml:space="preserve">
+    <value>Geral: Família da fonte</value>
+  </data>
+  <data name="Settings.Property.global.FontSize" xml:space="preserve">
+    <value>Geral: Tamanho da fonte</value>
+  </data>
+  <data name="Settings.Property.global.Theme" xml:space="preserve">
+    <value>Geral: Tema</value>
+  </data>
+  <data name="Settings.Property.editor.FontFamily" xml:space="preserve">
+    <value>Editor: Família da fonte</value>
+  </data>
+  <data name="Settings.Property.editor.FontSize" xml:space="preserve">
+    <value>Editor: Tamanho da fonte</value>
+  </data>
+  <data name="Settings.Property.editor.LineHeightFactor" xml:space="preserve">
+    <value>Editor: Altura da linha</value>
+  </data>
+  <data name="Settings.Property.editor.ShowLineNumbers" xml:space="preserve">
+    <value>Editor: Mostrar números de linha</value>
+  </data>
+  <data name="Settings.Property.editor.AutoPairBrackets" xml:space="preserve">
+    <value>Editor: Parear colchetes automaticamente</value>
+  </data>
+  <data name="Settings.Property.editor.FormatOnSave" xml:space="preserve">
+    <value>Editor: Formatar ao salvar</value>
+  </data>
+  <data name="Settings.Property.editor.CompletionTriggerDelayMs" xml:space="preserve">
+    <value>Editor: Atraso do acionamento de conclusão</value>
+  </data>
+  <data name="Settings.Property.languageServer.SuppressedDiagnosticCodes" xml:space="preserve">
+    <value>Servidor de Linguagem: Códigos de diagnóstico suprimidos</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableMsBuild" xml:space="preserve">
+    <value>Servidor de Linguagem: Habilitar MSBuild</value>
+  </data>
+  <data name="Settings.Property.languageServer.LoadProjectsOnDemand" xml:space="preserve">
+    <value>Servidor de Linguagem: Carregar projetos sob demanda</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnablePackageAutoRestore" xml:space="preserve">
+    <value>Servidor de Linguagem: Habilitar restauração automática de pacotes</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableAnalyzersSupport" xml:space="preserve">
+    <value>Servidor de Linguagem: Habilitar suporte a analisadores</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableDecompilationSupport" xml:space="preserve">
+    <value>Servidor de Linguagem: Habilitar descompilação</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableImportCompletion" xml:space="preserve">
+    <value>Servidor de Linguagem: Habilitar conclusão de imports</value>
+  </data>
+  <data name="Settings.Property.languageServer.DiagnosticWorkersThreadCount" xml:space="preserve">
+    <value>Servidor de Linguagem: Número de workers de diagnóstico</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableEditorConfigSupport" xml:space="preserve">
+    <value>Servidor de Linguagem: Habilitar suporte a EditorConfig</value>
+  </data>
+  <data name="Settings.Property.languageServer.IncludePrereleases" xml:space="preserve">
+    <value>Servidor de Linguagem: Incluir versões prévias</value>
+  </data>
+  <data name="Settings.Property.shell.SidebarWidth" xml:space="preserve">
+    <value>Shell: Largura da barra lateral</value>
+  </data>
+  <data name="Settings.Property.shell.TerminalHeight" xml:space="preserve">
+    <value>Shell: Altura do terminal inferior</value>
+  </data>
+  <data name="Settings.Property.shell.AnimationsEnabled" xml:space="preserve">
+    <value>Shell: Habilitar animações</value>
+  </data>
+  <data name="Settings.Property.problems.ShowWarningsFromAllFiles" xml:space="preserve">
+    <value>Problemas: Mostrar avisos de todos os arquivos</value>
+  </data>
+  <data name="Settings.Property.problems.ShowInformationFromAllFiles" xml:space="preserve">
+    <value>Problemas: Mostrar informações de todos os arquivos</value>
+  </data>
+  <data name="Settings.Property.problems.MaxVisibleProblems" xml:space="preserve">
+    <value>Problemas: Máximo de problemas visíveis</value>
+  </data>
+  <data name="Settings.Property.debug.ExceptionBreakMode" xml:space="preserve">
+    <value>Depuração: Modo de pausa em exceções</value>
+  </data>
+  <data name="Settings.Description.global.FontFamily" xml:space="preserve">
+    <value>Controla a família de fonte padrão da interface da IDE.</value>
+  </data>
+  <data name="Settings.Description.global.FontSize" xml:space="preserve">
+    <value>Controla o tamanho padrão da fonte da interface em pixels.</value>
+  </data>
+  <data name="Settings.Description.global.Theme" xml:space="preserve">
+    <value>Seleciona o tema ativo do aplicativo.</value>
+  </data>
+  <data name="Settings.Description.editor.FontFamily" xml:space="preserve">
+    <value>Controla a família de fonte usada no editor de código.</value>
+  </data>
+  <data name="Settings.Description.editor.FontSize" xml:space="preserve">
+    <value>Controla o tamanho da fonte do editor em pixels.</value>
+  </data>
+  <data name="Settings.Description.editor.LineHeightFactor" xml:space="preserve">
+    <value>Controla o espaçamento entre linhas como multiplicador do tamanho da fonte.</value>
+  </data>
+  <data name="Settings.Description.editor.ShowLineNumbers" xml:space="preserve">
+    <value>Mostra números de linha na margem do editor.</value>
+  </data>
+  <data name="Settings.Description.editor.AutoPairBrackets" xml:space="preserve">
+    <value>Insere automaticamente o colchete correspondente durante a digitação.</value>
+  </data>
+  <data name="Settings.Description.editor.FormatOnSave" xml:space="preserve">
+    <value>Formata arquivos quando são salvos, quando houver um formatador disponível.</value>
+  </data>
+  <data name="Settings.Description.editor.CompletionTriggerDelayMs" xml:space="preserve">
+    <value>Controla o atraso antes de solicitar sugestões de conclusão.</value>
+  </data>
+  <data name="Settings.Description.languageServer.SuppressedDiagnosticCodes" xml:space="preserve">
+    <value>Suprime IDs de diagnóstico do Roslyn ou OmniSharp e ações de código relacionadas.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableMsBuild" xml:space="preserve">
+    <value>Habilita o carregamento de projetos MSBuild no OmniSharp.</value>
+  </data>
+  <data name="Settings.Description.languageServer.LoadProjectsOnDemand" xml:space="preserve">
+    <value>Carrega projetos apenas quando eles são necessários pelo servidor de linguagem.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnablePackageAutoRestore" xml:space="preserve">
+    <value>Permite que o OmniSharp restaure pacotes ausentes automaticamente.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableAnalyzersSupport" xml:space="preserve">
+    <value>Habilita diagnósticos e correções de código dos analisadores do Roslyn.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableDecompilationSupport" xml:space="preserve">
+    <value>Permite navegar para símbolos descompilados quando o código-fonte não está disponível.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableImportCompletion" xml:space="preserve">
+    <value>Inclui sugestões de importação nos resultados de conclusão.</value>
+  </data>
+  <data name="Settings.Description.languageServer.DiagnosticWorkersThreadCount" xml:space="preserve">
+    <value>Controla quantos workers o OmniSharp usa para diagnósticos.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableEditorConfigSupport" xml:space="preserve">
+    <value>Aplica preferências de formatação e análise do .editorconfig.</value>
+  </data>
+  <data name="Settings.Description.languageServer.IncludePrereleases" xml:space="preserve">
+    <value>Permite SDKs pré-lançamento ao resolver o SDK do servidor de linguagem.</value>
+  </data>
+  <data name="Settings.Description.shell.SidebarWidth" xml:space="preserve">
+    <value>Controla a largura padrão da barra lateral esquerda.</value>
+  </data>
+  <data name="Settings.Description.shell.TerminalHeight" xml:space="preserve">
+    <value>Controla a altura padrão do painel inferior do terminal.</value>
+  </data>
+  <data name="Settings.Description.shell.AnimationsEnabled" xml:space="preserve">
+    <value>Habilita ou desabilita animações de transição da interface.</value>
+  </data>
+  <data name="Settings.Description.problems.ShowWarningsFromAllFiles" xml:space="preserve">
+    <value>Mostra avisos de arquivos que não estão abertos no momento.</value>
+  </data>
+  <data name="Settings.Description.problems.ShowInformationFromAllFiles" xml:space="preserve">
+    <value>Mostra informações de arquivos que não estão abertos no momento.</value>
+  </data>
+  <data name="Settings.Description.problems.MaxVisibleProblems" xml:space="preserve">
+    <value>Limita a quantidade de problemas exibidos no painel Problemas.</value>
+  </data>
+  <data name="Settings.Description.debug.ExceptionBreakMode" xml:space="preserve">
+    <value>Controla quando o depurador para em exceções.</value>
+  </data>
+  <data name="Settings.Action.RestoreDefaults" xml:space="preserve">
+    <value>Restaurar padrões</value>
+  </data>
+  <data name="Settings.Action.InstallTheme" xml:space="preserve">
+    <value>Instalar tema</value>
+  </data>
+  <data name="Settings.Action.SaveAndApply" xml:space="preserve">
+    <value>Salvar e aplicar</value>
+  </data>
+  <data name="Settings.Action.Reset" xml:space="preserve">
+    <value>Redefinir</value>
+  </data>
+  <data name="Settings.Action.Remove" xml:space="preserve">
+    <value>Remover</value>
+  </data>
+  <data name="Settings.Action.AddRule" xml:space="preserve">
+    <value>Adicionar regra</value>
+  </data>
+  <data name="Settings.Action.AddCustomId" xml:space="preserve">
+    <value>Adicionar ID personalizado</value>
+  </data>
+  <data name="Settings.Search.Placeholder" xml:space="preserve">
+    <value>Buscar configurações e atalhos</value>
+  </data>
+  <data name="Settings.StringArray.AddKnownRule" xml:space="preserve">
+    <value>Adicionar regra conhecida...</value>
+  </data>
+  <data name="Settings.StringArray.CustomIdPlaceholder" xml:space="preserve">
+    <value>ID personalizado (ex: CS0168)</value>
+  </data>
+  <data name="Settings.Keybinding.Record" xml:space="preserve">
+    <value>Gravar</value>
+  </data>
+  <data name="Settings.Keybinding.Recording" xml:space="preserve">
+    <value>Pressione as teclas...</value>
+  </data>
+  <data name="Settings.Keybinding.Conflict" xml:space="preserve">
+    <value>Atalho conflitante</value>
+  </data>
+  <data name="Settings.Status.Ready" xml:space="preserve">
+    <value>Pronto</value>
+  </data>
+  <data name="Settings.Status.Saved" xml:space="preserve">
+    <value>Salvo</value>
+  </data>
+  <data name="Settings.Status.DefaultsRestored" xml:space="preserve">
+    <value>Padrões restaurados</value>
+  </data>
+  <data name="Settings.Status.KeybindingReset" xml:space="preserve">
+    <value>Atalho redefinido</value>
+  </data>
+  <data name="Settings.Status.ThemeInstallFailed" xml:space="preserve">
+    <value>Falha ao instalar tema</value>
+  </data>
+  <data name="Settings.Status.SearchResults" xml:space="preserve">
+    <value>Resultados da busca</value>
+  </data>
+  <data name="Settings.Status.CannotBeEmpty" xml:space="preserve">
+    <value>{0} não pode estar vazio</value>
+  </data>
+  <data name="Settings.Status.ThemeInstalled" xml:space="preserve">
+    <value>{0} instalado</value>
+  </data>
+</root>

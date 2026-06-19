@@ -9,4 +9,6 @@ public sealed class GlobalSettings
 
     [ThemeReference]
     public string Theme { get; set; } = "FluenceDark";
+
+    public string Language { get; set; } = "en";
 }

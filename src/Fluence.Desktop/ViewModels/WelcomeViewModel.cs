@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Dialogs;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Workspace;
@@ -25,25 +26,44 @@ public sealed partial class WelcomeViewModel : ViewModelBase
     private readonly IUserNotificationService _notifications;
     private readonly IShellEventBus _eventBus;
     private readonly IRecentProjectsService _recentProjectsService;
+    private readonly ILocalizationService _loc;
 
     public WelcomeViewModel(
         IWorkspaceDialogService dialogs,
         IUserNotificationService notifications,
         IShellEventBus eventBus,
         IRecentProjectsService recentProjectsService,
-        IWorkspaceContext workspace)
+        IWorkspaceContext workspace,
+        ILocalizationService loc)
     {
         _dialogs = dialogs;
         _notifications = notifications;
         _eventBus = eventBus;
         _recentProjectsService = recentProjectsService;
+        _loc = loc;
 
         ReloadRecents();
         workspace.Changed += OnWorkspaceChanged;
+        _loc.LanguageChanged += OnLanguageChanged;
     }
 
-    [ObservableProperty]
-    private string _status = "No workspace opened";
+    private string? _statusKey = "Desktop.Status.NoWorkspaceOpened";
+    private string _statusRaw = string.Empty;
+
+    public string Status => _statusKey != null ? _loc.Get(_statusKey) : _statusRaw;
+
+    private void SetLocalizedStatus(string key)
+    {
+        _statusKey = key;
+        OnPropertyChanged(nameof(Status));
+    }
+
+    private void SetRawStatus(string raw)
+    {
+        _statusKey = null;
+        _statusRaw = raw;
+        OnPropertyChanged(nameof(Status));
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasRecentSolutions))]
@@ -55,6 +75,11 @@ public sealed partial class WelcomeViewModel : ViewModelBase
     {
         if (sender is IWorkspaceContext ctx && ctx.Current.Mode == WorkspaceMode.Empty)
             ReloadRecents();
+    }
+
+    private void OnLanguageChanged()
+    {
+        OnPropertyChanged(nameof(Status));
     }
 
     private void ReloadRecents()
@@ -86,7 +111,7 @@ public sealed partial class WelcomeViewModel : ViewModelBase
     private void NewProject()
     {
         _eventBus.Publish(new NewProjectRequestedEvent());
-        Status = "Create a new project";
+        SetLocalizedStatus("Desktop.Status.CreateProject");
     }
 
     [RelayCommand]
@@ -95,18 +120,18 @@ public sealed partial class WelcomeViewModel : ViewModelBase
         var path = await _dialogs.PickFileAsync(cancellationToken);
         if (path is null)
         {
-            Status = "No workspace opened";
+            SetLocalizedStatus("Desktop.Status.NoWorkspaceOpened");
             return;
         }
 
         try
         {
             _eventBus.Publish(new OpenFileRequestedEvent(path));
-            Status = path;
+            SetRawStatus(path);
         }
         catch (Exception ex) when (OpenFileFailureNotification.TryShow(_notifications, path, ex))
         {
-            Status = "Unable to open file";
+            SetLocalizedStatus("Desktop.Status.UnableToOpenFile");
         }
     }
 
@@ -116,12 +141,12 @@ public sealed partial class WelcomeViewModel : ViewModelBase
         var path = await _dialogs.PickFolderAsync(cancellationToken);
         if (path is null)
         {
-            Status = "No workspace opened";
+            SetLocalizedStatus("Desktop.Status.NoWorkspaceOpened");
             return;
         }
 
         _eventBus.Publish(new OpenFolderRequestedEvent(path));
-        Status = path;
+        SetRawStatus(path);
     }
 
     [RelayCommand]
@@ -130,18 +155,18 @@ public sealed partial class WelcomeViewModel : ViewModelBase
         var path = await _dialogs.PickSolutionAsync(cancellationToken);
         if (path is null)
         {
-            Status = "No workspace opened";
+            SetLocalizedStatus("Desktop.Status.NoWorkspaceOpened");
             return;
         }
 
         _eventBus.Publish(new OpenSolutionRequestedEvent(path));
-        Status = path;
+        SetRawStatus(path);
     }
 
     [RelayCommand]
     private void OpenRecent(RecentProject recent)
     {
         _eventBus.Publish(new OpenSolutionRequestedEvent(recent.Path));
-        Status = recent.Path;
+        SetRawStatus(recent.Path);
     }
 }

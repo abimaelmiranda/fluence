@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
@@ -35,6 +36,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
     private readonly IDotnetSdkProvisioningService _sdk;
     private readonly IUserNotificationService _notifications;
     private readonly ILaunchSettingsService _launchSettingsService;
+    private readonly ILocalizationService _loc;
 
     public PublishWizardViewModel(
         IWorkspaceContext workspace,
@@ -44,7 +46,8 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
         IShellEventBus events,
         IDotnetSdkProvisioningService sdk,
         IUserNotificationService notifications,
-        ILaunchSettingsService launchSettingsService)
+        ILaunchSettingsService launchSettingsService,
+        ILocalizationService loc)
     {
         _workspace = workspace;
         _dialogs = dialogs;
@@ -54,13 +57,14 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
         _sdk = sdk;
         _notifications = notifications;
         _launchSettingsService = launchSettingsService;
+        _loc = loc;
 
         Configurations = ["Release", "Debug"];
-        Frameworks = ["Project default", "net10.0", "net9.0", "net8.0"];
+        Frameworks = [_loc.Get("DotnetCli.Option.ProjectDefault"), "net10.0", "net9.0", "net8.0"];
         RuntimeIdentifiers = new ObservableCollection<string>(new[]
         {
             GetHostRuntimeIdentifier(),
-            "Portable",
+            _loc.Get("DotnetCli.Option.Portable"),
             "win-x64",
             "osx-arm64",
             "osx-x64",
@@ -70,6 +74,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
         SelectedConfiguration = Configurations[0];
         SelectedFramework = Frameworks[0];
         SelectedRuntimeIdentifier = RuntimeIdentifiers[0];
+        Status = _loc.Get("DotnetCli.Status.ChooseProjectAndPublishOptions");
     }
 
     public ObservableCollection<ProjectOption> Projects { get; } = [];
@@ -117,7 +122,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
     private bool _isRunning;
 
     [ObservableProperty]
-    private string _status = "Choose a project and publish options.";
+    private string _status = string.Empty;
 
     partial void OnSelectedProjectChanged(ProjectOption? value)
     {
@@ -144,9 +149,9 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
                           ?? Projects.FirstOrDefault();
 
         if (Projects.Count == 0)
-            Status = "No C# project was found in the current workspace.";
-        else if (!Status.StartsWith("Loaded publish profile", StringComparison.OrdinalIgnoreCase))
-            Status = "Choose a project and publish options.";
+            Status = _loc.Get("DotnetCli.Status.NoProjectFound");
+        else if (!Status.StartsWith(_loc.Get("DotnetCli.Status.LoadedPublishProfilePrefix"), StringComparison.OrdinalIgnoreCase))
+            Status = _loc.Get("DotnetCli.Status.ChooseProjectAndPublishOptions");
     }
 
     [RelayCommand]
@@ -175,12 +180,12 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
         if (!sdkStatus.IsDotnetAvailable || sdkStatus.InstalledSdks.Count == 0)
         {
             _events.Publish(new DotnetSdkSetupRequestedEvent());
-            Status = ".NET SDK is required before publishing.";
+            Status = _loc.Get("DotnetCli.Status.SdkRequiredPublish");
             return;
         }
 
         IsRunning = true;
-        Status = "Publishing...";
+        Status = _loc.Get("DotnetCli.Status.Publishing");
 
         try
         {
@@ -192,12 +197,12 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
             _events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
             await RunDotnetAsync(BuildPublishArguments(), Path.GetDirectoryName(SelectedProject!.Path)!, cancellationToken);
 
-            Status = "Publish completed.";
+            Status = _loc.Get("DotnetCli.Status.PublishCompleted");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Status = "Unable to publish.";
-            _notifications.ShowError("Unable to publish", ex.Message);
+            Status = _loc.Get("DotnetCli.Status.UnableToPublish");
+            _notifications.ShowError(_loc.Get("DotnetCli.Error.PublishTitle"), ex.Message);
         }
         finally
         {
@@ -209,19 +214,19 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
     {
         if (SelectedProject is null || !File.Exists(SelectedProject.Path))
         {
-            Status = "Select a valid project.";
+            Status = _loc.Get("DotnetCli.Validation.SelectProject");
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(OutputPath))
         {
-            Status = "Choose an output folder.";
+            Status = _loc.Get("DotnetCli.Validation.OutputFolder");
             return false;
         }
 
         if (SaveProfile && string.IsNullOrWhiteSpace(ProfileName))
         {
-            Status = "Enter a publish profile name.";
+            Status = _loc.Get("DotnetCli.Validation.PublishProfileName");
             return false;
         }
 
@@ -371,7 +376,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
             SaveProfile = true;
 
             SelectedConfiguration = ResolveOption(Configurations, ReadProperty(document, "Configuration"), SelectedConfiguration);
-            SelectedFramework = ResolveOption(Frameworks, ReadProperty(document, "TargetFramework"), "Project default");
+            SelectedFramework = ResolveOption(Frameworks, ReadProperty(document, "TargetFramework"), _loc.Get("DotnetCli.Option.ProjectDefault"));
             SelectedRuntimeIdentifier = ResolveOption(RuntimeIdentifiers, ReadProperty(document, "RuntimeIdentifier"), SelectedRuntimeIdentifier);
 
             var publishDir = ReadProperty(document, "PublishDir")
@@ -387,18 +392,18 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
             SingleFile = ReadBool(document, "PublishSingleFile", SingleFile);
             ReadyToRun = ReadBool(document, "PublishReadyToRun", ReadyToRun);
             Trimmed = ReadBool(document, "PublishTrimmed", Trimmed);
-            Status = $"Loaded publish profile {ProfileName}.";
+            Status = string.Format(_loc.Get("DotnetCli.Status.LoadedPublishProfile"), ProfileName);
         }
         catch (Exception ex)
         {
-            Status = $"Unable to load publish profile: {ex.Message}";
+            Status = string.Format(_loc.Get("DotnetCli.Status.UnableToLoadPublishProfile"), ex.Message);
         }
     }
 
     private void ResetPublishDefaults(string projectPath, string projectDirectory)
     {
         SelectedConfiguration = Configurations[0];
-        SelectedFramework = "Project default";
+        SelectedFramework = _loc.Get("DotnetCli.Option.ProjectDefault");
         SelectedRuntimeIdentifier = RuntimeIdentifiers[0];
         SelfContained = false;
         SingleFile = false;
@@ -407,7 +412,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
         SaveProfile = true;
         OutputPath = Path.Combine(projectDirectory, "bin", SelectedConfiguration, "publish");
         ProfileName = $"{SanitizeProfileName(Path.GetFileNameWithoutExtension(projectPath))}-Folder";
-        Status = "Choose a project and publish options.";
+        Status = _loc.Get("DotnetCli.Status.ChooseProjectAndPublishOptions");
     }
 
     private static string? ReadProperty(XDocument document, string name)
@@ -465,13 +470,13 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
         return string.IsNullOrWhiteSpace(sanitized) ? "FolderProfile" : sanitized;
     }
 
-    private static bool IsDefaultFramework(string value) =>
-        string.Equals(value, "Project default", StringComparison.OrdinalIgnoreCase);
+    private bool IsDefaultFramework(string value) =>
+        string.Equals(value, _loc.Get("DotnetCli.Option.ProjectDefault"), StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsPortableRuntime(string value) =>
-        string.Equals(value, "Portable", StringComparison.OrdinalIgnoreCase);
+    private bool IsPortableRuntime(string value) =>
+        string.Equals(value, _loc.Get("DotnetCli.Option.Portable"), StringComparison.OrdinalIgnoreCase);
 
-    private static string GetHostRuntimeIdentifier()
+    private string GetHostRuntimeIdentifier()
     {
         var architecture = RuntimeInformation.ProcessArchitecture switch
         {
@@ -488,6 +493,6 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             return $"linux-{architecture}";
 
-        return "Portable";
+        return _loc.Get("DotnetCli.Option.Portable");
     }
 }

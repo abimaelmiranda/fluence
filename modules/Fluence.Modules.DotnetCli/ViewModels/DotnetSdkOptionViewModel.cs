@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Fluence.Core.Abstractions.Localization;
 
 namespace Fluence.Modules.DotnetCli.ViewModels;
 
@@ -6,7 +7,8 @@ public sealed partial class DotnetSdkOptionViewModel(
     string displayName,
     string channel,
     string description,
-    bool isRecommended) : ObservableObject
+    bool isRecommended,
+    ILocalizationService localization) : ObservableObject
 {
     [ObservableProperty]
     private bool _isInstalled;
@@ -25,11 +27,15 @@ public sealed partial class DotnetSdkOptionViewModel(
 
     public bool IsRecommended { get; } = isRecommended;
 
+    private ILocalizationService Loc { get; } = localization;
+
     public bool CanInstall => !IsInstalled;
 
     public string StateText => IsInstalled
-        ? string.IsNullOrWhiteSpace(InstalledVersion) ? "Installed" : $"Installed {InstalledVersion}"
-        : "Available";
+        ? string.IsNullOrWhiteSpace(InstalledVersion)
+            ? Loc.Get("DotnetCli.Status.Installed")
+            : string.Format(Loc.Get("DotnetCli.Status.InstalledWithVersion"), InstalledVersion)
+        : Loc.Get("DotnetCli.Status.Available");
 
     partial void OnIsInstalledChanged(bool value)
     {

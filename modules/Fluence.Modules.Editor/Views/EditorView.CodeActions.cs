@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using AvaloniaEdit.Rendering;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.LanguageServer;
 using Fluence.Core.Events.Lsp;
@@ -157,7 +158,7 @@ public partial class EditorView
 
                 var title = diagnostic is not null
                     ? FormatDiagnosticTitle(diagnostic)
-                    : "Quick Fix";
+                    : _viewModel?.Localization.Get("Editor.CodeAction.QuickFix") ?? "Quick Fix";
                 ShowCodeActionPopup(title, actions, GetCaretPopupRect(), placementTarget: Editor.TextArea.TextView);
             });
         }
@@ -188,7 +189,9 @@ public partial class EditorView
             CodeActionsListBox.IsVisible = true;
             CodeActionsListBox.ItemsSource = actions
                 .Select(action => new CodeActionListItem(
-                    action.IsPreferred ? $"Fix: {action.Title}" : action.Title,
+                    action.IsPreferred
+                        ? string.Format(_viewModel?.Localization.Get("Editor.CodeAction.FixPrefix") ?? "Fix: {0}", action.Title)
+                        : action.Title,
                     action))
                 .ToArray();
             CodeActionsListBox.SelectedIndex = 0;

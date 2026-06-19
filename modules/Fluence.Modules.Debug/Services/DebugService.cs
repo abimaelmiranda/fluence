@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
@@ -57,7 +58,8 @@ public sealed class DebugService(
     ISettingsService settings,
     ITaskScheduler scheduler,
     IExclusiveJobCoordinator jobs,
-    IUiDispatcher dispatcher)
+    IUiDispatcher dispatcher,
+    ILocalizationService localization)
     : IDebugService, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -65,6 +67,7 @@ public sealed class DebugService(
     private IExclusiveJobLease? _jobLease;
     private bool _adapterStarted;
     private int _sessionGeneration;
+    private readonly ILocalizationService _loc = localization;
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -79,13 +82,13 @@ public sealed class DebugService(
         {
             if (_adapter is not null)
             {
-                ShowWarning("A debug session is already running.");
+                ShowWarning(_loc.Get("Debug.Notification.SessionAlreadyRunning"));
                 return;
             }
 
             if (!jobs.TryAcquire(ExclusiveJobKind.Debug, out var lease))
             {
-                ShowWarning(FormatJobBlockedMessage(jobs.ActiveJob, "debug"));
+                ShowWarning(FormatJobBlockedMessage(jobs.ActiveJob, _loc.Get("Debug.Job.DebugSession")));
                 return;
             }
 
@@ -94,7 +97,7 @@ public sealed class DebugService(
             var target = await projectTargets.ResolveProjectTargetAsync(ExecutionMode.Debug, cancellationToken).ConfigureAwait(false);
             if (target is null)
             {
-                ShowWarning("No debuggable project was found for the active document.");
+                ShowWarning(_loc.Get("Debug.Notification.NoDebuggableProject"));
                 ReleaseDebugJobLease();
                 return;
             }
@@ -140,7 +143,7 @@ public sealed class DebugService(
             var currentSession = sessions.CurrentSession;
             if (currentSession is null)
             {
-                ShowWarning("No active debug session to reload.");
+                ShowWarning(_loc.Get("Debug.Notification.NoActiveSessionToReload"));
                 return;
             }
 
@@ -260,7 +263,7 @@ public sealed class DebugService(
         var workspaceRoot = launchSettings.GetWorkspaceRoot(workspace.Current);
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
-            ShowWarning("No workspace root was found for the debug session.");
+            ShowWarning(_loc.Get("Debug.Notification.NoWorkspaceRoot"));
             return false;
         }
 
@@ -287,14 +290,14 @@ public sealed class DebugService(
         problems.ReplaceSource(ProblemSourceIds.Build, buildProblems);
         if (!buildResult.Succeeded || buildProblems.Any(problem => problem.Severity == ProblemSeverity.Error))
         {
-            ShowWarning("The debug build failed. Fix the build errors before starting a debug session.");
+            ShowWarning(_loc.Get("Debug.Notification.DebugBuildFailed"));
             return false;
         }
 
         var programPath = ResolveProgramPath(target.ProjectPath, workspaceRoot);
         if (programPath is null)
         {
-            ShowWarning("The debug build output DLL was not found.");
+            ShowWarning(_loc.Get("Debug.Notification.DebugDllMissing"));
             return false;
         }
 
@@ -416,7 +419,7 @@ public sealed class DebugService(
         }
         catch (Exception ex)
         {
-            await output.WriteAsync(OutputChannelIds.Debug, $"[debug] Error refreshing inspection: {ex.Message}\r\n", OutputChannelEntryKind.Error)
+            await output.WriteAsync(OutputChannelIds.Debug, string.Format(_loc.Get("Debug.Log.ErrorRefreshingInspection"), ex.Message) + "\r\n", OutputChannelEntryKind.Error)
                 .ConfigureAwait(false);
         }
     }
@@ -426,14 +429,14 @@ public sealed class DebugService(
         if (!_adapterStarted)
         {
             var hint = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)
-                ? " On macOS this is often a PATH/dotnet issue (the .app inherits a minimal PATH) or a debugger entitlement issue (com.apple.security.cs.debugger). Check the DAP log for stderr output."
-                : " Check the DAP log for details.";
+                ? _loc.Get("Debug.Log.MacTerminatedHint")
+                : _loc.Get("Debug.Log.TerminatedHint");
             scheduler.Schedule(
                 "debug.output",
                 TaskPriority.Background,
                 ct => output.WriteAsync(
                     OutputChannelIds.Debug,
-                    $"[debug] netcoredbg terminated before starting the debuggee.{hint}\r\n",
+                    string.Format(_loc.Get("Debug.Log.NetcoredbgTerminated"), hint) + "\r\n",
                     OutputChannelEntryKind.Error,
                     ct));
         }
@@ -505,23 +508,23 @@ public sealed class DebugService(
         !string.IsNullOrWhiteSpace(frame.FilePath) &&
         File.Exists(frame.FilePath);
 
-    private static DebugExceptionInfo CreateExceptionInfo(DebugAdapterStoppedEvent e)
+    private DebugExceptionInfo CreateExceptionInfo(DebugAdapterStoppedEvent e)
     {
-        var title = FirstNonEmpty(e.Text, e.Description, "Exception");
-        var message = FirstNonEmpty(e.Description, e.Text, "The debugger stopped on an exception.");
+        var title = FirstNonEmpty(e.Text, e.Description, _loc.Get("Debug.Exception.Title"));
+        var message = FirstNonEmpty(e.Description, e.Text, _loc.Get("Debug.Exception.Message"));
 
         if (string.Equals(title, message, StringComparison.Ordinal))
-            message = "The debugger stopped on an exception.";
+            message = _loc.Get("Debug.Exception.Message");
 
         return new DebugExceptionInfo(TrimForPopup(title, 120), TrimForPopup(message, 220));
     }
 
-    private static string FormatStoppedOutput(DebugAdapterStoppedEvent e, DebugExceptionInfo? exceptionInfo)
+    private string FormatStoppedOutput(DebugAdapterStoppedEvent e, DebugExceptionInfo? exceptionInfo)
     {
         if (exceptionInfo is null)
-            return $"[debug] Stopped: {e.Reason ?? "breakpoint"}\r\n";
+            return $"[debug] Stopped: {e.Reason ?? _loc.Get("Debug.Session.Breakpoint")}\r\n";
 
-        return $"[debug] Exception: {exceptionInfo.Title} - {exceptionInfo.Message}\r\n";
+        return string.Format(_loc.Get("Debug.Log.Exception"), exceptionInfo.Title, exceptionInfo.Message) + "\r\n";
     }
 
     private static string FirstNonEmpty(params string?[] values) =>
@@ -618,22 +621,22 @@ public sealed class DebugService(
     {
         if (dispatcher.CheckAccess())
         {
-            notifications.ShowWarning("Debug", message);
+            notifications.ShowWarning(_loc.Get("Debug.Title"), message);
             return;
         }
 
-        dispatcher.Post(() => notifications.ShowWarning("Debug", message));
+        dispatcher.Post(() => notifications.ShowWarning(_loc.Get("Debug.Title"), message));
     }
 
     private void ShowError(string message)
     {
         if (dispatcher.CheckAccess())
         {
-            notifications.ShowError("Debug", message);
+            notifications.ShowError(_loc.Get("Debug.Title"), message);
             return;
         }
 
-        dispatcher.Post(() => notifications.ShowError("Debug", message));
+        dispatcher.Post(() => notifications.ShowError(_loc.Get("Debug.Title"), message));
     }
 
     private void ReleaseDebugJobLease()
@@ -642,16 +645,16 @@ public sealed class DebugService(
         _jobLease = null;
     }
 
-    private static string FormatJobBlockedMessage(ExclusiveJobKind? activeJob, string requestedJob)
+    private string FormatJobBlockedMessage(ExclusiveJobKind? activeJob, string requestedJob)
     {
         var activeName = activeJob switch
         {
-            ExclusiveJobKind.Debug => "debug session",
-            ExclusiveJobKind.Run => "run process",
-            _ => "job",
+            ExclusiveJobKind.Debug => _loc.Get("Debug.Job.DebugSession"),
+            ExclusiveJobKind.Run => _loc.Get("Debug.Job.RunProcess"),
+            _ => _loc.Get("Debug.Job.Generic"),
         };
 
-        return $"Cannot start {requestedJob} while a {activeName} is running.";
+        return string.Format(_loc.Get("Debug.Notification.JobBlocked"), requestedJob, activeName);
     }
 
     private static string? ResolveProgramPath(string projectPath, string workspaceRoot)

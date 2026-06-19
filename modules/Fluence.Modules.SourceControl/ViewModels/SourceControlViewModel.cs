@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Workspace;
@@ -17,6 +18,7 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
     private readonly IWorkspaceContext _workspace;
     private readonly IShellEventBus _events;
     private readonly IOutputChannelService _output;
+    private readonly ILocalizationService _loc;
     private System.IO.FileSystemWatcher? _watcher;
     private System.Threading.CancellationTokenSource? _debounce;
     private string? _repoRoot;
@@ -35,18 +37,35 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
     public bool HasAhead => AheadCount > 0;
     public bool HasBehind => BehindCount > 0;
 
+    public string StagedChangesTitle => string.Format(_loc.Get("SourceControl.Section.StagedChanges"), StagedChanges.Count);
+    public string UnstagedChangesTitle => string.Format(_loc.Get("SourceControl.Section.Changes"), UnstagedChanges.Count);
+    public string StashesTitle => string.Format(_loc.Get("SourceControl.Section.Stashes"), Stashes.Count);
+
     public SourceControlViewModel(
         IGitService git,
         ISourceControlDialogService dialogs,
         IWorkspaceContext workspace,
         IShellEventBus events,
-        IOutputChannelService output)
+        IOutputChannelService output,
+        ILocalizationService loc)
     {
         _git = git;
         _dialogs = dialogs;
         _workspace = workspace;
         _events = events;
         _output = output;
+        _loc = loc;
+        loc.LanguageChanged += OnLanguageChanged;
+        StagedChanges.CollectionChanged += (_, _) => OnPropertyChanged(nameof(StagedChangesTitle));
+        UnstagedChanges.CollectionChanged += (_, _) => OnPropertyChanged(nameof(UnstagedChangesTitle));
+        Stashes.CollectionChanged += (_, _) => OnPropertyChanged(nameof(StashesTitle));
+    }
+
+    private void OnLanguageChanged()
+    {
+        OnPropertyChanged(nameof(StagedChangesTitle));
+        OnPropertyChanged(nameof(UnstagedChangesTitle));
+        OnPropertyChanged(nameof(StashesTitle));
     }
 
     public void Initialize(string? workspaceRoot)
@@ -58,6 +77,7 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        _loc.LanguageChanged -= OnLanguageChanged;
         _debounce?.Cancel();
         _debounce?.Dispose();
         DisposeWatcher();

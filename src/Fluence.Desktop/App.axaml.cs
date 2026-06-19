@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -8,7 +9,11 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Fluence.Core.Abstractions.Localization;
+using Fluence.Core.Abstractions.Settings;
+using Fluence.Core.Models.Settings;
 using Fluence.Desktop.Composition;
+using Fluence.Desktop.Markup;
 using Fluence.Desktop.Services;
 using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
@@ -41,6 +46,21 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             _serviceProvider = Bootstrapper.BuildServices();
+            var localization = _serviceProvider.GetRequiredService<ILocalizationService>();
+            localization.Register(new ResourceManager("Fluence.Desktop.Resources.Strings", typeof(App).Assembly));
+            Locale.Initialize(localization);
+
+            var savedLanguage = _serviceProvider.GetRequiredService<ISettingsService>().Get<GlobalSettings>().Language;
+            localization.SetLanguage(savedLanguage);
+
+            var aboutMenuItem = NativeMenu.GetMenu(this)?.Items.OfType<NativeMenuItem>().FirstOrDefault();
+            if (aboutMenuItem is not null)
+            {
+                aboutMenuItem.Header = localization.Get("Desktop.Menu.About");
+                localization.LanguageChanged += () => Dispatcher.UIThread.Post(() =>
+                    aboutMenuItem.Header = localization.Get("Desktop.Menu.About"));
+            }
+
             DataTemplates.Add(new ViewLocator());
 
             // Resolve eagerly to subscribe to workspace.Changed for auto-save
@@ -56,11 +76,10 @@ public partial class App : Avalonia.Application
             };
             _serviceProvider.GetRequiredService<AvaloniaUserNotificationService>().Attach(mainWindow);
 
-            NativeMenu.SetMenu(
-                mainWindow,
-                NativeMenus.CreateMainMenu(
-                    mainWindowViewModel,
-                    _serviceProvider.GetRequiredService<IKeybindingService>()));
+            var keybindings = _serviceProvider.GetRequiredService<IKeybindingService>();
+            var mainMenu = NativeMenus.CreateMainMenu(mainWindowViewModel, keybindings);
+            NativeMenu.SetMenu(mainWindow, mainMenu.Menu);
+            localization.LanguageChanged += () => Dispatcher.UIThread.Post(mainMenu.Refresh);
 
 
             lifecycle.StatusChanged += (_, e) =>
@@ -71,6 +90,9 @@ public partial class App : Avalonia.Application
                 });
             };
 
+            // TODO: investigate "[Control] PlatformImpl is null, couldn't handle input" logged by
+            // Avalonia during close. The OS destroys the native window handle while the framework
+            // is still tearing down, causing stray input events to hit controls with no backend.
             mainWindow.Closing += async (_, e) =>
             {
                 try

@@ -1,7 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:Fluence.Core.Services.Localization"
         x:Class="Fluence.Desktop.Views.AboutDialog"
-        Title="About Fluence"
+        Title="{Binding [Desktop.About.Title], Source={x:Static loc:Locale.Current}}"
         Icon="/Assets/fluence.ico"
         Width="380"
         Height="260"
@@ -18,13 +19,13 @@
                    Height="64"
                    HorizontalAlignment="Center"
                    Margin="0,0,0,8"/>
-            <TextBlock Text="Fluence"
+            <TextBlock Text="{Binding [Desktop.About.ProductName], Source={x:Static loc:Locale.Current}}"
                        FontFamily="{StaticResource FluenceFontFamily}"
                        FontSize="{StaticResource FluenceFontSizeDisplay}"
                        FontWeight="Bold"
                        Foreground="{StaticResource FluenceBrushTextPrimary}"
                        HorizontalAlignment="Center"/>
-            <TextBlock Text="Open source IDE for C# development"
+            <TextBlock Text="{Binding [Desktop.About.Description], Source={x:Static loc:Locale.Current}}"
                        FontFamily="{StaticResource FluenceFontFamily}"
                        FontSize="{StaticResource FluenceFontSizeBody}"
                        Foreground="{StaticResource FluenceBrushTextSecondary}"
@@ -37,7 +38,7 @@
         </StackPanel>
 
         <Button Grid.Row="1"
-                Content="Close"
+                Content="{Binding [Desktop.About.Close], Source={x:Static loc:Locale.Current}}"
                 Click="OnCloseClicked"
                 HorizontalAlignment="Center"
                 MinWidth="96"/>

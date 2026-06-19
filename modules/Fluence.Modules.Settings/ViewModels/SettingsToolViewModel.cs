@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.Keybindings;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Theming;
 using Fluence.Core.Models.Keybindings;
@@ -27,6 +28,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
     private readonly IKeybindingService _keybindings;
     private readonly IThemeLoader _themeLoader;
     private readonly IWorkspaceDialogService _dialogs;
+    private readonly ILocalizationService _loc;
 
     public SettingsToolViewModel(
         ISettingsRegistry settingsRegistry,
@@ -34,7 +36,8 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         ICommandRegistry commands,
         IKeybindingService keybindings,
         IThemeLoader themeLoader,
-        IWorkspaceDialogService dialogs)
+        IWorkspaceDialogService dialogs,
+        ILocalizationService loc)
     {
         _settingsRegistry = settingsRegistry;
         _settings = settings;
@@ -42,10 +45,22 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         _keybindings = keybindings;
         _themeLoader = themeLoader;
         _dialogs = dialogs;
+        _loc = loc;
+        _loc.LanguageChanged += OnLanguageChanged;
         Reload();
         _keybindings.Watch().Subscribe(new ActionObserver<IReadOnlyList<KeybindingDefinition>>(
             _ => Dispatcher.UIThread.Post(ReloadKeybindings)));
         _commands.Changed += (_, _) => Dispatcher.UIThread.Post(ReloadKeybindings);
+    }
+
+    private void OnLanguageChanged()
+    {
+        ReloadSettings();
+        ReloadKeybindings();
+        OnPropertyChanged(nameof(SettingsContextTitle));
+        OnPropertyChanged(nameof(Status));
+        foreach (var row in Keybindings)
+            row.NotifyLanguageChanged();
     }
 
     [ObservableProperty]
@@ -57,8 +72,19 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
             ReloadKeybindings();
     }
 
-    [ObservableProperty]
-    private string _status = "Ready";
+    private string _statusKey = "Settings.Status.Ready";
+    private object[] _statusArgs = [];
+
+    public string Status => _statusArgs.Length == 0
+        ? _loc.Get(_statusKey)
+        : string.Format(_loc.Get(_statusKey), _statusArgs);
+
+    private void SetStatus(string key, params object[] args)
+    {
+        _statusKey = key;
+        _statusArgs = args;
+        OnPropertyChanged(nameof(Status));
+    }
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -68,8 +94,8 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     public string SettingsContextTitle =>
         string.IsNullOrWhiteSpace(SearchQuery)
-            ? SelectedSection?.DisplayName ?? "Settings"
-            : "Search results";
+            ? SelectedSection?.DisplayName ?? _loc.Get("Settings.Tab.Settings")
+            : _loc.Get("Settings.Status.SearchResults");
 
     public ObservableCollection<SettingsSectionViewModel> Sections { get; } = [];
 
@@ -144,7 +170,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
     {
         _keybindings.ResetKeybinding(commandId);
         ReloadKeybindings();
-        Status = "Keybinding reset";
+        SetStatus("Settings.Status.KeybindingReset");
     }
 
     [RelayCommand]
@@ -153,13 +179,13 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         var emptySetting = GetEmptyStringSetting();
         if (emptySetting is not null)
         {
-            Status = $"{emptySetting} cannot be empty";
+            SetStatus("Settings.Status.CannotBeEmpty", emptySetting);
             return;
         }
 
         SaveSettings();
         SaveKeybindings();
-        Status = "Saved";
+        SetStatus("Settings.Status.Saved");
     }
 
     [RelayCommand]
@@ -174,11 +200,11 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
             var installed = _themeLoader.InstallTheme(path);
             ReloadThemeOptions();
             SelectTheme(installed.Reference);
-            Status = $"Installed {installed.DisplayName}";
+            SetStatus("Settings.Status.ThemeInstalled", installed.DisplayName);
         }
         catch
         {
-            Status = "Theme install failed";
+            SetStatus("Settings.Status.ThemeInstallFailed");
         }
     }
 
@@ -188,7 +214,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         _settings.ResetAll();
         _keybindings.ResetAll();
         Reload();
-        Status = "Defaults restored";
+        SetStatus("Settings.Status.DefaultsRestored");
     }
 
     private void Reload()
@@ -199,6 +225,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     private void ReloadSettings()
     {
+        var selectedSectionName = SelectedSection?.Name;
         Sections.Clear();
         ReloadThemeOptions();
         foreach (var section in _settingsRegistry.Sections
@@ -219,7 +246,9 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
             Sections.Add(sectionViewModel);
         }
 
-        SelectedSection = Sections.FirstOrDefault();
+        SelectedSection = Sections.FirstOrDefault(section =>
+            string.Equals(section.Name, selectedSectionName, StringComparison.OrdinalIgnoreCase))
+            ?? Sections.FirstOrDefault();
         OnPropertyChanged(nameof(SettingsContextTitle));
         RefreshSettingsFilter();
     }
@@ -246,7 +275,8 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
                 binding.Scope,
                 binding.Key,
                 hasConflict,
-                this));
+                this,
+                _loc));
         }
 
         RefreshKeybindingsFilter();
@@ -322,7 +352,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     private void SaveSettings()
     {
-        foreach (var section in Sections)
+        foreach (var section in Sections.ToArray())
         {
             var values = new Dictionary<string, object?>(StringComparer.Ordinal);
             foreach (var item in section.Properties)

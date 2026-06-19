@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Infrastructure;
 using Fluence.Core.ViewModels;
@@ -20,13 +21,19 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
     private readonly ITerminalService _terminalService;
     private readonly IWorkspaceContext _workspace;
     private readonly IUiDispatcher _dispatcher;
+    private readonly ILocalizationService _loc;
     private TerminalSessionViewModel? _activeSession;
 
-    public TerminalViewModel(ITerminalService terminalService, IWorkspaceContext workspace, IUiDispatcher dispatcher)
+    public TerminalViewModel(
+        ITerminalService terminalService,
+        IWorkspaceContext workspace,
+        IUiDispatcher dispatcher,
+        ILocalizationService loc)
     {
         _terminalService = terminalService;
         _workspace = workspace;
         _dispatcher = dispatcher;
+        _loc = loc;
         _terminalService.SessionsChanged += OnSessionsChanged;
 
         SyncSessions();
@@ -133,7 +140,7 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
         }
 
         for (var i = 0; i < Sessions.Count; i++)
-            Sessions[i].Title = $"Terminal {i + 1}";
+            Sessions[i].Title = string.Format(_loc.Get("Terminal.Session.TitleFormat"), i + 1);
 
         // Resolve active session only after all VMs exist. Setting ActiveSession before
         // the new VM is added would produce a null assignment that clears the terminal.

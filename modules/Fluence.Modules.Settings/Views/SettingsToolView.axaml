@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Fluence.Modules.Settings.ViewModels"
              xmlns:theming="using:Fluence.Core.Models.Theming"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Fluence.Modules.Settings.Views.SettingsToolView"
              x:DataType="vm:SettingsToolViewModel">
@@ -30,7 +31,7 @@
                         Classes="ideIcon settingsToolbarIcon"
                         Command="{Binding RestoreDefaultsCommand}"
                         VerticalAlignment="Center"
-                        ToolTip.Tip="Restore defaults">
+                        ToolTip.Tip="{Binding [Settings.Action.RestoreDefaults], Source={x:Static loc:Locale.Current}}">
                     <materialIcons:MaterialIcon Width="18"
                                                 Height="18"
                                                 Kind="Restore"
@@ -46,7 +47,7 @@
                             Spacing="6">
                     <Button Classes="ideIcon settingsToolbarIcon"
                             Command="{Binding InstallThemeCommand}"
-                            ToolTip.Tip="Install theme">
+                            ToolTip.Tip="{Binding [Settings.Action.InstallTheme], Source={x:Static loc:Locale.Current}}">
                         <materialIcons:MaterialIcon Width="18"
                                                     Height="18"
                                                     Kind="Download"
@@ -54,7 +55,7 @@
                     </Button>
                     <Button Classes="ideIcon ideAccent settingsToolbarIcon"
                             Command="{Binding SaveCommand}"
-                            ToolTip.Tip="Save and apply">
+                            ToolTip.Tip="{Binding [Settings.Action.SaveAndApply], Source={x:Static loc:Locale.Current}}">
                         <materialIcons:MaterialIcon Width="18"
                                                     Height="18"
                                                     Kind="Check"
@@ -77,14 +78,14 @@
                                             VerticalAlignment="Center"/>
                 <TextBox Grid.Column="1"
                          Classes="ideCompact"
-                         PlaceholderText="Search settings and keybindings"
+                         PlaceholderText="{Binding [Settings.Search.Placeholder], Source={x:Static loc:Locale.Current}}"
                          Text="{Binding SearchQuery, Mode=TwoWay}"/>
             </Grid>
         </Border>
         <TabControl Grid.Row="2"
                     Margin="0,4,0,0"
                     SelectedIndex="{Binding SelectedTabIndex}">
-            <TabItem Header="Settings">
+            <TabItem Header="{Binding [Settings.Tab.Settings], Source={x:Static loc:Locale.Current}}">
                 <Grid ColumnDefinitions="240,*"
                       Background="{StaticResource FluenceBrushShell}">
                     <Border Grid.Column="0"
@@ -94,7 +95,7 @@
                             Padding="10,10,8,10">
                         <Grid RowDefinitions="Auto,*"
                               RowSpacing="8">
-                            <TextBlock Text="Settings"
+                            <TextBlock Text="{Binding [Settings.Tab.Settings], Source={x:Static loc:Locale.Current}}"
                                        FontFamily="{StaticResource FluenceFontFamily}"
                                        FontSize="{StaticResource FluenceFontSizeSmall}"
                                        FontWeight="SemiBold"
@@ -146,14 +147,14 @@
                                     MaxWidth="1040"
                                     HorizontalAlignment="Left">
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Preferences"
+                                <TextBlock Text="{Binding [Settings.Label.Preferences], Source={x:Static loc:Locale.Current}}"
                                            FontFamily="{StaticResource FluenceFontFamily}"
                                            FontSize="{StaticResource FluenceFontSizeSmall}"
                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
                                 <StackPanel Orientation="Horizontal"
                                             Spacing="6"
                                             VerticalAlignment="Center">
-                                    <TextBlock Text="Settings"
+                                    <TextBlock Text="{Binding [Settings.Tab.Settings], Source={x:Static loc:Locale.Current}}"
                                                FontFamily="{StaticResource FluenceFontFamily}"
                                                FontSize="14"
                                                FontWeight="SemiBold"
@@ -217,7 +218,8 @@
                                                                               Classes="ideCompact"
                                                                               ItemsSource="{Binding ThemeOptions}"
                                                                               SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
-                                                                              IsVisible="{Binding IsThemeSelector}">
+                                                                              IsVisible="{Binding IsThemeSelector}"
+                                                                              VerticalAlignment="Center">
                                                                         <ComboBox.ItemTemplate>
                                                                             <DataTemplate x:DataType="theming:ThemeDescriptor">
                                                                                 <TextBlock Text="{Binding DisplayName}"/>
@@ -226,9 +228,22 @@
                                                                     </ComboBox>
                                                                     <ComboBox Width="360"
                                                                               Classes="ideCompact"
+                                                                              ItemsSource="{Binding LanguageOptions}"
+                                                                              SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                                                                              IsVisible="{Binding IsLanguageSelector}"
+                                                                              VerticalAlignment="Center">
+                                                                        <ComboBox.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:LanguageOptionViewModel">
+                                                                                <TextBlock Text="{Binding DisplayName}"/>
+                                                                            </DataTemplate>
+                                                                        </ComboBox.ItemTemplate>
+                                                                    </ComboBox>
+                                                                    <ComboBox Width="360"
+                                                                              Classes="ideCompact"
                                                                               ItemsSource="{Binding EnumOptions}"
                                                                               SelectedItem="{Binding SelectedEnumValue, Mode=TwoWay}"
-                                                                              IsVisible="{Binding IsEnum}"/>
+                                                                              IsVisible="{Binding IsEnum}"
+                                                                              VerticalAlignment="Center"/>
                                                                     <CheckBox IsChecked="{Binding BoolValue, Mode=TwoWay}"
                                                                               IsVisible="{Binding IsBoolean}"
                                                                               VerticalAlignment="Center"
@@ -261,7 +276,7 @@
                                                                                                         Height="28"
                                                                                                         MinHeight="28"
                                                                                                         Command="{Binding RemoveCommand}"
-                                                                                                        ToolTip.Tip="Remove">
+                                                                                                        ToolTip.Tip="{Binding [Settings.Action.Remove], Source={x:Static loc:Locale.Current}}">
                                                                                                     <materialIcons:MaterialIcon Width="14"
                                                                                                                                 Height="14"
                                                                                                                                 Kind="Close"
@@ -280,7 +295,7 @@
                                                                                       VerticalAlignment="Center"
                                                                                       ItemsSource="{Binding AvailableKnownRulesToAdd}"
                                                                                       SelectedItem="{Binding SelectedKnownRuleToAdd, Mode=TwoWay}"
-                                                                                      PlaceholderText="Add known rule...">
+                                                                                      PlaceholderText="{Binding [Settings.StringArray.AddKnownRule], Source={x:Static loc:Locale.Current}}">
                                                                                 <ComboBox.ItemTemplate>
                                                                                     <DataTemplate x:DataType="vm:SettingsKnownStringArrayOptionViewModel">
                                                                                         <TextBlock Text="{Binding DisplayText}"
@@ -297,7 +312,7 @@
                                                                                     HorizontalContentAlignment="Center"
                                                                                     VerticalContentAlignment="Center"
                                                                                     Command="{Binding AddSelectedKnownRuleCommand}"
-                                                                                    ToolTip.Tip="Add rule">
+                                                                                    ToolTip.Tip="{Binding [Settings.Action.AddRule], Source={x:Static loc:Locale.Current}}">
                                                                                 <materialIcons:MaterialIcon Width="14"
                                                                                                             Height="14"
                                                                                                             Kind="Plus"
@@ -308,7 +323,7 @@
                                                                               ColumnSpacing="6">
                                                                             <TextBox Grid.Column="0"
                                                                                      Classes="ideCompact"
-                                                                                     PlaceholderText="Custom ID (e.g. CS0168)"
+                                                                                     PlaceholderText="{Binding [Settings.StringArray.CustomIdPlaceholder], Source={x:Static loc:Locale.Current}}"
                                                                                      Text="{Binding NewStringArrayValue, Mode=TwoWay}"/>
                                                                             <Button Grid.Column="1"
                                                                                     Classes="ideGhost"
@@ -319,7 +334,7 @@
                                                                                     HorizontalContentAlignment="Center"
                                                                                     VerticalContentAlignment="Center"
                                                                                     Command="{Binding AddCustomStringArrayValueCommand}"
-                                                                                    ToolTip.Tip="Add custom ID">
+                                                                                    ToolTip.Tip="{Binding [Settings.Action.AddCustomId], Source={x:Static loc:Locale.Current}}">
                                                                                 <materialIcons:MaterialIcon Width="14"
                                                                                                             Height="14"
                                                                                                             Kind="Plus"
@@ -341,7 +356,7 @@
                     </ScrollViewer>
                 </Grid>
             </TabItem>
-            <TabItem Header="Keybindings">
+            <TabItem Header="{Binding [Settings.Tab.Keybindings], Source={x:Static loc:Locale.Current}}">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding FilteredKeybindings}"
@@ -384,7 +399,7 @@
                                                                     Kind="AlertCircleOutline"
                                                                     Foreground="{StaticResource FluenceBrushError}"
                                                                     IsVisible="{Binding HasConflict}"
-                                                                    ToolTip.Tip="Conflicting keybinding"
+                                                                    ToolTip.Tip="{Binding [Settings.Keybinding.Conflict], Source={x:Static loc:Locale.Current}}"
                                                                     VerticalAlignment="Center"
                                                                     HorizontalAlignment="Center"/>
                                         <Button Classes="ideIcon"
@@ -399,7 +414,7 @@
                                         <Button Classes="ideIcon"
                                                 Grid.Column="2"
                                                 Command="{Binding ResetCommand}"
-                                                ToolTip.Tip="Reset">
+                                                ToolTip.Tip="{Binding [Settings.Action.Reset], Source={x:Static loc:Locale.Current}}">
                                             <materialIcons:MaterialIcon Width="20"
                                                                         Height="20"
                                                                         Kind="Restore"

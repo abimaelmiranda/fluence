@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Jobs;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Tasks;
@@ -69,6 +71,8 @@ public sealed class Entrypoint : IModule
     {
         cancellationToken.ThrowIfCancellationRequested();
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
+        host.Services.GetRequiredService<ILocalizationService>()
+            .Register(new ResourceManager("Fluence.Modules.DotnetCli.Resources.Strings", typeof(Entrypoint).Assembly));
 
         // Build/Test/Restore/Clean são pesadas — Maintenance para não competir com o editor
         _subscriptions.Add(host.Events.SubscribeSync<BuildWorkspaceRequestedEvent>(_ =>

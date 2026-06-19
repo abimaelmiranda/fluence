@@ -18,6 +18,9 @@ internal static class SettingsValueConverter
                 if (item.IsThemeSelector)
                     return item.ThemeReference;
 
+                if (item.IsLanguageSelector)
+                    return item.SelectedLanguage?.Code;
+
                 if (string.IsNullOrWhiteSpace(item.TextValue))
                     return null;
 

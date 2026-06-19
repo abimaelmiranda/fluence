@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
@@ -28,6 +29,7 @@ public sealed partial class DebuggerSetupViewModel : ViewModelBase
     private readonly IDebuggerProvisioningService _provisioning;
     private readonly IWorkspaceContext _workspace;
     private readonly IShellEventBus _eventBus;
+    private readonly ILocalizationService _loc;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -42,11 +44,13 @@ public sealed partial class DebuggerSetupViewModel : ViewModelBase
     public DebuggerSetupViewModel(
         IDebuggerProvisioningService provisioning,
         IWorkspaceContext workspace,
-        IShellEventBus eventBus)
+        IShellEventBus eventBus,
+        ILocalizationService loc)
     {
         _provisioning = provisioning;
         _workspace = workspace;
         _eventBus = eventBus;
+        _loc = loc;
     }
 
     public async Task StartProvisioningAsync(CancellationToken cancellationToken = default)
@@ -63,18 +67,18 @@ public sealed partial class DebuggerSetupViewModel : ViewModelBase
         {
             await _provisioning.ProvisionAsync(AppendOutput, _cts.Token).ConfigureAwait(false);
 
-            AppendOutput("[Fluence] Setup complete. Starting debug session...");
+            AppendOutput(_loc.Get("DebuggerSetup.Log.SetupComplete"));
             await PublishCompletedAsync(startDebugSession: true).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            AppendOutput("[Fluence] Setup cancelled.");
-            await SetErrorAsync("Setup was cancelled.").ConfigureAwait(false);
+            AppendOutput(_loc.Get("DebuggerSetup.Log.SetupCancelled"));
+            await SetErrorAsync(_loc.Get("DebuggerSetup.Error.SetupCancelled")).ConfigureAwait(false);
             await PublishCompletedAsync(startDebugSession: false).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            AppendOutput($"[Fluence] Setup failed: {ex.Message}");
+            AppendOutput(string.Format(_loc.Get("DebuggerSetup.Log.SetupFailed"), ex.Message));
             await SetErrorAsync(ex.Message).ConfigureAwait(false);
             await PublishCompletedAsync(startDebugSession: false).ConfigureAwait(false);
         }

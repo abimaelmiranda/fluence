@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              xmlns:vm="using:Fluence.Modules.DotnetCli.ViewModels"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Fluence.Modules.DotnetCli.Views.DotnetSdkSetupView"
@@ -28,7 +29,7 @@
                 BorderThickness="0,0,0,1">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <TextBlock Grid.Column="0"
-                           Text=".NET SDK"
+                           Text="{Binding [DotnetCli.Title.Sdk], Source={x:Static loc:Locale.Current}}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeBody}"
                            FontWeight="SemiBold"
@@ -45,7 +46,7 @@
                             Spacing="6">
                     <Button Classes="ideIcon sdkToolbarIcon"
                             Command="{Binding RefreshSdkCommand}"
-                            ToolTip.Tip="Refresh">
+                        ToolTip.Tip="{Binding [DotnetCli.Action.Refresh], Source={x:Static loc:Locale.Current}}">
                         <materialIcons:MaterialIcon Width="18"
                                                     Height="18"
                                                     Kind="Refresh"
@@ -53,10 +54,10 @@
                     </Button>
                     <Button Classes="ideToolbar ideAccent"
                             Command="{Binding InstallOfficialCommand}"
-                            Content="Install selected"/>
+                            Content="{Binding [DotnetCli.Action.InstallSelected], Source={x:Static loc:Locale.Current}}"/>
                     <Button Classes="ideToolbar"
                             Command="{Binding RetrySystemWideCommand}"
-                            Content="System-wide"/>
+                            Content="{Binding [DotnetCli.Action.SystemWide], Source={x:Static loc:Locale.Current}}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -67,7 +68,7 @@
             <Grid ColumnDefinitions="150,*" ColumnSpacing="14">
                 <TextBlock Grid.Column="0"
                            Classes="ideLabel"
-                           Text="Active dotnet"
+                           Text="{Binding [DotnetCli.Label.ActiveDotnet], Source={x:Static loc:Locale.Current}}"
                            VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1"
                             Spacing="2">
@@ -87,7 +88,7 @@
               Margin="18,10,18,10">
             <StackPanel Grid.Column="0"
                         Spacing="8">
-                <TextBlock Text="SDKs"
+                <TextBlock Text="{Binding [DotnetCli.Label.Sdks], Source={x:Static loc:Locale.Current}}"
                            Classes="sdkSectionTitle"/>
                 <Border Classes="idePanel"
                         Padding="8"
@@ -128,7 +129,7 @@
 
             <StackPanel Grid.Column="1"
                         Spacing="8">
-                <TextBlock Text="Install Log"
+                <TextBlock Text="{Binding [DotnetCli.Label.InstallLog], Source={x:Static loc:Locale.Current}}"
                            Classes="sdkSectionTitle"/>
                 <Border Classes="idePanel"
                         Padding="10"

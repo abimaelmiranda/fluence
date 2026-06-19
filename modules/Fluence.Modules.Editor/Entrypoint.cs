@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Tasks;
@@ -65,6 +67,9 @@ public sealed class Entrypoint : IModule
     {
         cancellationToken.ThrowIfCancellationRequested();
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
+
+        host.Services.GetRequiredService<ILocalizationService>()
+            .Register(new ResourceManager("Fluence.Modules.Editor.Resources.Strings", typeof(Entrypoint).Assembly));
 
         host.Services.GetRequiredService<ISettingsRegistry>()
             .Register(EditorSettingsJsonContext.Default.EditorSettings);

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              xmlns:models="using:Fluence.Modules.Debug.Models"
              xmlns:vm="using:Fluence.Modules.Debug.ViewModels"
              x:Class="Fluence.Modules.Debug.Views.DebugSidebarView"
@@ -35,7 +36,7 @@
                     Classes="ideIcon"
                     Command="{Binding ContinueCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    ToolTip.Tip="Continue">
+                    ToolTip.Tip="{Binding [Debug.ToolTip.Continue], Source={x:Static loc:Locale.Current}}">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.ContinueIcon}"
                       Width="18"
                       Height="18"
@@ -48,7 +49,7 @@
                     Classes="ideIcon"
                     Command="{Binding StepOverCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    ToolTip.Tip="Step over">
+                    ToolTip.Tip="{Binding [Debug.ToolTip.StepOver], Source={x:Static loc:Locale.Current}}">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.StepOverIcon}"
                       Width="18"
                       Height="18"
@@ -61,7 +62,7 @@
                     Classes="ideIcon"
                     Command="{Binding StepIntoCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    ToolTip.Tip="Step into">
+                    ToolTip.Tip="{Binding [Debug.ToolTip.StepInto], Source={x:Static loc:Locale.Current}}">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.StepIntoIcon}"
                       Width="18"
                       Height="18"
@@ -74,7 +75,7 @@
                     Classes="ideIcon"
                     Command="{Binding StepOutCommand}"
                     IsEnabled="{Binding CanControlExecution}"
-                    ToolTip.Tip="Step out">
+                    ToolTip.Tip="{Binding [Debug.ToolTip.StepOut], Source={x:Static loc:Locale.Current}}">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.StepOutIcon}"
                       Width="18"
                       Height="18"
@@ -87,7 +88,7 @@
                     Classes="ideIcon"
                     Command="{Binding StopCommand}"
                     IsEnabled="{Binding CanRestartSession}"
-                    ToolTip.Tip="Stop debug">
+                    ToolTip.Tip="{Binding [Debug.ToolTip.Stop], Source={x:Static loc:Locale.Current}}">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.StopIcon}"
                       Width="18"
                       Height="18"
@@ -100,7 +101,7 @@
                     Classes="ideIcon"
                     Command="{Binding ReloadCommand}"
                     IsEnabled="{Binding CanRestartSession}"
-                    ToolTip.Tip="Reload session">
+                    ToolTip.Tip="{Binding [Debug.ToolTip.Reload], Source={x:Static loc:Locale.Current}}">
                 <Path Data="{x:Static models:DebugToolbarIconCatalog.ReloadIcon}"
                       Width="18"
                       Height="18"
@@ -112,7 +113,7 @@
         <Border Padding="10"
                 Classes="idePanel">
             <StackPanel Spacing="8">
-                <TextBlock Text="Variables"
+                <TextBlock Text="{Binding [Debug.Label.Variables], Source={x:Static loc:Locale.Current}}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            FontWeight="SemiBold"
@@ -124,7 +125,7 @@
         <Border Padding="10"
                 Classes="idePanel">
             <StackPanel Spacing="8">
-                <TextBlock Text="Call Stack"
+                <TextBlock Text="{Binding [Debug.Label.CallStack], Source={x:Static loc:Locale.Current}}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            FontWeight="SemiBold"
@@ -136,7 +137,7 @@
         <Border Padding="10"
                 Classes="idePanel">
             <StackPanel Spacing="8">
-                <TextBlock Text="Breakpoints"
+                <TextBlock Text="{Binding [Debug.Label.Breakpoints], Source={x:Static loc:Locale.Current}}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            FontWeight="SemiBold"

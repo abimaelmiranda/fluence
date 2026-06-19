@@ -3,6 +3,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
@@ -19,15 +20,16 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
 {
     private readonly IDebugStateService _debugState;
     private readonly IShellEventBus _events;
+    private readonly ILocalizationService _loc;
 
     [ObservableProperty]
-    private string _sessionTitle = "No debug session";
+    private string _sessionTitle;
 
     [ObservableProperty]
     private string _architecture = "x64";
 
     [ObservableProperty]
-    private string _status = "Inactive";
+    private string _status;
 
     [ObservableProperty]
     private bool _canControlExecution;
@@ -35,11 +37,14 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _canRestartSession;
 
-    public DebugSidebarViewModel(IDebugStateService debugState, IShellEventBus events)
+    public DebugSidebarViewModel(IDebugStateService debugState, IShellEventBus events, ILocalizationService loc)
     {
         _debugState = debugState;
         _events = events;
+        _loc = loc;
         _debugState.Changed += OnDebugStateChanged;
+        _sessionTitle = _loc.Get("Debug.Session.NoSession");
+        _status = _loc.Get("Debug.Status.Inactive");
         RefreshState();
     }
 
@@ -51,14 +56,16 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
 
     public void Update(DebugSession session)
     {
-        SessionTitle = session.IsActive ? "Debug session active" : "No debug session";
+        SessionTitle = session.IsActive
+            ? _loc.Get("Debug.Session.Active")
+            : _loc.Get("Debug.Session.NoSession");
         Architecture = session.TargetArchitecture;
         RefreshState();
     }
 
     public void Clear()
     {
-        SessionTitle = "No debug session";
+        SessionTitle = _loc.Get("Debug.Session.NoSession");
         Architecture = "x64";
         RefreshState();
     }
@@ -96,9 +103,19 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     {
         var snapshot = _debugState.Snapshot;
         SessionTitle = snapshot.IsActive
-            ? snapshot.IsStopped ? $"Stopped: {snapshot.Reason ?? "breakpoint"}" : "Debug session active"
+            ? snapshot.IsStopped
+                ? string.Format(_loc.Get("Debug.Session.Stopped"), snapshot.Reason ?? _loc.Get("Debug.Session.Breakpoint"))
+                : _loc.Get("Debug.Session.Active")
             : SessionTitle;
-        Status = snapshot.Status.ToString();
+        Status = snapshot.Status switch
+        {
+            DebugSessionStatus.Inactive => _loc.Get("Debug.Status.Inactive"),
+            DebugSessionStatus.Starting => _loc.Get("Debug.Status.Starting"),
+            DebugSessionStatus.Running => _loc.Get("Debug.Status.Running"),
+            DebugSessionStatus.Stopped => _loc.Get("Debug.Status.Stopped"),
+            DebugSessionStatus.Terminated => _loc.Get("Debug.Status.Terminated"),
+            _ => snapshot.Status.ToString(),
+        };
         CanControlExecution = snapshot.IsStopped && snapshot.ActiveThreadId is not null;
         CanRestartSession = snapshot.IsActive;
 
@@ -119,12 +136,12 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         return $"{frame.Name}:{frame.Line}";
     }
 
-    private static string FormatBreakpoint(DebugBreakpoint breakpoint)
+    private string FormatBreakpoint(DebugBreakpoint breakpoint)
     {
         var status = breakpoint.IsVerified
-            ? "Verified"
+            ? _loc.Get("Debug.Breakpoint.Verified")
             : string.IsNullOrWhiteSpace(breakpoint.Message)
-                ? "Pending"
+                ? _loc.Get("Debug.Breakpoint.Pending")
                 : breakpoint.Message;
         return $"{Path.GetFileName(breakpoint.FilePath)}:{breakpoint.Line} - {status}";
     }

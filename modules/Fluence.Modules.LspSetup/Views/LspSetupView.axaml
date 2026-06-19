@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Fluence.Modules.LspSetup.ViewModels"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              x:Class="Fluence.Modules.LspSetup.Views.LspSetupView"
              x:DataType="vm:LspSetupViewModel"
              Background="#0A0A0A">
@@ -9,11 +10,11 @@
 
     <!-- Header -->
     <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
-      <TextBlock Text="Setting up C# Language Server"
+      <TextBlock Text="{Binding [LspSetup.Header.Title], Source={x:Static loc:Locale.Current}}"
                  FontSize="18"
                  FontWeight="SemiBold"
                  Foreground="#9D67FF" />
-      <TextBlock Text="Please wait while Fluence installs OmniSharp. This may take a few minutes."
+      <TextBlock Text="{Binding [LspSetup.Header.Subtitle], Source={x:Static loc:Locale.Current}}"
                  FontSize="13"
                  Foreground="#888888"
                  TextWrapping="Wrap" />
@@ -43,7 +44,7 @@
                      Width="160"
                      Height="4"
                      Foreground="#9D67FF" />
-        <TextBlock Text="Installing..."
+        <TextBlock Text="{Binding [LspSetup.Status.Installing], Source={x:Static loc:Locale.Current}}"
                    FontSize="12"
                    Foreground="#888888"
                    VerticalAlignment="Center" />
@@ -58,14 +59,14 @@
                  TextWrapping="Wrap" />
 
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-        <Button Content="Retry"
+        <Button Content="{Binding [LspSetup.Action.Retry], Source={x:Static loc:Locale.Current}}"
                 Command="{Binding RetryCommand}"
                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                 Background="#9D67FF"
                 Foreground="White"
                 Padding="12,6"
                 VerticalAlignment="Center" />
-        <Button Content="Cancel"
+        <Button Content="{Binding [LspSetup.Action.Cancel], Source={x:Static loc:Locale.Current}}"
                 Command="{Binding CancelCommand}"
                 IsVisible="{Binding IsRunning}"
                 Background="Transparent"

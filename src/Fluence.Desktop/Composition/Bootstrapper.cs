@@ -31,7 +31,10 @@ using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Tasks;
+using Fluence.Core.Services.Localization;
+using Fluence.Desktop.Markup;
 using Fluence.Desktop.Services;
 using Fluence.Desktop.ViewModels;
 using Fluence.Desktop.Views;
@@ -65,6 +68,11 @@ internal static class Bootstrapper
         var services = new ServiceCollection();
 
         services.AddLogging(logging => logging.SetMinimumLevel(LogLevel.Debug));
+
+        // TODO [XamlViewer]: Register IFileViewerRegistry here when implementing the XAML Viewer module.
+        // services.AddSingleton<IFileViewerRegistry, FileViewerRegistry>();
+
+        services.AddSingleton<ILocalizationService, LocalizationService>();
 
         var viewRegistry = new ViewRegistry();
         viewRegistry.Register<WelcomeViewModel, WelcomeView>();

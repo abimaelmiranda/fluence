@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Editor.Menu.IntelliSense" xml:space="preserve"><value>IntelliSense</value></data>
+  <data name="Editor.Menu.GoToDefinition" xml:space="preserve"><value>Ir para definição</value></data>
+  <data name="Editor.Menu.GoToImplementation" xml:space="preserve"><value>Ir para implementação</value></data>
+  <data name="Editor.Menu.GoToTypeDefinition" xml:space="preserve"><value>Ir para definição de tipo</value></data>
+  <data name="Editor.CodeAction.NoQuickFixes" xml:space="preserve"><value>Nenhuma correção rápida disponível</value></data>
+  <data name="Editor.CodeAction.QuickFix" xml:space="preserve"><value>Correção rápida</value></data>
+  <data name="Editor.CodeAction.FixPrefix" xml:space="preserve"><value>Corrigir: {0}</value></data>
+  <data name="Editor.Format.Feedback.Formatting" xml:space="preserve"><value>Formatando...</value></data>
+  <data name="Editor.Format.Feedback.Unavailable" xml:space="preserve"><value>Formatação indisponível</value></data>
+  <data name="Editor.Format.Feedback.Skipped" xml:space="preserve"><value>Formatação ignorada</value></data>
+  <data name="Editor.Format.Feedback.AlreadyFormatted" xml:space="preserve"><value>Já formatado</value></data>
+  <data name="Editor.Format.Feedback.Formatted" xml:space="preserve"><value>Formatado</value></data>
+  <data name="Editor.Command.TriggerCompletion" xml:space="preserve"><value>Disparar conclusão</value></data>
+  <data name="Editor.Command.QuickFix" xml:space="preserve"><value>Correção rápida</value></data>
+  <data name="Editor.Command.GoToDefinition" xml:space="preserve"><value>Ir para definição</value></data>
+  <data name="Editor.Command.GoToImplementation" xml:space="preserve"><value>Ir para implementação</value></data>
+  <data name="Editor.Command.GoToTypeDefinition" xml:space="preserve"><value>Ir para definição de tipo</value></data>
+  <data name="Editor.Diagnostic.Warning" xml:space="preserve"><value>Aviso</value></data>
+  <data name="Editor.Diagnostic.Error" xml:space="preserve"><value>Erro</value></data>
+</root>

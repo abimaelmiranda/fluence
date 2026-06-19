@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Fluence.Core.Abstractions.Localization;
 
 namespace Fluence.Modules.Settings.ViewModels;
 
@@ -9,9 +10,11 @@ public sealed partial class KeybindingRowViewModel(
     string scope,
     string key,
     bool hasConflict,
-    SettingsToolViewModel owner) : ObservableObject
+    SettingsToolViewModel owner,
+    ILocalizationService loc) : ObservableObject
 {
     private readonly SettingsToolViewModel _owner = owner;
+    private readonly ILocalizationService _loc = loc;
 
     public string CommandId { get; } = commandId;
 
@@ -29,7 +32,11 @@ public sealed partial class KeybindingRowViewModel(
     [NotifyPropertyChangedFor(nameof(RecordIconBrush))]
     private bool _isRecording;
 
-    public string RecordButtonText => IsRecording ? "Press keys..." : "Record";
+    public string RecordButtonText => IsRecording
+        ? _loc.Get("Settings.Keybinding.Recording")
+        : _loc.Get("Settings.Keybinding.Record");
+
+    public void NotifyLanguageChanged() => OnPropertyChanged(nameof(RecordButtonText));
 
     public string RecordIconBrush => IsRecording ? "#FF6B6B" : "#AAB4BF";
 
