@@ -1,7 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Fluence.Modules.SolutionView.Models;
 using Fluence.Modules.SolutionView.Models.Enums;
 
@@ -9,10 +12,22 @@ namespace Fluence.Modules.SolutionView.ViewModels;
 
 public sealed partial class SolutionTreeItem : ObservableObject
 {
+    private static readonly SolutionTreeItem LoadingPlaceholder = new(
+        SolutionTreeNodeKind.File,
+        "Loading...",
+        null,
+        null);
+
     private readonly Action<SolutionTreeItem>? _activate;
 
     [ObservableProperty]
     private bool _isActive;
+
+    [ObservableProperty]
+    private bool _isExpanded;
+
+    [ObservableProperty]
+    private bool _isLoadingChildren;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DisplayName))]
@@ -41,9 +56,11 @@ public sealed partial class SolutionTreeItem : ObservableObject
         ICommand? setStartupProjectCommand = null,
         ICommand? addProjectReferenceCommand = null,
         ICommand? removeProjectReferenceCommand = null,
+        Func<SolutionTreeItem, CancellationToken, Task>? loadChildren = null,
         string? projectPath = null,
         string? referencedProjectPath = null,
-        bool isResolved = true)
+        bool isResolved = true,
+        bool areChildrenLoaded = true)
     {
         Kind = kind;
         Name = name;
@@ -67,9 +84,16 @@ public sealed partial class SolutionTreeItem : ObservableObject
         SetStartupProjectCommand = setStartupProjectCommand;
         AddProjectReferenceCommand = addProjectReferenceCommand;
         RemoveProjectReferenceCommand = removeProjectReferenceCommand;
+        LoadChildrenCommand = loadChildren is null
+            ? null
+            : new AsyncRelayCommand(token => LoadChildrenAsync(loadChildren, token));
         ProjectPath = projectPath;
         ReferencedProjectPath = referencedProjectPath;
         IsResolved = isResolved;
+        AreChildrenLoaded = areChildrenLoaded;
+
+        if (!AreChildrenLoaded)
+            Children.Add(LoadingPlaceholder);
     }
 
     public SolutionTreeNodeKind Kind { get; }
@@ -78,6 +102,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public string? ProjectPath { get; }
     public string? ReferencedProjectPath { get; }
     public bool IsResolved { get; }
+    public bool AreChildrenLoaded { get; private set; }
     public ObservableCollection<SolutionTreeItem> Children { get; } = [];
     public ICommand? OpenCommand { get; set; }
     public ICommand? NewFileCommand { get; }
@@ -97,6 +122,7 @@ public sealed partial class SolutionTreeItem : ObservableObject
     public ICommand? SetStartupProjectCommand { get; }
     public ICommand? AddProjectReferenceCommand { get; }
     public ICommand? RemoveProjectReferenceCommand { get; }
+    public ICommand? LoadChildrenCommand { get; }
 
     public bool IsFile => Kind == SolutionTreeNodeKind.File;
     public bool IsProject => Kind == SolutionTreeNodeKind.Project;
@@ -142,5 +168,43 @@ public sealed partial class SolutionTreeItem : ObservableObject
 
     public string DisplayName => IsStartupProject ? $"{Name} (startup)" : Name;
 
+    partial void OnIsExpandedChanged(bool value)
+    {
+        if (!value || AreChildrenLoaded || LoadChildrenCommand is null || !LoadChildrenCommand.CanExecute(null))
+            return;
+
+        LoadChildrenCommand.Execute(null);
+    }
+
+    public void MarkChildrenLoaded()
+    {
+        AreChildrenLoaded = true;
+    }
+
+    public void ResetPlaceholder()
+    {
+        Children.Clear();
+        AreChildrenLoaded = false;
+        Children.Add(LoadingPlaceholder);
+    }
+
     public void Activate() => _activate?.Invoke(this);
+
+    private async Task LoadChildrenAsync(
+        Func<SolutionTreeItem, CancellationToken, Task> loadChildren,
+        CancellationToken cancellationToken)
+    {
+        if (IsLoadingChildren)
+            return;
+
+        try
+        {
+            IsLoadingChildren = true;
+            await loadChildren(this, cancellationToken);
+        }
+        finally
+        {
+            IsLoadingChildren = false;
+        }
+    }
 }

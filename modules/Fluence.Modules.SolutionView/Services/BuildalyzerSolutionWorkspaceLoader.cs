@@ -1,12 +1,8 @@
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,15 +18,6 @@ namespace Fluence.Modules.SolutionView.Services;
 
 public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoader
 {
-    private const int CacheFormatVersion = 2;
-    private const string CacheDirectoryName = ".fluence";
-    private const string CacheFilePrefix = "solution-structure";
-
-    private static readonly JsonSerializerOptions CacheJsonOptions = new()
-    {
-        WriteIndented = true,
-    };
-
     private static readonly string[] SupportedItemTypes =
     [
         "Compile",
@@ -59,23 +46,11 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
     public Task<SolutionWorkspaceSnapshot> LoadStructuralAsync(string solutionPath, CancellationToken cancellationToken = default)
         => Task.Run(() => LoadStructural(solutionPath, cancellationToken), cancellationToken);
 
-    public Task<SolutionWorkspaceSnapshot> LoadAsync(string solutionPath, CancellationToken cancellationToken = default)
-        => Load(solutionPath, cancellationToken);
-
-    public bool HasValidCache(string solutionPath)
-    {
-        try
-        {
-            if (!File.Exists(solutionPath)) return false;
-            var solutionInfo = SolutionFileInfo.Parse(solutionPath);
-            var fingerprint = CreateCacheFingerprint(solutionPath, solutionInfo, CancellationToken.None);
-            return TryLoadFromCache(solutionPath, fingerprint, out _);
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    public Task<SolutionTreeNode> LoadProjectAsync(
+        string solutionPath,
+        string projectPath,
+        CancellationToken cancellationToken = default)
+        => Task.Run(() => LoadProject(solutionPath, projectPath, cancellationToken), cancellationToken);
 
     private static SolutionWorkspaceSnapshot LoadStructural(string solutionPath, CancellationToken cancellationToken)
     {
@@ -120,7 +95,10 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         return new SolutionWorkspaceSnapshot(solutionPath, root.ToImmutable());
     }
 
-    private static async Task<SolutionWorkspaceSnapshot> Load(string solutionPath, CancellationToken cancellationToken)
+    private static async Task<SolutionTreeNode> LoadProject(
+        string solutionPath,
+        string projectPath,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -129,168 +107,48 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
             throw new SolutionWorkspaceLoadException(solutionPath, "The solution file does not exist.");
         }
 
+        var normalizedProjectPath = Path.GetFullPath(projectPath);
+        if (string.IsNullOrWhiteSpace(projectPath) || !File.Exists(normalizedProjectPath) || IsHiddenPath(normalizedProjectPath))
+        {
+            throw new SolutionWorkspaceLoadException(solutionPath, "The project file does not exist.");
+        }
+
         var solutionInfo = SolutionFileInfo.Parse(solutionPath);
-        var fingerprint = CreateCacheFingerprint(solutionPath, solutionInfo, cancellationToken);
-        if (TryLoadFromCache(solutionPath, fingerprint, out var cachedSnapshot))
+        var solutionProjectPaths = solutionInfo.ProjectPaths
+            .Where(path => File.Exists(path) && !IsHiddenPath(path))
+            .Select(Path.GetFullPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        IProjectAnalyzer analyzer;
+        try
         {
-            return cachedSnapshot;
+            var manager = new AnalyzerManager();
+            analyzer = manager.GetProject(IOPath.Empty.Combine(normalizedProjectPath));
+        }
+        catch (Exception ex)
+        {
+            throw new SolutionWorkspaceLoadException(solutionPath, "Buildalyzer could not open this project.", ex);
         }
 
-        var projects = await LoadProjectsWithBuildalyzerAsync(solutionPath, solutionInfo, cancellationToken);
+        var projectName = Path.GetFileNameWithoutExtension(normalizedProjectPath);
+        var projectBuilder = new MutableNode(SolutionTreeNodeKind.Project, projectName, normalizedProjectPath);
+        AddDependencies(projectBuilder, normalizedProjectPath, solutionProjectPaths);
+        projectBuilder.Children.Add(new MutableNode(SolutionTreeNodeKind.File, Path.GetFileName(normalizedProjectPath), normalizedProjectPath));
 
-        var rootBuilder = new MutableNode(SolutionTreeNodeKind.Solution, Path.GetFileName(solutionPath), solutionPath);
-        foreach (var folderPath in solutionInfo.SolutionFolderPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
-        {
-            var parent = rootBuilder;
-            foreach (var folderName in folderPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-            {
-                if (string.IsNullOrWhiteSpace(folderName))
-                {
-                    continue;
-                }
-
-                parent = parent.GetOrAddChild(SolutionTreeNodeKind.SolutionFolder, folderName, null);
-            }
-        }
-
-        foreach (var project in projects.OrderBy(project => string.Join("/", project.SolutionFolderPath), StringComparer.OrdinalIgnoreCase)
-                                       .ThenBy(project => project.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var directory in GetProjectDirectories(normalizedProjectPath))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var parent = rootBuilder;
-            foreach (var folderName in project.SolutionFolderPath)
-            {
-                parent = parent.GetOrAddChild(SolutionTreeNodeKind.SolutionFolder, folderName, null);
-            }
-
-            parent.Children.Add(project.Node);
+            AddProjectDirectory(projectBuilder, normalizedProjectPath, directory);
         }
 
-        var snapshot = new SolutionWorkspaceSnapshot(solutionPath, rootBuilder.ToImmutable());
-        SaveToCache(solutionPath, fingerprint, snapshot);
-        return snapshot;
-    }
-
-    private static bool TryLoadFromCache(
-        string solutionPath,
-        SolutionCacheFingerprint fingerprint,
-        out SolutionWorkspaceSnapshot snapshot)
-    {
-        snapshot = null!;
-
-        try
+        var files = await Task.Run(() => GetProjectFiles(normalizedProjectPath, analyzer), cancellationToken);
+        foreach (var file in files)
         {
-            var cachePath = GetCacheFilePath(solutionPath);
-            if (!File.Exists(cachePath))
-            {
-                return false;
-            }
-
-            using var stream = File.OpenRead(cachePath);
-            var cache = JsonSerializer.Deserialize<SolutionStructureCache>(stream, CacheJsonOptions);
-            if (cache is null ||
-                cache.FormatVersion != CacheFormatVersion ||
-                cache.Fingerprint is null ||
-                cache.Root is null ||
-                !string.Equals(cache.SolutionPath, solutionPath, StringComparison.OrdinalIgnoreCase) ||
-                !HasSameFingerprint(fingerprint, cache.Fingerprint))
-            {
-                return false;
-            }
-
-            snapshot = new SolutionWorkspaceSnapshot(solutionPath, cache.Root);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static void SaveToCache(
-        string solutionPath,
-        SolutionCacheFingerprint fingerprint,
-        SolutionWorkspaceSnapshot snapshot)
-    {
-        try
-        {
-            var cacheDirectory = GetCacheDirectoryPath(solutionPath);
-            Directory.CreateDirectory(cacheDirectory);
-
-            var cache = new SolutionStructureCache(
-                CacheFormatVersion,
-                solutionPath,
-                DateTimeOffset.UtcNow,
-                fingerprint,
-                snapshot.Root);
-
-            var cachePath = GetCacheFilePath(solutionPath);
-            var temporaryPath = $"{cachePath}.tmp";
-            using (var stream = File.Create(temporaryPath))
-            {
-                JsonSerializer.Serialize(stream, cache, CacheJsonOptions);
-            }
-
-            File.Move(temporaryPath, cachePath, overwrite: true);
-        }
-        catch
-        {
-        }
-    }
-
-    private static string GetCacheDirectoryPath(string solutionPath)
-    {
-        var solutionDirectory = Path.GetDirectoryName(solutionPath) ?? Directory.GetCurrentDirectory();
-        return Path.Combine(solutionDirectory, CacheDirectoryName);
-    }
-
-    private static string GetCacheFilePath(string solutionPath)
-    {
-        var solutionName = Path.GetFileNameWithoutExtension(solutionPath);
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(solutionPath))))
-            .ToLowerInvariant()[..12];
-        return Path.Combine(GetCacheDirectoryPath(solutionPath), $"{CacheFilePrefix}-{solutionName}-{hash}.json");
-    }
-
-    private static SolutionCacheFingerprint CreateCacheFingerprint(
-        string solutionPath,
-        SolutionFileInfo solutionInfo,
-        CancellationToken cancellationToken)
-    {
-        var files = solutionInfo.ProjectPaths
-            .Append(Path.GetFullPath(solutionPath))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .Select(CreateCacheFileFingerprint)
-            .ToArray();
-
-        var visibleProjectFiles = solutionInfo.ProjectPaths
-            .SelectMany(path => GetVisibleProjectFilePaths(path, cancellationToken))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        var visibleProjectDirectories = solutionInfo.ProjectPaths
-            .SelectMany(path => GetProjectDirectories(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        return new SolutionCacheFingerprint(files, visibleProjectFiles, visibleProjectDirectories);
-    }
-
-    private static SolutionCacheFileFingerprint CreateCacheFileFingerprint(string path)
-    {
-        if (!File.Exists(path))
-        {
-            return new SolutionCacheFileFingerprint(Path.GetFullPath(path), null, null);
+            cancellationToken.ThrowIfCancellationRequested();
+            AddProjectFile(projectBuilder, normalizedProjectPath, file);
         }
 
-        var info = new FileInfo(path);
-        return new SolutionCacheFileFingerprint(
-            Path.GetFullPath(path),
-            info.LastWriteTimeUtc.Ticks,
-            info.Length);
+        return projectBuilder.ToImmutable();
     }
 
     private static IEnumerable<string> GetVisibleProjectFilePaths(string projectPath, CancellationToken cancellationToken)
@@ -307,7 +165,7 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
                 .Where(path =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    return IsVisibleProjectCacheFile(path);
+                    return IsVisibleProjectFile(path);
                 })
                 .Select(Path.GetFullPath)
                 .ToArray();
@@ -318,116 +176,9 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         }
     }
 
-    private static bool IsVisibleProjectCacheFile(string path)
+    private static bool IsVisibleProjectFile(string path)
     {
         return !IsHiddenPath(path) && !HasHiddenAttributes(path);
-    }
-
-    private static bool HasSameFingerprint(
-        SolutionCacheFingerprint current,
-        SolutionCacheFingerprint cached)
-    {
-        if (current.Files.Count != cached.Files.Count)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < current.Files.Count; index++)
-        {
-            var currentFile = current.Files[index];
-            var cachedFile = cached.Files[index];
-            if (!string.Equals(currentFile.Path, cachedFile.Path, StringComparison.OrdinalIgnoreCase) ||
-                currentFile.LastWriteTimeUtcTicks != cachedFile.LastWriteTimeUtcTicks ||
-                currentFile.Length != cachedFile.Length)
-            {
-                return false;
-            }
-        }
-
-        if (!HasSamePaths(current.VisibleProjectFiles, cached.VisibleProjectFiles))
-        {
-            return false;
-        }
-
-        return HasSamePaths(current.VisibleProjectDirectories, cached.VisibleProjectDirectories);
-    }
-
-    private static bool HasSamePaths(
-        IReadOnlyList<string> current,
-        IReadOnlyList<string> cached)
-    {
-        if (current.Count != cached.Count)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < current.Count; index++)
-        {
-            if (!string.Equals(current[index], cached[index], StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static async Task<List<ProjectLoadResult>> LoadProjectsWithBuildalyzerAsync(
-        string solutionPath,
-        SolutionFileInfo solutionInfo,
-        CancellationToken cancellationToken)
-    {
-        AnalyzerManager manager;
-        try
-        {
-            manager = solutionInfo.ProjectPaths.Count > 0
-                ? new AnalyzerManager()
-                : new AnalyzerManager(IOPath.Empty.Combine(solutionPath));
-        }
-        catch (Exception ex)
-        {
-            throw new SolutionWorkspaceLoadException(solutionPath, "Buildalyzer could not open this solution.", ex);
-        }
-
-        var projects = GetProjects(manager, solutionInfo);
-        var solutionProjectPaths = projects
-            .Select(project => project.ProjectPath)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var results = new ConcurrentBag<ProjectLoadResult>();
-
-        await Parallel.ForEachAsync(
-            projects,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = cancellationToken },
-            async (project, ct) =>
-            {
-                var (projectPath, analyzer) = project;
-
-                if (!File.Exists(projectPath) || IsHiddenPath(projectPath))
-                    return;
-
-                var projectName = Path.GetFileNameWithoutExtension(projectPath);
-                var projectBuilder = new MutableNode(SolutionTreeNodeKind.Project, projectName, projectPath);
-                AddDependencies(projectBuilder, projectPath, solutionProjectPaths);
-                projectBuilder.Children.Add(new MutableNode(SolutionTreeNodeKind.File, Path.GetFileName(projectPath), projectPath));
-
-                foreach (var directory in GetProjectDirectories(projectPath))
-                {
-                    ct.ThrowIfCancellationRequested();
-                    AddProjectDirectory(projectBuilder, projectPath, directory);
-                }
-
-                var files = await Task.Run(() => GetProjectFiles(projectPath, analyzer), ct);
-                foreach (var file in files)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    AddProjectFile(projectBuilder, projectPath, file);
-                }
-
-                var folderPath = solutionInfo.GetFolderPath(projectPath);
-                results.Add(new ProjectLoadResult(projectName, folderPath, projectBuilder));
-            });
-
-        return results.ToList();
     }
 
     private static void AddDependencies(
@@ -538,31 +289,6 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
     private static string NormalizeProjectInclude(string include)
         => include.Replace('\\', Path.DirectorySeparatorChar)
                   .Replace('/', Path.DirectorySeparatorChar);
-
-    private static List<(string ProjectPath, IProjectAnalyzer Analyzer)> GetProjects(AnalyzerManager manager, SolutionFileInfo solutionInfo)
-    {
-        var projects = new List<(string ProjectPath, IProjectAnalyzer Analyzer)>();
-        foreach (var entry in manager.Projects)
-        {
-            projects.Add((Path.GetFullPath(entry.Key), entry.Value));
-        }
-
-        foreach (var projectPath in solutionInfo.ProjectPaths)
-        {
-            if (projects.Any(project => string.Equals(project.ProjectPath, projectPath, StringComparison.OrdinalIgnoreCase)))
-            {
-                continue;
-            }
-
-            var analyzer = manager.GetProject(IOPath.Empty.Combine(projectPath));
-            if (analyzer is not null)
-            {
-                projects.Add((projectPath, analyzer));
-            }
-        }
-
-        return projects;
-    }
 
     private static IReadOnlySet<string> GetProjectFiles(string projectPath, IProjectAnalyzer analyzer)
     {
@@ -790,31 +516,9 @@ public sealed class BuildalyzerSolutionWorkspaceLoader : ISolutionWorkspaceLoade
         }
     }
 
-    private sealed record ProjectLoadResult(
-        string Name,
-        IReadOnlyList<string> SolutionFolderPath,
-        MutableNode Node);
-
     private sealed record ProjectReferenceInfo(string Include);
 
     private sealed record PackageReferenceInfo(string Id, string? Version);
-
-    private sealed record SolutionStructureCache(
-        int FormatVersion,
-        string SolutionPath,
-        DateTimeOffset CreatedAtUtc,
-        SolutionCacheFingerprint Fingerprint,
-        SolutionTreeNode Root);
-
-    private sealed record SolutionCacheFingerprint(
-        IReadOnlyList<SolutionCacheFileFingerprint> Files,
-        IReadOnlyList<string> VisibleProjectFiles,
-        IReadOnlyList<string> VisibleProjectDirectories);
-
-    private sealed record SolutionCacheFileFingerprint(
-        string Path,
-        long? LastWriteTimeUtcTicks,
-        long? Length);
 
     private sealed class MutableNode(
         SolutionTreeNodeKind kind,
