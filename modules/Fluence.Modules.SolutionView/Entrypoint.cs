@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
@@ -69,6 +71,10 @@ public sealed class Entrypoint : IModule
     public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        host.Services.GetRequiredService<ILocalizationService>()
+            .Register(new ResourceManager("Fluence.Modules.SolutionView.Resources.Strings", typeof(Entrypoint).Assembly));
+
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
         _subscriptions.Add(host.Events.SubscribeSync<OpenSolutionRequestedEvent>(e =>

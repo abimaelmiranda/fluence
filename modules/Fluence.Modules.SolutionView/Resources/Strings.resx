@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="SolutionView.Status.Loading" xml:space="preserve"><value>Loading solution...</value></data>
+  <data name="SolutionView.ContextMenu.Open" xml:space="preserve"><value>Open</value></data>
+  <data name="SolutionView.ContextMenu.NewFolder" xml:space="preserve"><value>New Folder</value></data>
+  <data name="SolutionView.ContextMenu.NewFile" xml:space="preserve"><value>New File</value></data>
+  <data name="SolutionView.ContextMenu.LoadSolution" xml:space="preserve"><value>Load Solution</value></data>
+  <data name="SolutionView.ContextMenu.Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="SolutionView.ContextMenu.Paste" xml:space="preserve"><value>Paste</value></data>
+  <data name="SolutionView.ContextMenu.Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="SolutionView.ContextMenu.CloseSolution" xml:space="preserve"><value>Close Solution</value></data>
+  <data name="SolutionView.ContextMenu.ManageNuGet" xml:space="preserve"><value>Manage NuGet Packages...</value></data>
+  <data name="SolutionView.ContextMenu.Build" xml:space="preserve"><value>Build</value></data>
+  <data name="SolutionView.ContextMenu.Restore" xml:space="preserve"><value>Restore</value></data>
+  <data name="SolutionView.ContextMenu.Clean" xml:space="preserve"><value>Clean</value></data>
+  <data name="SolutionView.ContextMenu.Publish" xml:space="preserve"><value>Publish</value></data>
+  <data name="SolutionView.ContextMenu.Run" xml:space="preserve"><value>Run</value></data>
+  <data name="SolutionView.ContextMenu.Test" xml:space="preserve"><value>Test</value></data>
+  <data name="SolutionView.ContextMenu.SetStartupProject" xml:space="preserve"><value>Set as Startup Project</value></data>
+  <data name="SolutionView.ContextMenu.AddProjectReference" xml:space="preserve"><value>Add Project Reference</value></data>
+  <data name="SolutionView.ContextMenu.Remove" xml:space="preserve"><value>Remove</value></data>
+</root>

@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Fluence.Modules.SourceControl.ViewModels"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              x:Class="Fluence.Modules.SourceControl.Views.SourceControlView"
              x:DataType="vm:SourceControlViewModel">
 
@@ -68,7 +69,7 @@
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Left"
                         Padding="2,2"
-                        ToolTip.Tip="Switch branch">
+                        ToolTip.Tip="{Binding [SourceControl.Branch.SwitchBranch], Source={x:Static loc:Locale.Current}}">
                     <Button.Flyout>
                         <Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
                             <Border MinWidth="230" MaxHeight="320"
@@ -101,7 +102,7 @@
                                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                                     Command="{Binding CheckoutCommand}"
                                                                     IsVisible="{Binding CanCheckout}"
-                                                                    ToolTip.Tip="Checkout branch">
+                                                                    ToolTip.Tip="{Binding [SourceControl.Branch.Checkout], Source={x:Static loc:Locale.Current}}">
                                                                 <materialIcons:MaterialIcon Width="13"
                                                                                             Height="13"
                                                                                             Kind="SourceBranch"
@@ -110,7 +111,7 @@
                                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                                     Command="{Binding DeleteCommand}"
                                                                     IsVisible="{Binding CanDelete}"
-                                                                    ToolTip.Tip="Delete branch">
+                                                                    ToolTip.Tip="{Binding [SourceControl.Branch.Delete], Source={x:Static loc:Locale.Current}}">
                                                                 <materialIcons:MaterialIcon Width="13"
                                                                                             Height="13"
                                                                                             Kind="Close"
@@ -142,14 +143,14 @@
                                    FontSize="{StaticResource FluenceFontSizeSmall}"
                                    Foreground="{StaticResource FluenceBrushTextSecondary}"
                                    VerticalAlignment="Center"
-                                   ToolTip.Tip="Commits ahead of remote"/>
+                                   ToolTip.Tip="{Binding [SourceControl.Branch.AheadOf], Source={x:Static loc:Locale.Current}}"/>
                         <TextBlock Text="{Binding BehindCount, StringFormat='↓{0}'}"
                                    IsVisible="{Binding HasBehind}"
                                    FontFamily="{StaticResource FluenceFontFamily}"
                                    FontSize="{StaticResource FluenceFontSizeSmall}"
                                    Foreground="{StaticResource FluenceBrushTextSecondary}"
                                    VerticalAlignment="Center"
-                                   ToolTip.Tip="Commits behind remote"/>
+                                   ToolTip.Tip="{Binding [SourceControl.Branch.Behind], Source={x:Static loc:Locale.Current}}"/>
                     </StackPanel>
                 </Button>
 
@@ -161,7 +162,7 @@
                         CornerRadius="5"
                         Padding="8,7">
                     <StackPanel Spacing="6">
-                        <TextBlock Text="Local changes would be overwritten"
+                        <TextBlock Text="{Binding [SourceControl.Conflict.Warning], Source={x:Static loc:Locale.Current}}"
                                    FontFamily="{StaticResource FluenceFontFamily}"
                                    FontSize="{StaticResource FluenceFontSizeSmall}"
                                    FontWeight="SemiBold"
@@ -172,7 +173,7 @@
                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
                         <StackPanel Spacing="4">
                             <Button Classes="ideToolbar ideAccent"
-                                    Content="Stash &amp; Checkout"
+                                    Content="{Binding [SourceControl.Conflict.StashAndCheckout], Source={x:Static loc:Locale.Current}}"
                                     Command="{Binding StashAndCheckoutCommand}"
                                     IsEnabled="{Binding !IsBusy}"
                                     HorizontalAlignment="Stretch"
@@ -180,14 +181,14 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <Button Grid.Column="0"
                                         Classes="ideGhost"
-                                        Content="Force Checkout"
+                                        Content="{Binding [SourceControl.Conflict.ForceCheckout], Source={x:Static loc:Locale.Current}}"
                                         Command="{Binding ForceCheckoutCommand}"
                                         IsEnabled="{Binding !IsBusy}"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Center"/>
                                 <Button Grid.Column="1"
                                         Classes="ideGhost"
-                                        Content="Cancel"
+                                        Content="{Binding [SourceControl.Conflict.Cancel], Source={x:Static loc:Locale.Current}}"
                                         Command="{Binding CancelCheckoutCommand}"
                                         Margin="4,0,0,0"/>
                             </Grid>
@@ -197,7 +198,7 @@
 
                 <TextBox Classes="ideCompact"
                          Text="{Binding CommitMessage}"
-                         PlaceholderText="Commit message..."
+                         PlaceholderText="{Binding [SourceControl.Commit.Placeholder], Source={x:Static loc:Locale.Current}}"
                          AcceptsReturn="False"/>
 
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
@@ -212,7 +213,7 @@
                             Classes="ideIcon ideAccent sourceControlToolbarIcon"
                             Command="{Binding CommitCommand}"
                             IsEnabled="{Binding !IsBusy}"
-                            ToolTip.Tip="Commit">
+                            ToolTip.Tip="{Binding [SourceControl.Action.Commit], Source={x:Static loc:Locale.Current}}">
                         <materialIcons:MaterialIcon Width="18"
                                                     Height="18"
                                                     Kind="Check"
@@ -221,7 +222,7 @@
                     <Button Grid.Column="2" Classes="ideIcon sourceControlToolbarIcon"
                             Command="{Binding PullCommand}" IsEnabled="{Binding !IsBusy}"
                             Margin="4,0,0,0"
-                            ToolTip.Tip="Pull">
+                            ToolTip.Tip="{Binding [SourceControl.Action.Pull], Source={x:Static loc:Locale.Current}}">
                         <materialIcons:MaterialIcon Width="18"
                                                     Height="18"
                                                     Kind="ArrowDown"
@@ -230,7 +231,7 @@
                     <Button Grid.Column="3" Classes="ideIcon sourceControlToolbarIcon"
                             Command="{Binding PushCommand}" IsEnabled="{Binding !IsBusy}"
                             Margin="4,0,0,0"
-                            ToolTip.Tip="Push">
+                            ToolTip.Tip="{Binding [SourceControl.Action.Push], Source={x:Static loc:Locale.Current}}">
                         <materialIcons:MaterialIcon Width="18"
                                                     Height="18"
                                                     Kind="ArrowUp"
@@ -238,7 +239,7 @@
                     </Button>
                     <Button Grid.Column="4" Classes="ideIcon sourceControlToolbarIcon"
                             Command="{Binding FetchCommand}" IsEnabled="{Binding !IsBusy}"
-                            Margin="4,0,0,0" ToolTip.Tip="Fetch all remotes">
+                            Margin="4,0,0,0" ToolTip.Tip="{Binding [SourceControl.Action.Fetch], Source={x:Static loc:Locale.Current}}">
                         <materialIcons:MaterialIcon Width="18"
                                                     Height="18"
                                                     Kind="Refresh"
@@ -255,7 +256,7 @@
             <StackPanel Margin="4,4">
 
                 <!-- No git repo -->
-                <TextBlock Text="No Git repository found"
+                <TextBlock Text="{Binding [SourceControl.Status.NoRepo], Source={x:Static loc:Locale.Current}}"
                            IsVisible="{Binding !IsGitRepository}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeSmall}"
@@ -264,7 +265,7 @@
                            Margin="0,24,0,0"/>
 
                 <!-- Working tree clean -->
-                <TextBlock Text="Working tree clean"
+                <TextBlock Text="{Binding [SourceControl.Status.Clean], Source={x:Static loc:Locale.Current}}"
                            IsVisible="{Binding IsWorkingTreeClean}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeSmall}"
@@ -277,14 +278,14 @@
                     <Border Padding="4,8,8,4">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0"
-                                       Text="{Binding StagedChanges.Count, StringFormat='STAGED CHANGES ({0})'}"
+                                       Text="{Binding StagedChangesTitle}"
                                        FontFamily="{StaticResource FluenceFontFamily}"
                                        FontSize="{StaticResource FluenceFontSizeSmall}"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
                             <Button Grid.Column="1" Classes="ideIcon sourceControlHeaderIcon"
                                     Command="{Binding UnstageAllCommand}"
-                                    ToolTip.Tip="Unstage all">
+                                    ToolTip.Tip="{Binding [SourceControl.Action.UnstageAll], Source={x:Static loc:Locale.Current}}">
                                 <materialIcons:MaterialIcon Width="13"
                                                             Height="13"
                                                             Kind="Minus"
@@ -316,7 +317,7 @@
                                                     Orientation="Horizontal">
                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding OpenDiffCommand}"
-                                                    ToolTip.Tip="View diff">
+                                                    ToolTip.Tip="{Binding [SourceControl.Action.ViewDiff], Source={x:Static loc:Locale.Current}}">
                                                 <materialIcons:MaterialIcon Width="13"
                                                                             Height="13"
                                                                             Kind="FileCompare"
@@ -324,7 +325,7 @@
                                             </Button>
                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding RevertCommand}"
-                                                    ToolTip.Tip="Revert changes">
+                                                    ToolTip.Tip="{Binding [SourceControl.Action.Revert], Source={x:Static loc:Locale.Current}}">
                                                 <materialIcons:MaterialIcon Width="13"
                                                                             Height="13"
                                                                             Kind="Undo"
@@ -332,7 +333,7 @@
                                             </Button>
                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding UnstageCommand}"
-                                                    ToolTip.Tip="Unstage">
+                                                    ToolTip.Tip="{Binding [SourceControl.Action.Unstage], Source={x:Static loc:Locale.Current}}">
                                                 <materialIcons:MaterialIcon Width="13"
                                                                             Height="13"
                                                                             Kind="Minus"
@@ -351,14 +352,14 @@
                     <Border Padding="4,8,8,4">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0"
-                                       Text="{Binding UnstagedChanges.Count, StringFormat='CHANGES ({0})'}"
+                                       Text="{Binding UnstagedChangesTitle}"
                                        FontFamily="{StaticResource FluenceFontFamily}"
                                        FontSize="{StaticResource FluenceFontSizeSmall}"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
                             <Button Grid.Column="1" Classes="ideIcon sourceControlHeaderIcon"
                                     Command="{Binding StageAllCommand}"
-                                    ToolTip.Tip="Stage all">
+                                    ToolTip.Tip="{Binding [SourceControl.Action.StageAll], Source={x:Static loc:Locale.Current}}">
                                 <materialIcons:MaterialIcon Width="13"
                                                             Height="13"
                                                             Kind="Plus"
@@ -390,7 +391,7 @@
                                                     Orientation="Horizontal">
                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding OpenDiffCommand}"
-                                                    ToolTip.Tip="View diff">
+                                                    ToolTip.Tip="{Binding [SourceControl.Action.ViewDiff], Source={x:Static loc:Locale.Current}}">
                                                 <materialIcons:MaterialIcon Width="13"
                                                                             Height="13"
                                                                             Kind="FileCompare"
@@ -398,7 +399,7 @@
                                             </Button>
                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding RevertCommand}"
-                                                    ToolTip.Tip="Revert changes">
+                                                    ToolTip.Tip="{Binding [SourceControl.Action.Revert], Source={x:Static loc:Locale.Current}}">
                                                 <materialIcons:MaterialIcon Width="13"
                                                                             Height="13"
                                                                             Kind="Undo"
@@ -406,7 +407,7 @@
                                             </Button>
                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding StageCommand}"
-                                                    ToolTip.Tip="Stage">
+                                                    ToolTip.Tip="{Binding [SourceControl.Action.Stage], Source={x:Static loc:Locale.Current}}">
                                                 <materialIcons:MaterialIcon Width="13"
                                                                             Height="13"
                                                                             Kind="Plus"
@@ -423,7 +424,7 @@
                 <!-- Stashes -->
                 <StackPanel IsVisible="{Binding HasStashes}">
                     <Border Padding="4,8,8,4">
-                        <TextBlock Text="{Binding Stashes.Count, StringFormat='STASHES ({0})'}"
+                        <TextBlock Text="{Binding StashesTitle}"
                                    FontFamily="{StaticResource FluenceFontFamily}"
                                    FontSize="{StaticResource FluenceFontSizeSmall}"
                                    FontWeight="SemiBold"
@@ -450,7 +451,7 @@
                                                     Orientation="Horizontal">
                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding PopCommand}"
-                                                    ToolTip.Tip="Apply &amp; drop stash">
+                                                    ToolTip.Tip="{Binding [SourceControl.Action.PopStash], Source={x:Static loc:Locale.Current}}">
                                                 <materialIcons:MaterialIcon Width="13"
                                                                             Height="13"
                                                                             Kind="PlusCircle"
@@ -458,7 +459,7 @@
                                             </Button>
                                             <Button Classes="ideIcon sourceControlRowIcon"
                                                     Command="{Binding DropCommand}"
-                                                    ToolTip.Tip="Drop stash">
+                                                    ToolTip.Tip="{Binding [SourceControl.Action.DropStash], Source={x:Static loc:Locale.Current}}">
                                                 <materialIcons:MaterialIcon Width="13"
                                                                             Height="13"
                                                                             Kind="Close"

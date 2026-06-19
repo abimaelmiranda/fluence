@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="SourceControl.Branch.SwitchBranch" xml:space="preserve"><value>Trocar branch</value></data>
+  <data name="SourceControl.Branch.Checkout" xml:space="preserve"><value>Fazer checkout</value></data>
+  <data name="SourceControl.Branch.Delete" xml:space="preserve"><value>Excluir branch</value></data>
+  <data name="SourceControl.Branch.AheadOf" xml:space="preserve"><value>Commits à frente do remoto</value></data>
+  <data name="SourceControl.Branch.Behind" xml:space="preserve"><value>Commits atrás do remoto</value></data>
+  <data name="SourceControl.Conflict.Warning" xml:space="preserve"><value>Mudanças locais seriam sobrescritas</value></data>
+  <data name="SourceControl.Conflict.StashAndCheckout" xml:space="preserve"><value>Stash e Checkout</value></data>
+  <data name="SourceControl.Conflict.ForceCheckout" xml:space="preserve"><value>Forçar Checkout</value></data>
+  <data name="SourceControl.Conflict.Cancel" xml:space="preserve"><value>Cancelar</value></data>
+  <data name="SourceControl.Commit.Placeholder" xml:space="preserve"><value>Mensagem do commit...</value></data>
+  <data name="SourceControl.Action.Commit" xml:space="preserve"><value>Commit</value></data>
+  <data name="SourceControl.Action.Pull" xml:space="preserve"><value>Pull</value></data>
+  <data name="SourceControl.Action.Push" xml:space="preserve"><value>Push</value></data>
+  <data name="SourceControl.Action.Fetch" xml:space="preserve"><value>Buscar todos os remotos</value></data>
+  <data name="SourceControl.Status.NoRepo" xml:space="preserve"><value>Nenhum repositório Git encontrado</value></data>
+  <data name="SourceControl.Status.Clean" xml:space="preserve"><value>Árvore de trabalho limpa</value></data>
+  <data name="SourceControl.Action.UnstageAll" xml:space="preserve"><value>Remover tudo do stage</value></data>
+  <data name="SourceControl.Action.ViewDiff" xml:space="preserve"><value>Ver diff</value></data>
+  <data name="SourceControl.Action.Revert" xml:space="preserve"><value>Reverter mudanças</value></data>
+  <data name="SourceControl.Action.Unstage" xml:space="preserve"><value>Remover do stage</value></data>
+  <data name="SourceControl.Action.StageAll" xml:space="preserve"><value>Adicionar tudo ao stage</value></data>
+  <data name="SourceControl.Action.Stage" xml:space="preserve"><value>Adicionar ao stage</value></data>
+  <data name="SourceControl.Action.PopStash" xml:space="preserve"><value>Aplicar e descartar stash</value></data>
+  <data name="SourceControl.Action.DropStash" xml:space="preserve"><value>Descartar stash</value></data>
+  <data name="SourceControl.Section.StagedChanges" xml:space="preserve"><value>MUDANÇAS STAGED ({0})</value></data>
+  <data name="SourceControl.Section.Changes" xml:space="preserve"><value>MUDANÇAS ({0})</value></data>
+  <data name="SourceControl.Section.Stashes" xml:space="preserve"><value>STASHES ({0})</value></data>
+</root>
