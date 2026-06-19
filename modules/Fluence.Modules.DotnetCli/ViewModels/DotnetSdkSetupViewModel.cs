@@ -11,6 +11,7 @@ using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Dotnet;
 using Fluence.Core.ViewModels;
+using Fluence.Core.Events.Build;
 
 namespace Fluence.Modules.DotnetCli.ViewModels;
 

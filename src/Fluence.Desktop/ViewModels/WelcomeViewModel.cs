@@ -15,6 +15,7 @@ using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.File;
 using Fluence.Core.ViewModels;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Desktop.ViewModels;
 

@@ -10,6 +10,7 @@ using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.FileExplorer.ViewModels;
+using Fluence.Core.Events.Workspace;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.FileExplorer;

@@ -12,6 +12,8 @@ using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Exceptions;
 using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Events.Lsp;
+using Fluence.Core.Events.Ui;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -28,6 +30,10 @@ using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
+using Fluence.Core.Events.Build;
+using Fluence.Core.Events.Debug;
+using Fluence.Core.Events.Provisioning;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Desktop.ViewModels;
 
