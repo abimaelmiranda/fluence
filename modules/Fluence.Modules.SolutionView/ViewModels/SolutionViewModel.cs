@@ -29,6 +29,9 @@ using Fluence.Modules.SolutionView.Exceptions;
 using Fluence.Modules.SolutionView.Models;
 using Fluence.Modules.SolutionView.Models.Enums;
 using Fluence.Modules.SolutionView.Services;
+using Fluence.Core.Events.Build;
+using Fluence.Core.Events.Ui;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.SolutionView.ViewModels;
 

@@ -2,9 +2,9 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Infrastructure;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Abstractions.Workspace;
@@ -19,12 +19,14 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
 {
     private readonly ITerminalService _terminalService;
     private readonly IWorkspaceContext _workspace;
+    private readonly IUiDispatcher _dispatcher;
     private TerminalSessionViewModel? _activeSession;
 
-    public TerminalViewModel(ITerminalService terminalService, IWorkspaceContext workspace)
+    public TerminalViewModel(ITerminalService terminalService, IWorkspaceContext workspace, IUiDispatcher dispatcher)
     {
         _terminalService = terminalService;
         _workspace = workspace;
+        _dispatcher = dispatcher;
         _terminalService.SessionsChanged += OnSessionsChanged;
 
         SyncSessions();
@@ -103,7 +105,7 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
 
     private void OnSessionsChanged(object? sender, EventArgs e)
     {
-        Dispatcher.UIThread.Post(SyncSessions);
+        _dispatcher.Post(SyncSessions);
     }
 
     private void SyncSessions()
@@ -127,7 +129,7 @@ public sealed partial class TerminalViewModel : ViewModelBase, IDisposable
             if (Sessions.Any(viewModel => ReferenceEquals(viewModel.Session, session)))
                 continue;
 
-            Sessions.Add(new TerminalSessionViewModel(session, _workspace, ActivateSession));
+            Sessions.Add(new TerminalSessionViewModel(session, _workspace, ActivateSession, _dispatcher));
         }
 
         for (var i = 0; i < Sessions.Count; i++)

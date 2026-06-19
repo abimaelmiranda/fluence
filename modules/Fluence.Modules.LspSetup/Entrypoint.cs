@@ -5,6 +5,7 @@ using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.LspSetup.ViewModels;
+using Fluence.Core.Events.Provisioning;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.LspSetup;

@@ -141,7 +141,7 @@ public partial class EditorView
                     request.Version != Volatile.Read(ref _hoverRequestVersion))
                     return;
 
-                var node = new HoverVariableNode(result, _viewModel.GetChildVariablesAsync);
+                var node = _viewModel.CreateHoverNode(result);
                 HoverPopup.IsOpen = false;
                 HoverTree.ItemsSource = new[] { node };
                 HoverPopup.PlacementTarget = EditorSurface;

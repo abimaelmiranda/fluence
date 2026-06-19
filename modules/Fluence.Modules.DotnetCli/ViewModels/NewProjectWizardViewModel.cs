@@ -18,6 +18,9 @@ using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workbench;
 using Fluence.Core.ViewModels;
 using Fluence.Modules.DotnetCli.Services;
+using Fluence.Core.Events.Build;
+using Fluence.Core.Events.Ui;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.DotnetCli.ViewModels;
 

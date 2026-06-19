@@ -24,6 +24,7 @@ using Fluence.Modules.Debug.Commands.DebugProject;
 using Fluence.Modules.Debug.Abstractions.Session;
 using Fluence.Modules.Debug.Json;
 using Fluence.Modules.Debug.Services;
+using Fluence.Core.Events.Debug;
 
 namespace Fluence.Modules.Debug;
 

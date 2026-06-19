@@ -11,6 +11,7 @@ using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Models.Output;
 using Fluence.Modules.LanguageServer;
 using Fluence.Infrastructure.Protocols.Lsp;
+using Fluence.Core.Events.Provisioning;
 
 namespace Fluence.Modules.LanguageServer.Services;
 

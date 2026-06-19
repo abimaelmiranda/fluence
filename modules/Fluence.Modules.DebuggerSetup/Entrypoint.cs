@@ -10,6 +10,7 @@ using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.DebuggerSetup.ViewModels;
+using Fluence.Core.Events.Provisioning;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.DebuggerSetup;

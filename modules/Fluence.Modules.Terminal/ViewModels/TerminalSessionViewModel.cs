@@ -3,9 +3,9 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Infrastructure;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Abstractions.Workspace;
@@ -23,6 +23,7 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
     private readonly ITerminalSession _session;
     private readonly IWorkspaceContext _workspace;
     private readonly Action<TerminalSessionViewModel> _activate;
+    private readonly IUiDispatcher _dispatcher;
     private readonly CancellationTokenSource _bridgeCts = new();
     private readonly System.Text.Decoder _utf8Decoder = System.Text.Encoding.UTF8.GetDecoder();
     private readonly StringBuilder _pendingOutput = new();
@@ -37,11 +38,13 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
     public TerminalSessionViewModel(
         ITerminalSession session,
         IWorkspaceContext workspace,
-        Action<TerminalSessionViewModel> activate)
+        Action<TerminalSessionViewModel> activate,
+        IUiDispatcher dispatcher)
     {
         _session = session;
         _workspace = workspace;
         _activate = activate;
+        _dispatcher = dispatcher;
 
         XTerminal = new XTerminal(new TerminalOptions
         {
@@ -128,7 +131,7 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
         if (_disposed || cancellationToken.IsCancellationRequested || !_session.CanAcceptInput)
             return;
 
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             if (!_disposed && !cancellationToken.IsCancellationRequested && _session.CanAcceptInput)
             {
@@ -202,7 +205,7 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
             shouldSchedule = _outputFlushScheduled++ == 0;
         }
         if (shouldSchedule)
-            Dispatcher.UIThread.Post(FlushPendingOutput);
+            _dispatcher.Post(FlushPendingOutput);
     }
 
     private void FlushPendingOutput()
@@ -225,7 +228,7 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
 
     private void OnCleared(object? sender, EventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             if (!_disposed)
             {
@@ -237,7 +240,7 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
 
     public void WriteError(string message)
     {
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             if (!_disposed)
             {
@@ -249,7 +252,7 @@ public sealed partial class TerminalSessionViewModel : ViewModelBase, IDisposabl
 
     private async Task ResizeXTerminalAsync(int cols, int rows)
     {
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        await _dispatcher.InvokeAsync(() =>
         {
             if (_disposed)
                 return;

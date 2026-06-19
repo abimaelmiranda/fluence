@@ -1,4 +1,4 @@
-using Avalonia.Threading;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -9,6 +9,7 @@ using Fluence.Core.Models.Modules.Enums;
 using Fluence.Modules.Debug.ViewModels;
 using Fluence.Modules.Debug.Abstractions.Session;
 using Fluence.Modules.Debug.Models;
+using Fluence.Core.Events.Ui;
 
 namespace Fluence.Modules.Debug.Services;
 
@@ -16,16 +17,17 @@ public sealed class DebugSessionManager(
     IWorkspaceContext workspace,
     IShellRegionHost shellRegions,
     IShellEventBus events,
-    DebugSidebarViewModel sidebar)
+    DebugSidebarViewModel sidebar,
+    IUiDispatcher dispatcher)
     : IDebugSessionManager
 {
     public DebugSession? CurrentSession { get; private set; }
 
     public void Start(ProjectExecutionTarget target, ExecutionMode mode)
     {
-        if (!Dispatcher.UIThread.CheckAccess())
+        if (!dispatcher.CheckAccess())
         {
-            Dispatcher.UIThread.Post(() => Start(target, mode));
+            dispatcher.Post(() => Start(target, mode));
             return;
         }
 
@@ -44,9 +46,9 @@ public sealed class DebugSessionManager(
 
     public void Stop()
     {
-        if (!Dispatcher.UIThread.CheckAccess())
+        if (!dispatcher.CheckAccess())
         {
-            Dispatcher.UIThread.Post(Stop);
+            dispatcher.Post(Stop);
             return;
         }
 

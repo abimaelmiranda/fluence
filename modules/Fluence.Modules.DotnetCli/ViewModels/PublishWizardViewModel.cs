@@ -20,6 +20,8 @@ using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Workbench;
 using Fluence.Core.ViewModels;
 using Fluence.Modules.DotnetCli.Services;
+using Fluence.Core.Events.Build;
+using Fluence.Core.Events.Ui;
 
 namespace Fluence.Modules.DotnetCli.ViewModels;
 

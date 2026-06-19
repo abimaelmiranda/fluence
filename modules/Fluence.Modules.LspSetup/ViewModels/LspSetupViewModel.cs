@@ -1,13 +1,14 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.ViewModels;
+using Fluence.Core.Events.Provisioning;
 
 namespace Fluence.Modules.LspSetup.ViewModels;
 
@@ -18,6 +19,7 @@ public sealed partial class LspSetupViewModel : ViewModelBase
     private readonly ILspProvisioningService _provisioning;
     private readonly IWorkspaceContext _workspace;
     private readonly IShellEventBus _eventBus;
+    private readonly IUiDispatcher _dispatcher;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -34,17 +36,19 @@ public sealed partial class LspSetupViewModel : ViewModelBase
     public LspSetupViewModel(
         ILspProvisioningService provisioning,
         IWorkspaceContext workspace,
-        IShellEventBus eventBus)
+        IShellEventBus eventBus,
+        IUiDispatcher dispatcher)
     {
         _provisioning = provisioning;
         _workspace = workspace;
         _eventBus = eventBus;
+        _dispatcher = dispatcher;
     }
 
     public async Task StartProvisioningAsync(CancellationToken cancellationToken = default)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        await _dispatcher.InvokeAsync(() =>
         {
             IsRunning = true;
             ErrorMessage = null;
@@ -56,7 +60,7 @@ public sealed partial class LspSetupViewModel : ViewModelBase
             await _provisioning.ProvisionAsync(AppendOutput, _cts.Token).ConfigureAwait(false);
 
             AppendOutput("[Fluence] Setup complete. Starting language server...");
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await _dispatcher.InvokeAsync(() =>
             {
                 _eventBus.Publish(new LspProvisioningCompletedEvent());
                 _workspace.CloseDocument(ToolTabId);
@@ -74,7 +78,7 @@ public sealed partial class LspSetupViewModel : ViewModelBase
         }
         finally
         {
-            await Dispatcher.UIThread.InvokeAsync(() => IsRunning = false);
+            await _dispatcher.InvokeAsync(() => IsRunning = false);
             _cts?.Dispose();
             _cts = null;
         }
@@ -96,11 +100,11 @@ public sealed partial class LspSetupViewModel : ViewModelBase
 
     private void AppendOutput(string line)
     {
-        Dispatcher.UIThread.Post(() => Output += line + "\n");
+        _dispatcher.Post(() => Output += line + "\n");
     }
 
     private async Task SetErrorAsync(string message)
     {
-        await Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = message);
+        await _dispatcher.InvokeAsync(() => ErrorMessage = message);
     }
 }

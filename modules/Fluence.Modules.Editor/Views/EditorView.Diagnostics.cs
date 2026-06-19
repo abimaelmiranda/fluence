@@ -2,6 +2,7 @@ using Avalonia.Interactivity;
 using AvaloniaEdit.Rendering;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Core.Events.Lsp;
 
 namespace Fluence.Modules.Editor.Views;
 

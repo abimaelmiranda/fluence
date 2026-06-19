@@ -72,6 +72,7 @@ internal static class Bootstrapper
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         services.AddSingleton<ITaskScheduler, FluentTaskScheduler>();
         services.AddSingleton<IShellEventBus>(provider => new ShellEventBus(provider.GetRequiredService<IUiDispatcher>()));
+        services.AddSingleton<IShellRequestBus, ShellRequestBus>();
         services.AddSingleton<ShellRegionHost>();
         services.AddSingleton<IShellRegionHost>(provider => provider.GetRequiredService<ShellRegionHost>());
         services.AddSingleton<IWorkspaceContext>(provider => new WorkspaceContext(provider.GetRequiredService<IUiDispatcher>()));

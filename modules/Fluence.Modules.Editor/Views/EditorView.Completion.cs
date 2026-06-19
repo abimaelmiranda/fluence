@@ -11,6 +11,7 @@ using AvaloniaEdit.Rendering;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Modules.Editor.Completion;
+using Fluence.Core.Events.Lsp;
 
 namespace Fluence.Modules.Editor.Views;
 
