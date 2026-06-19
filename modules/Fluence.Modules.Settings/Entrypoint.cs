@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using System.Threading;
 using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Settings;
@@ -15,7 +16,11 @@ namespace Fluence.Modules.Settings;
 
 public sealed class Entrypoint : IModule
 {
-    public string Name => "Settings";
+    public string Id => "Settings";
+
+    public string DisplayName => "Settings";
+
+    public int StartupOrder => 100;
 
     public void Register(IServiceCollection services)
     {
@@ -39,10 +44,12 @@ public sealed class Entrypoint : IModule
             sp => (SettingsToolViewModel)sp.GetRequiredService<ISettingsTool>());
     }
 
-    public void Initialize(IModuleHost host)
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         host.Services.GetRequiredService<ThemeRuntimeCoordinator>().Start();
-        host.SetModuleState(Name, ModuleState.Active);
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;

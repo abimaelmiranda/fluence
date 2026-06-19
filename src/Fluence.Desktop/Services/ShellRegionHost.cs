@@ -1,16 +1,38 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 
 namespace Fluence.Desktop.Services;
 
-public sealed class ShellRegionHost : IShellRegionHost
+public sealed class ShellRegionHost : IShellRegionHost, IDisposable
 {
+    private readonly IServiceProvider _services;
+    private readonly IWorkspaceContext _workspace;
+    private readonly IDisposable _activitySubscription;
+    private readonly List<ShellPanelContribution> _panels = [];
+    private string? _activeActivityTabId;
     private ShellRegionContent? _mainContent;
     private ShellRegionContent? _sidebarContent;
     private ShellRegionContent? _bottomBarContent;
+
+    public ShellRegionHost(
+        IServiceProvider services,
+        IWorkspaceContext workspace,
+        IShellEventBus events)
+    {
+        _services = services;
+        _workspace = workspace;
+        _workspace.Changed += OnWorkspaceChanged;
+        _activitySubscription = events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
+        {
+            _activeActivityTabId = e.TabId;
+            Refresh();
+        });
+    }
 
     public event EventHandler? Changed;
 
@@ -49,9 +71,30 @@ public sealed class ShellRegionHost : IShellRegionHost
         }
     }
 
-    public void SetContent(ShellRegion region, string contentId, string title, object viewModel)
+    public void RegisterPanels(IEnumerable<ShellPanelContribution> panels)
     {
-        var content = new ShellRegionContent(region, contentId, title, viewModel);
+        _panels.Clear();
+        _panels.AddRange(panels);
+        Refresh();
+    }
+
+    public void Refresh()
+    {
+        ApplyRegion(ShellRegion.Main);
+        ApplyRegion(ShellRegion.Sidebar);
+        ApplyRegion(ShellRegion.BottomBar);
+    }
+
+    public void Expand(ShellRegion region)
+    {
+        RegionExpanded?.Invoke(this, new ShellRegionExpandedEventArgs(region));
+    }
+
+    private void OnWorkspaceChanged(object? sender, EventArgs e) => Refresh();
+
+    private void ApplyRegion(ShellRegion region)
+    {
+        var content = ResolveContent(region);
         switch (region)
         {
             case ShellRegion.Main:
@@ -68,24 +111,46 @@ public sealed class ShellRegionHost : IShellRegionHost
         }
     }
 
-    public void ClearContent(ShellRegion region, string contentId)
+    private ShellRegionContent? ResolveContent(ShellRegion region)
     {
-        switch (region)
+        var contribution = _panels
+            .Where(panel => panel.Region == region && IsVisible(panel.Visibility))
+            .OrderBy(panel => panel.Order)
+            .LastOrDefault();
+
+        if (contribution is not null)
         {
-            case ShellRegion.Main when MainContent?.ContentId == contentId:
-                MainContent = null;
-                break;
-            case ShellRegion.Sidebar when SidebarContent?.ContentId == contentId:
-                SidebarContent = null;
-                break;
-            case ShellRegion.BottomBar when BottomBarContent?.ContentId == contentId:
-                BottomBarContent = null;
-                break;
+            return new ShellRegionContent(
+                contribution.Region,
+                contribution.ContentId,
+                contribution.Title,
+                contribution.ResolveViewModel(_services));
         }
+
+        return null;
     }
 
-    public void Expand(ShellRegion region)
+    private bool IsVisible(PanelVisibilityRule visibility)
     {
-        RegionExpanded?.Invoke(this, new ShellRegionExpandedEventArgs(region));
+        return visibility.Kind switch
+        {
+            PanelVisibilityKind.Always => true,
+            PanelVisibilityKind.WorkspaceMode => visibility.WorkspaceMode == _workspace.Current.NavigationMode,
+            PanelVisibilityKind.ActivityTab => string.Equals(
+                visibility.ActivityTabId,
+                _activeActivityTabId,
+                StringComparison.Ordinal),
+            PanelVisibilityKind.Custom => visibility.Predicate?.Invoke(
+                _workspace.Current,
+                _activeActivityTabId,
+                _services) == true,
+            _ => false,
+        };
+    }
+
+    public void Dispose()
+    {
+        _workspace.Changed -= OnWorkspaceChanged;
+        _activitySubscription.Dispose();
     }
 }

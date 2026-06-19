@@ -19,8 +19,8 @@ public sealed class ModuleHost(
 
     public IShellRegionHost ShellRegions { get; } = shellRegions;
 
-    public void SetModuleState(string moduleName, ModuleState state)
+    public void SetModuleState(string moduleId, ModuleState state)
     {
-        Workspace.SetModuleState(moduleName, state);
+        Workspace.SetModuleState(moduleId, state);
     }
 }

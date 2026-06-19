@@ -20,7 +20,6 @@ using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;

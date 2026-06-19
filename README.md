@@ -27,7 +27,7 @@ Fluence follows a **Modular Monolith** architecture: all modules run in a single
 
 ```
 Core              ← workspace, DI contracts, shell contracts (IIdeModule, IWorkspaceContext,
-                    IShellEventBus, IPanelDescriptor, IViewRegistry, ITerminalService)
+                    IShellEventBus, ModuleContributions, ShellPanelContribution, ITerminalService)
 Infrastructure    ← OS/platform adapters: ProcessHost, Pty (macOS/Windows), TerminalService
 Desktop           ← Avalonia shell: App, MainWindow, Bootstrapper, WelcomeScreen, UI services
 

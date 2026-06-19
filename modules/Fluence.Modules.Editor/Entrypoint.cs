@@ -8,7 +8,6 @@ using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
@@ -31,7 +30,11 @@ public sealed class Entrypoint : IModule
     private readonly List<IDisposable> _subscriptions = [];
     private EditorViewModel? _editorViewModel;
 
-    public string Name => "Editor";
+    public string Id => "Editor";
+
+    public string DisplayName => "Editor";
+
+    public int StartupOrder => 400;
 
     public void Register(IServiceCollection services)
     {
@@ -42,8 +45,23 @@ public sealed class Entrypoint : IModule
         services.AddSingleton<ICommandHandler<SaveActiveDocumentCommand>, SaveActiveDocumentCommandHandler>();
     }
 
-    public void Initialize(IModuleHost host)
+    public ModuleContributions GetContributions() =>
+        new()
+        {
+            Panels =
+            [
+                new ShellPanelContribution(
+                    ShellRegion.Main,
+                    Id,
+                    "Editor",
+                    services => services.GetRequiredService<EditorViewModel>(),
+                    PanelVisibilityRule.Always),
+            ],
+        };
+
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
         host.Services.GetRequiredService<ISettingsRegistry>()
@@ -52,11 +70,6 @@ public sealed class Entrypoint : IModule
             .Get<EditorSettings>();
 
         _editorViewModel = host.Services.GetRequiredService<EditorViewModel>();
-        host.ShellRegions.SetContent(
-            ShellRegion.Main,
-            Name,
-            "Editor",
-            _editorViewModel);
 
         _subscriptions.Add(host.Events.SubscribeSync<OpenFileRequestedEvent>(e =>
             scheduler.Schedule("editor.open", TaskPriority.Interactive,
@@ -72,7 +85,8 @@ public sealed class Entrypoint : IModule
             scheduler.Schedule("editor.save", TaskPriority.Critical,
                 ct => SaveActiveDocumentAsync(host, ct))));
 
-        host.SetModuleState(Name, ModuleState.Active);
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     private static async Task OpenFileAtLocationAsync(
