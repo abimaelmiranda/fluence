@@ -13,11 +13,11 @@
                 <Setter Property="Height" Value="30"/>
                 <Setter Property="MinHeight" Value="30"/>
             </Style>
-            <Style Selector="ComboBox.settingsField">
-                <Setter Property="Height" Value="34"/>
-                <Setter Property="MinHeight" Value="34"/>
-                <Setter Property="Padding" Value="12,0"/>
-                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style Selector="Button.settingsListIcon">
+                <Setter Property="Width" Value="30"/>
+                <Setter Property="Height" Value="30"/>
+                <Setter Property="MinHeight" Value="30"/>
+                <Setter Property="Padding" Value="0"/>
             </Style>
         </Grid.Styles>
         <Border Grid.Row="0"
@@ -85,64 +85,261 @@
                     Margin="0,4,0,0"
                     SelectedIndex="{Binding SelectedTabIndex}">
             <TabItem Header="Settings">
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding FilteredSections}"
-                                  Margin="18,14"
-                                  MaxWidth="760"
-                                  HorizontalAlignment="Left">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:SettingsSectionViewModel">
-                                <StackPanel Spacing="7"
-                                            Margin="0,0,0,20">
-                                    <TextBlock Text="{Binding Name}"
+                <Grid ColumnDefinitions="240,*"
+                      Background="{StaticResource FluenceBrushShell}">
+                    <Border Grid.Column="0"
+                            Background="{StaticResource FluenceBrushSurface}"
+                            BorderBrush="{StaticResource FluenceBrushBorder}"
+                            BorderThickness="0,0,1,0"
+                            Padding="10,10,8,10">
+                        <Grid RowDefinitions="Auto,*"
+                              RowSpacing="8">
+                            <TextBlock Text="Settings"
+                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                       Margin="2,1,2,0"/>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding Sections}"
+                                     SelectedItem="{Binding SelectedSection, Mode=TwoWay}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Padding="0">
+                                <ListBox.Styles>
+                                    <Style Selector="ListBoxItem">
+                                        <Setter Property="Padding" Value="8,5"/>
+                                        <Setter Property="Margin" Value="0,1"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="CornerRadius" Value="3"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="{StaticResource FluenceBrushSurfaceElevated}"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:selected TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource FluenceBrushAccent}"/>
+                                    </Style>
+                                </ListBox.Styles>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SettingsSectionViewModel">
+                                        <StackPanel Spacing="0">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                                       FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+                    <ScrollViewer Grid.Column="1"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="24,18,28,28"
+                                    Spacing="14"
+                                    MaxWidth="1040"
+                                    HorizontalAlignment="Left">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Preferences"
+                                           FontFamily="{StaticResource FluenceFontFamily}"
+                                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="6"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Settings"
                                                FontFamily="{StaticResource FluenceFontFamily}"
-                                               FontSize="{StaticResource FluenceFontSizeBody}"
+                                               FontSize="14"
                                                FontWeight="SemiBold"
                                                Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                                    <ItemsControl ItemsSource="{Binding FilteredProperties}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:SettingsPropertyViewModel">
-                                                <Grid ColumnDefinitions="200,360"
-                                                      ColumnSpacing="16"
-                                                      Margin="0,2">
-                                                    <TextBlock Grid.Column="0"
-                                                               Classes="ideLabel"
-                                                               Text="{Binding Name}"
-                                                               VerticalAlignment="Center"/>
-                                                    <TextBox Grid.Column="1"
-                                                             Classes="ideCompact"
-                                                             Text="{Binding TextValue, Mode=TwoWay}"
-                                                             IsVisible="{Binding IsText}"/>
-                                                    <ComboBox Grid.Column="1"
-                                                              Classes="settingsField"
-                                                              ItemsSource="{Binding ThemeOptions}"
-                                                              SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
-                                                              IsVisible="{Binding IsThemeSelector}">
-                                                        <ComboBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="theming:ThemeDescriptor">
-                                                                <TextBlock Text="{Binding DisplayName}"/>
-                                                            </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                    <ComboBox Grid.Column="1"
-                                                              Classes="settingsField"
-                                                              ItemsSource="{Binding EnumOptions}"
-                                                              SelectedItem="{Binding SelectedEnumValue, Mode=TwoWay}"
-                                                              IsVisible="{Binding IsEnum}"/>
-                                                    <CheckBox Grid.Column="1"
-                                                              IsChecked="{Binding BoolValue, Mode=TwoWay}"
-                                                              IsVisible="{Binding IsBoolean}"
-                                                              VerticalAlignment="Center"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                    <TextBlock Text=">"
+                                               FontFamily="{StaticResource FluenceFontFamily}"
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding SettingsContextTitle}"
+                                               FontFamily="{StaticResource FluenceFontFamily}"
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource FluenceBrushAccent}"
+                                               TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding FilteredSections}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SettingsSectionViewModel">
+                                        <StackPanel Spacing="8"
+                                                    Margin="0,0,0,8">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                                       FontSize="15"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                       TextWrapping="Wrap"/>
+                                            <ItemsControl ItemsSource="{Binding FilteredProperties}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:SettingsPropertyViewModel">
+                                                        <Border BorderBrush="{StaticResource FluenceBrushBorder}"
+                                                                BorderThickness="0,0,0,1"
+                                                                Padding="0,12,0,12"
+                                                                Margin="0,0,0,2">
+                                                            <Grid ColumnDefinitions="300,*"
+                                                                  ColumnSpacing="20">
+                                                                <StackPanel Grid.Column="0"
+                                                                            Spacing="4">
+                                                                    <TextBlock Text="{Binding DisplayName}"
+                                                                               FontFamily="{StaticResource FluenceFontFamily}"
+                                                                               FontSize="{StaticResource FluenceFontSizeBody}"
+                                                                               FontWeight="SemiBold"
+                                                                               Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                                                               TextWrapping="Wrap"/>
+                                                                    <TextBlock Text="{Binding Description}"
+                                                                               Classes="ideLabel"
+                                                                               FontFamily="{StaticResource FluenceFontFamily}"
+                                                                               FontSize="{StaticResource FluenceFontSizeSmall}"
+                                                                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                                               TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                                <StackPanel Grid.Column="1"
+                                                                            Spacing="6"
+                                                                            VerticalAlignment="Center">
+                                                                    <TextBox Width="360"
+                                                                             Classes="ideCompact"
+                                                                             Text="{Binding TextValue, Mode=TwoWay}"
+                                                                             IsVisible="{Binding IsText}"/>
+                                                                    <ComboBox Width="360"
+                                                                              Classes="ideCompact"
+                                                                              ItemsSource="{Binding ThemeOptions}"
+                                                                              SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
+                                                                              IsVisible="{Binding IsThemeSelector}">
+                                                                        <ComboBox.ItemTemplate>
+                                                                            <DataTemplate x:DataType="theming:ThemeDescriptor">
+                                                                                <TextBlock Text="{Binding DisplayName}"/>
+                                                                            </DataTemplate>
+                                                                        </ComboBox.ItemTemplate>
+                                                                    </ComboBox>
+                                                                    <ComboBox Width="360"
+                                                                              Classes="ideCompact"
+                                                                              ItemsSource="{Binding EnumOptions}"
+                                                                              SelectedItem="{Binding SelectedEnumValue, Mode=TwoWay}"
+                                                                              IsVisible="{Binding IsEnum}"/>
+                                                                    <CheckBox IsChecked="{Binding BoolValue, Mode=TwoWay}"
+                                                                              IsVisible="{Binding IsBoolean}"
+                                                                              VerticalAlignment="Center"
+                                                                              Margin="0,2,0,0"/>
+                                                                    <StackPanel Spacing="6"
+                                                                                IsVisible="{Binding IsStringArray}">
+                                                                        <ScrollViewer MaxHeight="180"
+                                                                                      VerticalScrollBarVisibility="Auto"
+                                                                                      HorizontalScrollBarVisibility="Disabled"
+                                                                                      PointerWheelChanged="OnSuppressionsScrollWheel">
+                                                                            <ItemsControl ItemsSource="{Binding StringArrayItems}">
+                                                                                <ItemsControl.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="vm:SettingsStringArrayItemViewModel">
+                                                                                        <Border Classes="ideRow"
+                                                                                                Padding="6,5"
+                                                                                                Margin="0,0,0,2">
+                                                                                            <Grid ColumnDefinitions="*,28">
+                                                                                                <StackPanel VerticalAlignment="Center"
+                                                                                                            Spacing="1">
+                                                                                                    <TextBlock Text="{Binding Value}"
+                                                                                                               Classes="ideValue"
+                                                                                                               FontWeight="SemiBold"/>
+                                                                                                    <TextBlock Text="{Binding Title}"
+                                                                                                               Classes="ideLabel"
+                                                                                                               IsVisible="{Binding IsKnownRule}"/>
+                                                                                                </StackPanel>
+                                                                                                <Button Grid.Column="1"
+                                                                                                        Classes="ideIcon"
+                                                                                                        Width="28"
+                                                                                                        Height="28"
+                                                                                                        MinHeight="28"
+                                                                                                        Command="{Binding RemoveCommand}"
+                                                                                                        ToolTip.Tip="Remove">
+                                                                                                    <materialIcons:MaterialIcon Width="14"
+                                                                                                                                Height="14"
+                                                                                                                                Kind="Close"
+                                                                                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                                                                </Button>
+                                                                                            </Grid>
+                                                                                        </Border>
+                                                                                    </DataTemplate>
+                                                                                </ItemsControl.ItemTemplate>
+                                                                            </ItemsControl>
+                                                                        </ScrollViewer>
+                                                                        <Grid ColumnDefinitions="*,32"
+                                                                              ColumnSpacing="6">
+                                                                            <ComboBox Grid.Column="0"
+                                                                                      Classes="ideCompact"
+                                                                                      VerticalAlignment="Center"
+                                                                                      ItemsSource="{Binding AvailableKnownRulesToAdd}"
+                                                                                      SelectedItem="{Binding SelectedKnownRuleToAdd, Mode=TwoWay}"
+                                                                                      PlaceholderText="Add known rule...">
+                                                                                <ComboBox.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="vm:SettingsKnownStringArrayOptionViewModel">
+                                                                                        <TextBlock Text="{Binding DisplayText}"
+                                                                                                   VerticalAlignment="Center"/>
+                                                                                    </DataTemplate>
+                                                                                </ComboBox.ItemTemplate>
+                                                                            </ComboBox>
+                                                                            <Button Grid.Column="1"
+                                                                                    Classes="ideGhost"
+                                                                                    Width="32"
+                                                                                    Height="26"
+                                                                                    MinHeight="26"
+                                                                                    Padding="0"
+                                                                                    HorizontalContentAlignment="Center"
+                                                                                    VerticalContentAlignment="Center"
+                                                                                    Command="{Binding AddSelectedKnownRuleCommand}"
+                                                                                    ToolTip.Tip="Add rule">
+                                                                                <materialIcons:MaterialIcon Width="14"
+                                                                                                            Height="14"
+                                                                                                            Kind="Plus"
+                                                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                                            </Button>
+                                                                        </Grid>
+                                                                        <Grid ColumnDefinitions="*,32"
+                                                                              ColumnSpacing="6">
+                                                                            <TextBox Grid.Column="0"
+                                                                                     Classes="ideCompact"
+                                                                                     PlaceholderText="Custom ID (e.g. CS0168)"
+                                                                                     Text="{Binding NewStringArrayValue, Mode=TwoWay}"/>
+                                                                            <Button Grid.Column="1"
+                                                                                    Classes="ideGhost"
+                                                                                    Width="32"
+                                                                                    Height="26"
+                                                                                    MinHeight="26"
+                                                                                    Padding="0"
+                                                                                    HorizontalContentAlignment="Center"
+                                                                                    VerticalContentAlignment="Center"
+                                                                                    Command="{Binding AddCustomStringArrayValueCommand}"
+                                                                                    ToolTip.Tip="Add custom ID">
+                                                                                <materialIcons:MaterialIcon Width="14"
+                                                                                                            Height="14"
+                                                                                                            Kind="Plus"
+                                                                                                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                                            </Button>
+                                                                        </Grid>
+                                                                    </StackPanel>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
             </TabItem>
             <TabItem Header="Keybindings">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
