@@ -8,7 +8,7 @@ namespace Fluence.Modules.Editor.Rendering;
 internal sealed class DebugLineRenderer : IBackgroundRenderer
 {
     private static readonly ISolidColorBrush ExecutionLineBrush =
-        new SolidColorBrush(Color.FromArgb(96, 190, 48, 48));
+        new SolidColorBrush(Color.FromArgb(72, 170, 64, 64));
 
     private DebugExecutionLine? _executionLine;
 

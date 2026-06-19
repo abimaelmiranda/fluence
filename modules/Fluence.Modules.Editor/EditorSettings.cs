@@ -9,6 +9,8 @@ public sealed class EditorSettings
 
     public double FontSize { get; set; } = 13;
 
+    public double LineHeightFactor { get; set; } = 1.3;
+
     public bool ShowLineNumbers { get; set; } = true;
 
     public bool AutoPairBrackets { get; set; } = true;

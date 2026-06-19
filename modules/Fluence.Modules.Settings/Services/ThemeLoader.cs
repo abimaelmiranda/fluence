@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using Avalonia.Media;
-using Avalonia.Platform;
 using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Abstractions.Theming;
 using Fluence.Core.Models.Theming;
@@ -266,23 +265,23 @@ public sealed class ThemeLoader : IThemeLoader
             },
             Colors = new ThemeColors
             {
-                Shell = "#1E1E1E",
-                Surface = "#1E1E1E",
-                SurfaceElevated = "#282828",
-                InputBackground = "#282828",
-                Border = "#282828",
-                TextPrimary = "#F2F5F8",
-                TextSecondary = "#AAB4BF",
-                Accent = "#B05CDA",
-                Error = "#FF6B6B",
-                EditorBackground = "#1E1E1E",
-                EditorForeground = "#D4D4D4",
-                EditorSelection = "#3A3D41",
-                ActivityBarBackground = "#1E1E1E",
-                ActivityBarActiveBackground = "#282828",
-                ActivityBarForeground = "#F2F5F8",
-                ActivityBarInactiveForeground = "#AAB4BF",
-                BottomBarBackground = "#602676",
+                Shell = "#202225",
+                Surface = "#202225",
+                SurfaceElevated = "#292C31",
+                InputBackground = "#272A2F",
+                Border = "#32363C",
+                TextPrimary = "#DDE3EA",
+                TextSecondary = "#9EA8B3",
+                Accent = "#9B6BB6",
+                Error = "#E36D6D",
+                EditorBackground = "#202225",
+                EditorForeground = "#CBD1D8",
+                EditorSelection = "#3A4652",
+                ActivityBarBackground = "#202225",
+                ActivityBarActiveBackground = "#292C31",
+                ActivityBarForeground = "#DDE3EA",
+                ActivityBarInactiveForeground = "#9EA8B3",
+                BottomBarBackground = "#4F315F",
             },
             SemanticTokenColors = BuiltInSemanticTokenColors,
             TextMateThemeJson = LoadBuiltInTextMateTheme(),
@@ -291,30 +290,7 @@ public sealed class ThemeLoader : IThemeLoader
 
     private static string LoadBuiltInTextMateTheme()
     {
-        try
-        {
-            var uri = new Uri("avares://Fluence.Modules.Editor/Assets/Themes/fluence-default-dark.json");
-            using var stream = AssetLoader.Open(uri);
-            using var reader = new StreamReader(stream);
-            return reader.ReadToEnd();
-        }
-        catch
-        {
-            return """
-            {
-              "name": "FluenceDark",
-              "settings": [
-                {
-                  "settings": {
-                    "background": "#1E1E1E",
-                    "foreground": "#D4D4D4",
-                    "selection": "#3A3D41"
-                  }
-                }
-              ]
-            }
-            """;
-        }
+        return DefaultTextMateTheme.Json;
     }
 
     private static IReadOnlyDictionary<string, string> ParseSemanticTokenColors(

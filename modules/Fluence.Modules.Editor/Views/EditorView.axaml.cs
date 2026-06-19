@@ -274,6 +274,7 @@ public partial class EditorView : UserControl
             var fontFamily = new FontFamily(settings.FontFamily);
             Editor.FontFamily = fontFamily;
             Editor.FontSize = settings.FontSize;
+            Editor.Options.LineHeightFactor = Math.Clamp(settings.LineHeightFactor, 1.0, 1.8);
             Editor.ShowLineNumbers = settings.ShowLineNumbers;
             Editor.TextArea.TextView.Redraw();
             Editor.TextArea.TextView.InvalidateMeasure();

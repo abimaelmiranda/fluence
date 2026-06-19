@@ -11,7 +11,9 @@ namespace Fluence.Modules.Editor.Rendering;
 
 internal sealed class BreakpointMargin : AbstractMargin
 {
-    private static readonly IBrush GhostBrush = Brushes.DarkRed;
+    private static readonly IBrush GhostBrush = new SolidColorBrush(Color.FromArgb(130, 130, 58, 58));
+    private static readonly IBrush VerifiedBrush = new SolidColorBrush(Color.FromRgb(190, 90, 90));
+    private static readonly IBrush UnverifiedBrush = new SolidColorBrush(Color.FromRgb(130, 58, 58));
 
     private readonly Action<int> _toggleBreakpoint;
     private IReadOnlyList<DebugBreakpoint> _breakpoints = [];
@@ -47,7 +49,7 @@ internal sealed class BreakpointMargin : AbstractMargin
 
             if (bp is not null)
             {
-                var brush = bp.IsVerified ? Brushes.IndianRed : Brushes.DarkRed;
+                var brush = bp.IsVerified ? VerifiedBrush : UnverifiedBrush;
                 context.DrawEllipse(brush, null, new Point(11, y), 6, 6);
             }
             else if (lineNumber == _hoveredLine)

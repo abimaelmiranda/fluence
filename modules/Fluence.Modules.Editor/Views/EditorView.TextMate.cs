@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Text;
-using Avalonia.Platform;
 using Avalonia.Threading;
 using AvaloniaEdit.TextMate;
+using Fluence.Core.Models.Theming;
 using TextMateSharp.Grammars;
 using TextMateSharp.Internal.Themes.Reader;
 using TextMateSharp.Themes;
@@ -27,9 +27,7 @@ public partial class EditorView
 
     private static IRawTheme? LoadStandardTheme()
     {
-        var uri = new Uri("avares://Fluence.Modules.Editor/Assets/Themes/fluence-default-dark.json");
-
-        using var stream = AssetLoader.Open(uri);
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(DefaultTextMateTheme.Json));
         using var reader = new StreamReader(stream);
         return ThemeReader.ReadThemeSync(reader);
     }

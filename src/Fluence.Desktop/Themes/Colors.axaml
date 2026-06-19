@@ -1,24 +1,24 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Color x:Key="FluenceColorShell">#1E1E1E</Color>
-    <Color x:Key="FluenceColorSurface">#1E1E1E</Color>
-    <Color x:Key="FluenceColorSurfaceElevated">#282828</Color>
-    <Color x:Key="FluenceColorInputBackground">#282828</Color>
-    <Color x:Key="FluenceColorBorder">#282828</Color>
-    <Color x:Key="FluenceColorTextPrimary">#F2F5F8</Color>
-    <Color x:Key="FluenceColorTextSecondary">#AAB4BF</Color>
-    <Color x:Key="FluenceColorAccent">#B05CDA</Color>
-    <Color x:Key="FluenceColorError">#FF6B6B</Color>
-    <Color x:Key="FluenceColorEditorBackground">#1E1E1E</Color>
-    <Color x:Key="FluenceColorEditorForeground">#D4D4D4</Color>
-    <Color x:Key="FluenceColorEditorSelection">#3A3D41</Color>
-    <Color x:Key="FluenceColorActivityBarBackground">#1E1E1E</Color>
-    <Color x:Key="FluenceColorActivityBarActiveBackground">#282828</Color>
-    <Color x:Key="FluenceColorActivityBarForeground">#F2F5F8</Color>
-    <Color x:Key="FluenceColorActivityBarInactiveForeground">#AAB4BF</Color>
-    <Color x:Key="FluenceColorBottomBarBackground">#602676</Color>
-    <Color x:Key="FluenceColorBottomBarDivider">#44282828</Color>
-    <Color x:Key="FluenceColorBottomBarContentBackground">#1A1D23</Color>
+    <Color x:Key="FluenceColorShell">#202225</Color>
+    <Color x:Key="FluenceColorSurface">#202225</Color>
+    <Color x:Key="FluenceColorSurfaceElevated">#292C31</Color>
+    <Color x:Key="FluenceColorInputBackground">#272A2F</Color>
+    <Color x:Key="FluenceColorBorder">#32363C</Color>
+    <Color x:Key="FluenceColorTextPrimary">#DDE3EA</Color>
+    <Color x:Key="FluenceColorTextSecondary">#9EA8B3</Color>
+    <Color x:Key="FluenceColorAccent">#9B6BB6</Color>
+    <Color x:Key="FluenceColorError">#E36D6D</Color>
+    <Color x:Key="FluenceColorEditorBackground">#202225</Color>
+    <Color x:Key="FluenceColorEditorForeground">#CBD1D8</Color>
+    <Color x:Key="FluenceColorEditorSelection">#3A4652</Color>
+    <Color x:Key="FluenceColorActivityBarBackground">#202225</Color>
+    <Color x:Key="FluenceColorActivityBarActiveBackground">#292C31</Color>
+    <Color x:Key="FluenceColorActivityBarForeground">#DDE3EA</Color>
+    <Color x:Key="FluenceColorActivityBarInactiveForeground">#9EA8B3</Color>
+    <Color x:Key="FluenceColorBottomBarBackground">#4F315F</Color>
+    <Color x:Key="FluenceColorBottomBarDivider">#5532363C</Color>
+    <Color x:Key="FluenceColorBottomBarContentBackground">#1F2329</Color>
 
     <SolidColorBrush x:Key="FluenceBrushShell" Color="{StaticResource FluenceColorShell}"/>
     <SolidColorBrush x:Key="FluenceBrushSurface" Color="{StaticResource FluenceColorSurface}"/>

@@ -13,11 +13,11 @@ namespace Fluence.Modules.Editor.Rendering;
 
 internal sealed class DiagnosticRenderer : IBackgroundRenderer
 {
-    private static readonly ISolidColorBrush ErrorBrush   = new SolidColorBrush(Color.FromRgb(255, 80, 80));
-    private static readonly ISolidColorBrush WarningBrush = new SolidColorBrush(Color.FromRgb(220, 180, 80));
+    private static readonly ISolidColorBrush ErrorBrush   = new SolidColorBrush(Color.FromRgb(215, 105, 105));
+    private static readonly ISolidColorBrush WarningBrush = new SolidColorBrush(Color.FromRgb(200, 170, 95));
     private static readonly DashStyle        WiggleDash   = new DashStyle([2, 2], 0);
-    private static readonly IPen             ErrorPen     = new Pen(ErrorBrush,   1.5, WiggleDash);
-    private static readonly IPen             WarningPen   = new Pen(WarningBrush, 1.5, WiggleDash);
+    private static readonly IPen             ErrorPen     = new Pen(ErrorBrush,   1.15, WiggleDash);
+    private static readonly IPen             WarningPen   = new Pen(WarningBrush, 1.15, WiggleDash);
 
     private IReadOnlyList<LspDiagnostic> _diagnostics = [];
     private TextDocument? _document;
