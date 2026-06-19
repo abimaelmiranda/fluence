@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading;
@@ -50,6 +51,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
     private readonly IShellEventBus _eventBus;
     private readonly SolutionProjectAssociationService _projectAssociations;
     private CancellationTokenSource? _loadCts;
+    private readonly Dictionary<string, CancellationTokenSource> _projectLoadCtsByPath = new(StringComparer.OrdinalIgnoreCase);
     private string? _loadedSolutionPath;
     private SolutionWorkspaceSnapshot? _loadedSnapshot;
 
@@ -116,6 +118,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
         {
             _loadedSolutionPath = null;
             _loadedSnapshot = null;
+            CancelProjectLoads();
             _projectAssociations.Clear();
             RootItems.Clear();
             ErrorMessage = null;
@@ -138,27 +141,20 @@ public sealed partial class SolutionViewModel : ViewModelBase
         IsLoading = true;
         ErrorMessage = null;
         RootItems.Clear();
+        CancelProjectLoads();
         _projectAssociations.Clear(solutionPath);
 
         try
         {
-            // When cache is cold, show the structural skeleton immediately so the tree
-            // appears in < 100ms while Buildalyzer runs in background.
-            if (!_solutionLoader.HasValidCache(solutionPath))
-            {
-                var skeleton = await _solutionLoader.LoadStructuralAsync(solutionPath, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-                RootItems.Add(CreateTreeItem(skeleton.Root));
-                IsLoading = false;
-            }
+            var snapshot = await _solutionLoader.LoadStructuralAsync(solutionPath, cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
+                return;
 
-            var snapshot = await _solutionLoader.LoadAsync(solutionPath, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
             _loadedSnapshot = snapshot;
-            _projectAssociations.Update(snapshot);
+            _projectAssociations.UpdateStructural(snapshot);
 
             RootItems.Clear();
-            RootItems.Add(CreateTreeItem(snapshot.Root));
+            RootItems.Add(CreateTreeItem(snapshot.Root, deferProjectChildren: true));
             UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
             UpdateStartupProject(_workspace.Current.StartupProjectPath);
         }
@@ -179,8 +175,12 @@ public sealed partial class SolutionViewModel : ViewModelBase
         }
     }
 
-    private SolutionTreeItem CreateTreeItem(SolutionTreeNode node)
+    private SolutionTreeItem CreateTreeItem(SolutionTreeNode node, bool deferProjectChildren)
     {
+        var shouldDeferChildren = deferProjectChildren &&
+                                  node.Kind == SolutionTreeNodeKind.Project &&
+                                  node.Path is not null;
+
         var item = new SolutionTreeItem(
             node.Kind,
             node.Name,
@@ -204,18 +204,64 @@ public sealed partial class SolutionViewModel : ViewModelBase
             CreateSetStartupProjectCommand(node),
             CreateAddProjectReferenceCommand(node),
             CreateRemoveProjectReferenceCommand(node),
+            shouldDeferChildren ? LoadProjectChildrenAsync : null,
             node.ProjectPath,
             node.ReferencedProjectPath,
-            node.IsResolved)
+            node.IsResolved,
+            areChildrenLoaded: !shouldDeferChildren)
         {
             IsStartupProject = node.Kind == SolutionTreeNodeKind.Project &&
                                string.Equals(node.Path, _workspace.Current.StartupProjectPath, StringComparison.OrdinalIgnoreCase),
         };
 
-        foreach (var child in node.Children)
-            item.Children.Add(CreateTreeItem(child));
+        if (!shouldDeferChildren)
+        {
+            foreach (var child in node.Children)
+                item.Children.Add(CreateTreeItem(child, deferProjectChildren));
+        }
 
         return item;
+    }
+
+    private async Task LoadProjectChildrenAsync(SolutionTreeItem item, CancellationToken cancellationToken)
+    {
+        var solutionPath = _workspace.Current.CurrentSolutionPath;
+        if (string.IsNullOrWhiteSpace(solutionPath) || string.IsNullOrWhiteSpace(item.Path))
+            return;
+
+        var projectCts = ResetProjectLoad(item.Path);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, projectCts.Token);
+
+        try
+        {
+            var projectNode = await _solutionLoader.LoadProjectAsync(solutionPath, item.Path, linkedCts.Token);
+            if (linkedCts.Token.IsCancellationRequested)
+                return;
+
+            item.Children.Clear();
+            foreach (var child in projectNode.Children)
+                item.Children.Add(CreateTreeItem(child, deferProjectChildren: false));
+
+            item.MarkChildrenLoaded();
+            _projectAssociations.UpdateProject(solutionPath, projectNode);
+            UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
+            UpdateStartupProject(_workspace.Current.StartupProjectPath);
+        }
+        catch (OperationCanceledException) { }
+        catch (SolutionWorkspaceLoadException ex)
+        {
+            item.ResetPlaceholder();
+            _notifications.ShowError("Unable to load project", ex.Reason);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            item.ResetPlaceholder();
+            _notifications.ShowError("Unable to load project", "The project could not be read.");
+        }
+        finally
+        {
+            ClearProjectLoad(item.Path, projectCts);
+        }
     }
 
     private ICommand? CreateOpenCommand(SolutionTreeNode node) => node.Kind switch
@@ -628,6 +674,36 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
         _loadedSolutionPath = solutionPath;
         return LoadAsync(solutionPath);
+    }
+
+    private CancellationTokenSource ResetProjectLoad(string projectPath)
+    {
+        if (_projectLoadCtsByPath.Remove(projectPath, out var existingCts))
+        {
+            existingCts.Cancel();
+        }
+
+        var cts = new CancellationTokenSource();
+        _projectLoadCtsByPath[projectPath] = cts;
+        return cts;
+    }
+
+    private void ClearProjectLoad(string projectPath, CancellationTokenSource cts)
+    {
+        if (_projectLoadCtsByPath.TryGetValue(projectPath, out var current) && ReferenceEquals(current, cts))
+            _projectLoadCtsByPath.Remove(projectPath);
+
+        cts.Dispose();
+    }
+
+    private void CancelProjectLoads()
+    {
+        foreach (var cts in _projectLoadCtsByPath.Values)
+        {
+            cts.Cancel();
+        }
+
+        _projectLoadCtsByPath.Clear();
     }
 
     private void UpdateActiveItem(string? activePath) =>

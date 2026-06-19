@@ -16,6 +16,7 @@ public sealed class SolutionProjectAssociationService : IProjectAssociationServi
     private readonly object _gate = new();
     private string? _solutionPath;
     private Dictionary<string, string> _projectByFilePath = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> _projectByDirectoryPath = new(StringComparer.OrdinalIgnoreCase);
 
     public string? FindProjectForFile(string solutionPath, string filePath)
     {
@@ -30,21 +31,46 @@ public sealed class SolutionProjectAssociationService : IProjectAssociationServi
             if (!string.Equals(_solutionPath, normalizedSolutionPath, StringComparison.OrdinalIgnoreCase))
                 return null;
 
-            return _projectByFilePath.TryGetValue(normalizedFilePath, out var projectPath)
-                ? projectPath
-                : null;
+            if (_projectByFilePath.TryGetValue(normalizedFilePath, out var projectPath))
+                return projectPath;
+
+            return FindProjectByContainingDirectory(normalizedFilePath, _projectByDirectoryPath);
         }
     }
 
-    public void Update(SolutionWorkspaceSnapshot snapshot)
+    public void UpdateStructural(SolutionWorkspaceSnapshot snapshot)
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        AddAssociations(snapshot.Root, currentProjectPath: null, map);
+        var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var directories = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        AddStructuralAssociations(snapshot.Root, files, directories);
 
         lock (_gate)
         {
             _solutionPath = NormalizePath(snapshot.SolutionPath);
-            _projectByFilePath = map;
+            _projectByFilePath = files;
+            _projectByDirectoryPath = directories;
+        }
+    }
+
+    public void UpdateProject(string solutionPath, SolutionTreeNode projectNode)
+    {
+        if (projectNode.Kind != SolutionTreeNodeKind.Project || string.IsNullOrWhiteSpace(projectNode.Path))
+            return;
+
+        var normalizedSolutionPath = NormalizePath(solutionPath);
+        var normalizedProjectPath = NormalizePath(projectNode.Path);
+        var projectDirectory = Path.GetDirectoryName(normalizedProjectPath);
+
+        lock (_gate)
+        {
+            if (!string.Equals(_solutionPath, normalizedSolutionPath, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            _projectByFilePath[normalizedProjectPath] = normalizedProjectPath;
+            if (!string.IsNullOrWhiteSpace(projectDirectory))
+                _projectByDirectoryPath[NormalizePath(projectDirectory)] = normalizedProjectPath;
+
+            AddFileAssociations(projectNode, normalizedProjectPath, _projectByFilePath);
         }
     }
 
@@ -60,28 +86,56 @@ public sealed class SolutionProjectAssociationService : IProjectAssociationServi
 
             _solutionPath = null;
             _projectByFilePath = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _projectByDirectoryPath = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
     }
 
-    private static void AddAssociations(
+    private static void AddStructuralAssociations(
         SolutionTreeNode node,
-        string? currentProjectPath,
-        Dictionary<string, string> map)
+        Dictionary<string, string> files,
+        Dictionary<string, string> directories)
     {
         if (node.Kind == SolutionTreeNodeKind.Project && !string.IsNullOrWhiteSpace(node.Path))
         {
-            currentProjectPath = NormalizePath(node.Path);
-            map.TryAdd(currentProjectPath, currentProjectPath);
-        }
-        else if (node.Kind == SolutionTreeNodeKind.File &&
-                 !string.IsNullOrWhiteSpace(node.Path) &&
-                 !string.IsNullOrWhiteSpace(currentProjectPath))
-        {
-            map.TryAdd(NormalizePath(node.Path), currentProjectPath);
+            var projectPath = NormalizePath(node.Path);
+            files.TryAdd(projectPath, projectPath);
+
+            var projectDirectory = Path.GetDirectoryName(projectPath);
+            if (!string.IsNullOrWhiteSpace(projectDirectory))
+                directories.TryAdd(NormalizePath(projectDirectory), projectPath);
         }
 
         foreach (var child in node.Children)
-            AddAssociations(child, currentProjectPath, map);
+            AddStructuralAssociations(child, files, directories);
+    }
+
+    private static void AddFileAssociations(
+        SolutionTreeNode node,
+        string currentProjectPath,
+        Dictionary<string, string> map)
+    {
+        if (node.Kind == SolutionTreeNodeKind.File && !string.IsNullOrWhiteSpace(node.Path))
+            map[NormalizePath(node.Path)] = currentProjectPath;
+
+        foreach (var child in node.Children)
+            AddFileAssociations(child, currentProjectPath, map);
+    }
+
+    private static string? FindProjectByContainingDirectory(
+        string filePath,
+        Dictionary<string, string> projectByDirectoryPath)
+    {
+        var directory = Path.GetDirectoryName(filePath);
+        while (!string.IsNullOrWhiteSpace(directory))
+        {
+            var normalizedDirectory = NormalizePath(directory);
+            if (projectByDirectoryPath.TryGetValue(normalizedDirectory, out var projectPath))
+                return projectPath;
+
+            directory = Directory.GetParent(normalizedDirectory)?.FullName;
+        }
+
+        return null;
     }
 
     private static string NormalizePath(string path)
