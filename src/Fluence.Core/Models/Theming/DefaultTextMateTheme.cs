@@ -112,6 +112,27 @@ public static class DefaultTextMateTheme
           }
         },
         {
+          "name": "XML/HTML Tag Name",
+          "scope": "entity.name.tag",
+          "settings": {
+            "foreground": "#569CD6"
+          }
+        },
+        {
+          "name": "XML/HTML Attribute Name",
+          "scope": "entity.other.attribute-name",
+          "settings": {
+            "foreground": "#9CDCFE"
+          }
+        },
+        {
+          "name": "XML/HTML Attribute Value",
+          "scope": "string.quoted.double.xml, string.quoted.single.xml, string.quoted.double.html, string.quoted.single.html",
+          "settings": {
+            "foreground": "#CE9178"
+          }
+        },
+        {
           "name": "Invalid",
           "scope": "invalid",
           "settings": {
