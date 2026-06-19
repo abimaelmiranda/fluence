@@ -18,6 +18,44 @@ public sealed class ProcessHost(IProcessSpawner spawner) : IProcessHost
         CancellationToken cancellationToken = default,
         IReadOnlyDictionary<string, string>? environment = null)
     {
+        _ = await RunWithResultAsync(
+            executable,
+            arguments,
+            workingDirectory,
+            onOutput,
+            onError,
+            cancellationToken,
+            environment).ConfigureAwait(false);
+    }
+
+    public async Task RunAsync(
+        string executable,
+        IReadOnlyList<string> arguments,
+        string? workingDirectory,
+        Action<string> onOutput,
+        Action<string> onError,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string>? environment = null)
+    {
+        _ = await RunWithResultAsync(
+            executable,
+            arguments,
+            workingDirectory,
+            onOutput,
+            onError,
+            cancellationToken,
+            environment).ConfigureAwait(false);
+    }
+
+    public async Task<ProcessResult> RunWithResultAsync(
+        string executable,
+        string arguments,
+        string? workingDirectory,
+        Action<string> onOutput,
+        Action<string> onError,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string>? environment = null)
+    {
         var startInfo = new ProcessStartInfo
         {
             FileName = executable,
@@ -29,10 +67,10 @@ public sealed class ProcessHost(IProcessSpawner spawner) : IProcessHost
             CreateNoWindow = true,
         };
 
-        await RunCoreAsync(startInfo, onOutput, onError, cancellationToken, environment).ConfigureAwait(false);
+        return await RunCoreAsync(startInfo, onOutput, onError, cancellationToken, environment).ConfigureAwait(false);
     }
 
-    public async Task RunAsync(
+    public async Task<ProcessResult> RunWithResultAsync(
         string executable,
         IReadOnlyList<string> arguments,
         string? workingDirectory,
@@ -54,10 +92,10 @@ public sealed class ProcessHost(IProcessSpawner spawner) : IProcessHost
         foreach (var argument in arguments)
             startInfo.ArgumentList.Add(argument);
 
-        await RunCoreAsync(startInfo, onOutput, onError, cancellationToken, environment).ConfigureAwait(false);
+        return await RunCoreAsync(startInfo, onOutput, onError, cancellationToken, environment).ConfigureAwait(false);
     }
 
-    private async Task RunCoreAsync(
+    private async Task<ProcessResult> RunCoreAsync(
         ProcessStartInfo startInfo,
         Action<string> onOutput,
         Action<string> onError,
@@ -97,7 +135,8 @@ public sealed class ProcessHost(IProcessSpawner spawner) : IProcessHost
 
         try
         {
-            await tcs.Task.ConfigureAwait(false);
+            var exitCode = await tcs.Task.ConfigureAwait(false);
+            return new ProcessResult(exitCode);
         }
         finally
         {

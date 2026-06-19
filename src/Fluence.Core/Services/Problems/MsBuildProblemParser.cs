@@ -3,12 +3,10 @@ using System.IO;
 using System.Text.RegularExpressions;
 using Fluence.Core.Models.Problems;
 
-namespace Fluence.Modules.DotnetCli.Services;
+namespace Fluence.Core.Services.Problems;
 
-public static partial class BuildProblemParser
+public static partial class MsBuildProblemParser
 {
-    private const string Source = "Build";
-
     public static ProblemItem? TryParse(string line, string? workingDirectory)
     {
         var match = BuildProblemRegex().Match(line);
@@ -31,7 +29,7 @@ public static partial class BuildProblemParser
             Line: Math.Max(0, lineNumber - 1),
             Character: Math.Max(0, columnNumber - 1),
             Severity: severity,
-            Source: Source,
+            Source: ProblemSourceIds.Build,
             Code: match.Groups["code"].Value.Trim(),
             Message: match.Groups["message"].Value.Trim());
     }

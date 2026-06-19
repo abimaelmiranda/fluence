@@ -15,7 +15,9 @@ using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Services.File;
+using Fluence.Core.Models.Output;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
@@ -38,6 +40,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
     private readonly PackageIconLoader _icons;
     private readonly IUserNotificationService _notifications;
     private readonly IShellEventBus _eventBus;
+    private readonly IOutputChannelService _output;
     private string? _solutionPath;
     private CancellationTokenSource? _loadCts;
 
@@ -74,7 +77,8 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         INuGetProjectService projectService,
         PackageIconLoader icons,
         IUserNotificationService notifications,
-        IShellEventBus eventBus)
+        IShellEventBus eventBus,
+        IOutputChannelService output)
     {
         _workspace = workspace;
         _packageSource = packageSource;
@@ -82,6 +86,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         _icons = icons;
         _notifications = notifications;
         _eventBus = eventBus;
+        _output = output;
     }
 
     public ObservableCollection<NuGetPackageSearchItem> BrowseResults { get; } = [];
@@ -109,6 +114,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         ArgumentException.ThrowIfNullOrWhiteSpace(solutionPath);
 
         _solutionPath = solutionPath;
+        WriteOutput($"[NuGetExplorer] Opening package manager for {Path.GetFileName(solutionPath)}\r\n");
         _workspace.OpenToolTab(GetToolTabId(solutionPath), "NuGet Package Manager", this);
         _ = RefreshAsync();
     }
@@ -173,6 +179,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
 
         await RunBusyAsync(async innerToken =>
         {
+            WriteOutput("[NuGetExplorer] Loading package data\r\n");
             UsesCentralPackageManagement = _projectService.UsesCentralPackageManagement(_solutionPath);
             await LoadProjectsAsync(innerToken);
             await LoadInstalledPackagesAsync(innerToken);
@@ -383,11 +390,13 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Xml.XmlException)
         {
             StatusMessage = ex.Message;
+            WriteOutput($"[NuGetExplorer] Failed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
             _notifications.ShowError("NuGet Package Manager", ex.Message);
         }
         catch (Exception ex)
         {
             StatusMessage = "Unable to reach nuget.org.";
+            WriteOutput($"[NuGetExplorer] Crashed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
             _notifications.ShowError("NuGet Package Manager", ex.Message);
         }
         finally
@@ -447,4 +456,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
 
     private static string GetToolTabId(string solutionPath)
         => $"{ToolTabIdPrefix}{Path.GetFullPath(solutionPath)}";
+
+    private void WriteOutput(string text, OutputChannelEntryKind kind = OutputChannelEntryKind.Information) =>
+        _ = _output.WriteAsync(OutputChannelIds.Output, text, kind);
 }

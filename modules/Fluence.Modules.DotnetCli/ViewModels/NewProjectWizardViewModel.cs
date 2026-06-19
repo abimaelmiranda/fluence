@@ -144,6 +144,8 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         if (!Validate(out var projectRoot))
             return;
 
+        _output.Clear(OutputChannelIds.Run);
+
         var sdkStatus = await _sdk.GetStatusAsync(cancellationToken);
         if (!sdkStatus.IsDotnetAvailable || sdkStatus.InstalledSdks.Count == 0)
         {

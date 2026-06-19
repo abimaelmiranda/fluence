@@ -28,6 +28,8 @@ public sealed class RunProjectCommandHandler(
 {
     public async Task HandleAsync(RunProjectCommand command, CancellationToken cancellationToken = default)
     {
+        output.Clear(OutputChannelIds.Run);
+
         if (workspace.Current.Mode is WorkspaceMode.Folder or WorkspaceMode.Solution &&
             await launchSettings.EnsureAsync(ExecutionMode.Release, cancellationToken) is null)
         {

@@ -24,4 +24,27 @@ public interface IProcessHost
         Action<string> onError,
         CancellationToken cancellationToken = default,
         IReadOnlyDictionary<string, string>? environment = null);
+
+    Task<ProcessResult> RunWithResultAsync(
+        string executable,
+        string arguments,
+        string? workingDirectory,
+        Action<string> onOutput,
+        Action<string> onError,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string>? environment = null);
+
+    Task<ProcessResult> RunWithResultAsync(
+        string executable,
+        IReadOnlyList<string> arguments,
+        string? workingDirectory,
+        Action<string> onOutput,
+        Action<string> onError,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string>? environment = null);
+}
+
+public sealed record ProcessResult(int ExitCode)
+{
+    public bool Succeeded => ExitCode == 0;
 }

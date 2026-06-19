@@ -21,12 +21,15 @@ using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Abstractions.Problems;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Jobs;
+using Fluence.Core.Models.Problems;
 using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.File;
+using Fluence.Core.Services.Problems;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -49,6 +52,7 @@ public sealed class DebugService(
     IDebugSessionManager sessions,
     IDebuggerProvisioningService provisioning,
     IDotnetSdkProvisioningService sdk,
+    IProblemService problems,
     ISettingsService settings,
     ITaskScheduler scheduler,
     IExclusiveJobCoordinator jobs)
@@ -258,16 +262,32 @@ public sealed class DebugService(
             return false;
         }
 
-        ExpandBottomBar();
-        await output.WriteAsync(OutputChannelIds.Debug, "[debug] Building project...\r\n", cancellationToken: cancellationToken).ConfigureAwait(false);
+        SelectBottomBar(BottomBarTabIds.Run);
+        output.Clear(OutputChannelIds.Run);
+        problems.ClearSource(ProblemSourceIds.Build);
+        var buildProblems = new List<ProblemItem>();
+        var buildProblemsGate = new object();
+
         var dotnet = await sdk.ResolveDotnetExecutableAsync(cancellationToken).ConfigureAwait(false);
-        await processHost.RunAsync(
+        var buildArguments = new[] { "build", target.ProjectPath, "-c", "Debug" };
+        var buildWorkingDirectory = Path.GetDirectoryName(target.ProjectPath);
+        await output.WriteAsync(
+            OutputChannelIds.Run,
+            $"> {FormatCommand(dotnet, buildArguments)}\r\n",
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var buildResult = await processHost.RunWithResultAsync(
             dotnet,
-            ["build", target.ProjectPath, "-c", "Debug"],
-            Path.GetDirectoryName(target.ProjectPath),
-            line => ScheduleDebugOutput(line + Environment.NewLine, isError: false),
-            line => ScheduleDebugOutput(line + Environment.NewLine, isError: true),
+            buildArguments,
+            buildWorkingDirectory,
+            line => ScheduleRunOutput(line, buildWorkingDirectory, buildProblems, buildProblemsGate, isError: false),
+            line => ScheduleRunOutput(line, buildWorkingDirectory, buildProblems, buildProblemsGate, isError: true),
             cancellationToken).ConfigureAwait(false);
+        problems.ReplaceSource(ProblemSourceIds.Build, buildProblems);
+        if (!buildResult.Succeeded || buildProblems.Any(problem => problem.Severity == ProblemSeverity.Error))
+        {
+            ShowWarning("The debug build failed. Fix the build errors before starting a debug session.");
+            return false;
+        }
 
         var programPath = ResolveProgramPath(target.ProjectPath, workspaceRoot);
         if (programPath is null)
@@ -279,6 +299,7 @@ public sealed class DebugService(
         sessions.Start(target, mode);
         debugState.StartSession();
         var exceptionBreakMode = settings.Get<DebugSettings>().ExceptionBreakMode;
+        SelectBottomBar(BottomBarTabIds.Debug);
 
         Interlocked.Increment(ref _sessionGeneration);
         _adapter = await adapterFactory.CreateAsync(workspaceRoot, cancellationToken).ConfigureAwait(false);
@@ -541,9 +562,9 @@ public sealed class DebugService(
         }
     }
 
-    private void ExpandBottomBar()
+    private void SelectBottomBar(string tabId)
     {
-        events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Debug));
+        events.Publish(new SelectBottomBarTabEvent(tabId));
 
         if (Dispatcher.UIThread.CheckAccess())
         {
@@ -552,6 +573,43 @@ public sealed class DebugService(
         }
 
         Dispatcher.UIThread.Post(() => shellRegions.Expand(ShellRegion.BottomBar));
+    }
+
+    private void ScheduleRunOutput(
+        string line,
+        string? workingDirectory,
+        List<ProblemItem> buildProblems,
+        object buildProblemsGate,
+        bool isError)
+    {
+        var problem = MsBuildProblemParser.TryParse(line, workingDirectory);
+        if (problem is not null)
+        {
+            lock (buildProblemsGate)
+                buildProblems.Add(problem);
+        }
+
+        scheduler.Schedule(
+            "run.output",
+            isError ? TaskPriority.Interactive : TaskPriority.Background,
+            ct => output.WriteAsync(
+                OutputChannelIds.Run,
+                line + Environment.NewLine,
+                isError ? OutputChannelEntryKind.Error : OutputChannelEntryKind.Information,
+                ct));
+    }
+
+    private static string FormatCommand(string executable, IReadOnlyList<string> arguments) =>
+        string.Join(" ", new[] { QuoteIfNeeded(executable) }.Concat(arguments.Select(QuoteIfNeeded)));
+
+    private static string QuoteIfNeeded(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return "\"\"";
+
+        return value.Any(char.IsWhiteSpace)
+            ? $"\"{value.Replace("\"", "\\\"", StringComparison.Ordinal)}\""
+            : value;
     }
 
     private void ShowWarning(string message)
