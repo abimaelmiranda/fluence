@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Problems;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Problems;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.LanguageServer.Services;
@@ -26,6 +28,7 @@ public sealed partial class Entrypoint : IModule
     private readonly object _documentGate = new();
     private readonly Dictionary<string, DocumentSyncState> _documents = new(StringComparer.OrdinalIgnoreCase);
     private bool _provisioningPending;
+    private int _diagnosticsPublishedOpenFileCount;
     private string? _lastStartedRootPath;
     private ILanguageServerService? _languageServer;
     private SemanticTokensService? _semanticTokensService;
@@ -47,6 +50,7 @@ public sealed partial class Entrypoint : IModule
                 provider.GetRequiredService<IProcessSpawner>(),
                 provider.GetRequiredService<IDiagnosticsService>(),
                 provider.GetRequiredService<IShellEventBus>(),
+                provider.GetRequiredService<IOutputChannelService>(),
                 provider.GetRequiredService<LspClientHolder>()));
         services.AddSingleton<ICompletionService>(provider =>
             new CompletionService(
@@ -82,6 +86,7 @@ public sealed partial class Entrypoint : IModule
     {
         _scheduler?.CancelAndForget("lsp.start");
         _scheduler?.CancelAndForget("lsp.problems");
+        _scheduler?.CancelAndForget("lsp.diagnostics-output");
 
         foreach (var subscription in _subscriptions)
             subscription.Dispose();
@@ -109,19 +114,22 @@ public sealed partial class Entrypoint : IModule
         var lsp = host.Services.GetRequiredService<ILanguageServerService>();
         var provisioning = host.Services.GetRequiredService<ILspProvisioningService>();
         var nav = host.Services.GetRequiredService<INavigationService>();
+        var diagnosticsService = host.Services.GetRequiredService<IDiagnosticsService>();
         var problems = host.Services.GetRequiredService<IProblemService>();
+        var output = host.Services.GetRequiredService<IOutputChannelService>();
         _languageServer = lsp;
         _semanticTokensService = host.Services.GetRequiredService<SemanticTokensService>();
         _eventBus = host.Events;
         _scheduler = host.Services.GetRequiredService<ITaskScheduler>();
         _workspace = host.Workspace;
 
-        _workspaceChanged = (_, _) => TryStartOrRestart(host, lsp, provisioning, fromProvisioning: false);
+        _workspaceChanged = (_, _) => TryStartOrRestart(host, lsp, provisioning, output, fromProvisioning: false);
         host.Workspace.Changed += _workspaceChanged;
 
         _subscriptions.Add(host.Events.SubscribeSync<DocumentOpenedEvent>(e =>
         {
             RegisterDocument(e.FilePath, e.Content, e.LanguageId, e.Version);
+            PublishCachedDiagnosticsForOpenDocument(diagnosticsService, problems, output, e.FilePath);
             if (!lsp.IsRunning) return;
             _scheduler.Schedule(
                 $"lsp.ensure-open.{e.FilePath}",
@@ -143,6 +151,7 @@ public sealed partial class Entrypoint : IModule
         _subscriptions.Add(host.Events.SubscribeSync<DocumentClosedEvent>(e =>
         {
             UnregisterDocument(e.FilePath);
+            problems.ClearFile(ProblemSourceIds.Lsp, e.FilePath);
             if (!lsp.IsRunning) return;
             _scheduler.Schedule(
                 $"lsp.close.{e.FilePath}",
@@ -164,8 +173,11 @@ public sealed partial class Entrypoint : IModule
         _subscriptions.Add(host.Events.SubscribeSync<DiagnosticsUpdatedEvent>(e =>
         {
             var diagnostics = e.Diagnostics;
+            if (!IsOpenTextDocument(e.FilePath))
+                return;
+
             _scheduler.ScheduleLatest(
-                "lsp.problems",
+                $"lsp.problems.{e.FilePath}",
                 TaskPriority.Background,
                 TimeSpan.Zero,
                 ct =>
@@ -174,17 +186,18 @@ public sealed partial class Entrypoint : IModule
                         return Task.CompletedTask;
 
                     problems.ReplaceFile(
-                        "LSP",
+                        ProblemSourceIds.Lsp,
                         e.FilePath,
                         diagnostics.Select(diagnostic => new ProblemItem(
                             FilePath: e.FilePath,
                             Line: diagnostic.StartLine,
                             Character: diagnostic.StartCharacter,
                             Severity: ToProblemSeverity(diagnostic.Severity),
-                            Source: "LSP",
+                            Source: ProblemSourceIds.Lsp,
                             Code: diagnostic.Code,
                             Message: diagnostic.Message)).ToArray());
 
+                    QueueDiagnosticsOutput(output);
                     return Task.CompletedTask;
                 },
                 correlationId: e.FilePath);
@@ -224,7 +237,7 @@ public sealed partial class Entrypoint : IModule
         _subscriptions.Add(host.Events.SubscribeSync<LspProvisioningCompletedEvent>(_ =>
         {
             _provisioningPending = false;
-            TryStartOrRestart(host, lsp, provisioning, fromProvisioning: true);
+            TryStartOrRestart(host, lsp, provisioning, output, fromProvisioning: true);
         }));
 
         host.SetModuleState(Name, ModuleState.Active);
@@ -275,7 +288,12 @@ public sealed partial class Entrypoint : IModule
         }
     }
 
-    private void TryStartOrRestart(IModuleHost host, ILanguageServerService lsp, ILspProvisioningService provisioning, bool fromProvisioning)
+    private void TryStartOrRestart(
+        IModuleHost host,
+        ILanguageServerService lsp,
+        ILspProvisioningService provisioning,
+        IOutputChannelService output,
+        bool fromProvisioning)
     {
         var rootPath = ResolveRootPath(host.Workspace);
         if (rootPath is null)
@@ -296,6 +314,7 @@ public sealed partial class Entrypoint : IModule
             if (!_provisioningPending)
             {
                 _provisioningPending = true;
+                _ = output.WriteAsync(OutputChannelIds.Output, "[LanguageServer] OmniSharp provisioning required\r\n");
                 host.Events.Publish(new LspProvisioningRequiredEvent());
             }
             return;
@@ -350,10 +369,65 @@ public sealed partial class Entrypoint : IModule
 
         _scheduler?.CancelAndForget($"lsp.ensure-open.{filePath}");
         _scheduler?.CancelAndForget($"lsp.didchange.{filePath}");
+        _scheduler?.CancelAndForget($"lsp.problems.{filePath}");
         _scheduler?.CancelAndForget($"lsp.semantic.{filePath}");
         _scheduler?.CancelAndForget($"lsp.flush.{filePath}");
 
         _eventBus?.Publish(new SemanticTokensRefreshFinishedEvent(filePath));
+    }
+
+    private bool IsOpenTextDocument(string filePath)
+    {
+        lock (_documentGate)
+            return _documents.ContainsKey(filePath);
+    }
+
+    private void PublishCachedDiagnosticsForOpenDocument(
+        IDiagnosticsService diagnosticsService,
+        IProblemService problems,
+        IOutputChannelService output,
+        string filePath)
+    {
+        if (!IsOpenTextDocument(filePath))
+            return;
+
+        var diagnostics = diagnosticsService.GetDiagnostics(filePath);
+        if (diagnostics.Count == 0)
+            return;
+
+        problems.ReplaceFile(
+            ProblemSourceIds.Lsp,
+            filePath,
+            diagnostics.Select(diagnostic => new ProblemItem(
+                FilePath: filePath,
+                Line: diagnostic.StartLine,
+                Character: diagnostic.StartCharacter,
+                Severity: ToProblemSeverity(diagnostic.Severity),
+                Source: ProblemSourceIds.Lsp,
+                Code: diagnostic.Code,
+                Message: diagnostic.Message)).ToArray());
+
+        QueueDiagnosticsOutput(output);
+    }
+
+    private void QueueDiagnosticsOutput(IOutputChannelService output)
+    {
+        Interlocked.Increment(ref _diagnosticsPublishedOpenFileCount);
+        _scheduler!.ScheduleLatest(
+            "lsp.diagnostics-output",
+            TaskPriority.Background,
+            TimeSpan.FromMilliseconds(750),
+            _ =>
+            {
+                var count = Interlocked.Exchange(ref _diagnosticsPublishedOpenFileCount, 0);
+                if (count <= 0)
+                    return Task.CompletedTask;
+
+                var suffix = count == 1 ? "file" : "files";
+                return output.WriteAsync(
+                    OutputChannelIds.Output,
+                    $"[LanguageServer] Diagnostics: {count} open {suffix} updated\r\n");
+            });
     }
 
     private bool IsOpenInServer(string filePath)

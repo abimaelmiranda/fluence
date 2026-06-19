@@ -9,7 +9,16 @@ internal sealed partial class LanguageServerService
     {
         ["processId"] = Environment.ProcessId,
         ["clientInfo"] = new JsonObject { ["name"] = "Fluence", ["version"] = "1.0" },
+        ["rootPath"] = rootPath,
         ["rootUri"] = FilePathToUri(rootPath),
+        ["workspaceFolders"] = new JsonArray
+        {
+            new JsonObject
+            {
+                ["uri"] = FilePathToUri(rootPath),
+                ["name"] = System.IO.Path.GetFileName(rootPath),
+            },
+        },
         ["capabilities"] = new JsonObject
         {
             ["textDocument"] = new JsonObject
@@ -63,6 +72,35 @@ internal sealed partial class LanguageServerService
             ["workspace"] = new JsonObject
             {
                 ["didChangeConfiguration"] = new JsonObject(),
+                ["workspaceFolders"] = true,
+            },
+        },
+    };
+
+    private static JsonObject BuildConfigurationParams() => new()
+    {
+        ["settings"] = new JsonObject
+        {
+            ["msbuild"] = new JsonObject
+            {
+                ["enabled"] = true,
+                ["loadProjectsOnDemand"] = false,
+                ["EnablePackageAutoRestore"] = true,
+            },
+            ["RoslynExtensionsOptions"] = new JsonObject
+            {
+                ["enableAnalyzersSupport"] = true,
+                ["enableDecompilationSupport"] = true,
+                ["enableImportCompletion"] = true,
+                ["diagnosticWorkersThreadCount"] = 1,
+            },
+            ["FormattingOptions"] = new JsonObject
+            {
+                ["enableEditorConfigSupport"] = true,
+            },
+            ["sdk"] = new JsonObject
+            {
+                ["includePrereleases"] = true,
             },
         },
     };
