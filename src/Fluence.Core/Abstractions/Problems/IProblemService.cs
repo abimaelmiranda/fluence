@@ -20,5 +20,7 @@ public interface IProblemService
 
     void ReplaceFile(string source, string filePath, IReadOnlyList<ProblemItem> problems);
 
+    void ClearFile(string source, string filePath);
+
     void ClearSource(string source);
 }

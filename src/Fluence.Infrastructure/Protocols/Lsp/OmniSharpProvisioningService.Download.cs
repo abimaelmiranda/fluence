@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,7 +61,6 @@ public sealed partial class OmniSharpProvisioningService
     private static (string Name, string DownloadUrl)? FindOmniSharpAsset(JsonElement assets)
     {
         var rid = ResolveRuntimeId();
-        (string Name, string DownloadUrl)? fallback = null;
 
         foreach (var asset in assets.EnumerateArray())
         {
@@ -78,20 +76,11 @@ public sealed partial class OmniSharpProvisioningService
                 continue;
 
             // OmniSharp releases use names like: omnisharp-osx-arm64-net6.0.tar.gz
-            // Prefer the exact RID match
             if (lower.Contains(rid, StringComparison.Ordinal))
                 return (name, url);
-
-            // Fallback: same OS family, any arch
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && lower.Contains("osx", StringComparison.Ordinal))
-                fallback ??= (name, url);
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && lower.Contains("win", StringComparison.Ordinal))
-                fallback ??= (name, url);
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && lower.Contains("linux", StringComparison.Ordinal))
-                fallback ??= (name, url);
         }
 
-        return fallback;
+        return null;
     }
 
     private static void ExtractArchive(string archivePath, string installRoot)

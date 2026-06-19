@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Models.LanguageServer;
 using Fluence.Modules.LanguageServer.Protocol;
 
@@ -29,6 +30,7 @@ internal sealed partial class LanguageServerService
 
     private void OnClientDisconnected()
     {
+        WriteOutput("[LanguageServer] OmniSharp disconnected\r\n", OutputChannelEntryKind.Warning);
         var client = _client;
         _client = null;
         _holder.Client = null;

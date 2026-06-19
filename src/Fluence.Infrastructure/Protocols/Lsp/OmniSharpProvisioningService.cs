@@ -26,13 +26,22 @@ public sealed partial class OmniSharpProvisioningService(IFluenceStorageService 
 
     public string GetExecutablePath() => Path.Combine(InstallDir, ResolveExecutableName());
 
+    public string? GetDotnetHostPath() => ResolveDotnetExecutable();
+
+    public string? GetSelectedSdkPath() => ResolveSelectedSdkPath();
+
     public IReadOnlyDictionary<string, string> GetLaunchEnvironment()
     {
-        var dotnetRoot = ResolveDotnetDir();
-        return new Dictionary<string, string>
+        var environment = new Dictionary<string, string>
         {
-            ["DOTNET_ROOT"] = dotnetRoot,
+            ["DOTNET_ROOT"] = ResolveDotnetDir(),
         };
+
+        var dotnetHostPath = GetDotnetHostPath();
+        if (!string.IsNullOrWhiteSpace(dotnetHostPath))
+            environment["DOTNET_HOST_PATH"] = dotnetHostPath;
+
+        return environment;
     }
 
     public async Task ProvisionAsync(Action<string> onOutput, CancellationToken cancellationToken = default)

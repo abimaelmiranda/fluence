@@ -64,6 +64,21 @@ public sealed class ProblemService : IProblemService
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public void ClearFile(string source, string filePath)
+    {
+        lock (_gate)
+        {
+            if (_problems.RemoveAll(problem =>
+                    string.Equals(problem.Source, source, StringComparison.Ordinal) &&
+                    string.Equals(problem.FilePath, filePath, StringComparison.OrdinalIgnoreCase)) == 0)
+            {
+                return;
+            }
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     public void ClearSource(string source)
     {
         lock (_gate)
