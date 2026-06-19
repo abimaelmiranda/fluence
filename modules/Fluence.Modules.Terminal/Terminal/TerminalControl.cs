@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Input.TextInput;
 using Avalonia.Media;
 using XTerm.Buffer;
 using XTerm.Common;
@@ -42,6 +43,7 @@ public sealed class TerminalControl : Avalonia.Controls.Control
     private (int Col, int Row)? _selectionStart;
     private (int Col, int Row)? _selectionEnd;
     private bool _isSelecting;
+    private TerminalTextInputMethodClient? _inputMethodClient;
 
     public Func<string, Task>? TerminalTextInput { get; set; }
     public Action<int, int>? Resized { get; set; }
@@ -73,6 +75,15 @@ public sealed class TerminalControl : Avalonia.Controls.Control
     public TerminalControl()
     {
         InputMethod.SetIsInputMethodEnabled(this, true);
+        AddHandler(InputElement.TextInputMethodClientRequestedEvent,
+            OnTextInputMethodClientRequested);
+    }
+
+    private void OnTextInputMethodClientRequested(
+        object? sender, TextInputMethodClientRequestedEventArgs e)
+    {
+        _inputMethodClient ??= new TerminalTextInputMethodClient(this);
+        e.Client = _inputMethodClient;
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -701,6 +712,41 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         Color.Parse("#56B6C2"), // Bright Cyan
         Color.Parse("#F2F5F8"), // Bright White
     ];
+
+    // IME client ---------------------------------------------------
+
+    private sealed class TerminalTextInputMethodClient : TextInputMethodClient
+    {
+        private readonly TerminalControl _owner;
+
+        public TerminalTextInputMethodClient(TerminalControl owner) => _owner = owner;
+
+        public override Visual TextViewVisual => _owner;
+        public override bool SupportsPreedit => true;
+        public override bool SupportsSurroundingText => false;
+        public override string SurroundingText => string.Empty;
+
+        public override Rect CursorRectangle
+        {
+            get
+            {
+                var t = _owner.Terminal;
+                if (t is null || _owner._charWidth <= 0 || _owner._charHeight <= 0)
+                    return new Rect(_owner.Bounds.Size);
+                return new Rect(
+                    t.Buffer.X * _owner._charWidth,
+                    t.Buffer.Y * _owner._charHeight,
+                    _owner._charWidth,
+                    _owner._charHeight);
+            }
+        }
+
+        public override TextSelection Selection { get; set; }
+
+        // Preedit is the composition-in-progress (e.g., the dead key `'`).
+        // Don't forward to PTY — OnTextInput delivers the final composed char.
+        public override void SetPreeditText(string? preeditText, int? cursorPos) { }
+    }
 
     // Key mapping ---------------------------------------------------
 
