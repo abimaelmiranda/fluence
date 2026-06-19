@@ -494,11 +494,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
                 OpenKeybindings();
                 return Task.CompletedTask;
             }));
+        // TODO: o ideal seria Ctrl+Tab, mas o Avalonia consome esse atalho para navegação de foco
+        // antes de chegar ao handler da janela. Tentativas: Tunnel routing, Tunnel|Bubble — sem efeito.
+        // Usar Alt+Shift+Tab como fallback até encontrarmos uma solução.
         _commands.Register(new IdeCommandDefinition(
             CommandIds.NextTab,
             "Next Tab",
             KeybindingScope.Global,
-            "Ctrl+Tab",
+            "Alt+Shift+Tab",
             NextTabAsync));
         _commands.Register(new IdeCommandDefinition(
             CommandIds.ToggleSidebar,
