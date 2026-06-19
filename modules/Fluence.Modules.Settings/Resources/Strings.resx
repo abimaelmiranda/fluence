@@ -59,12 +59,20 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
 
+  <!-- Tabs -->
   <data name="Settings.Tab.Settings" xml:space="preserve">
     <value>Settings</value>
   </data>
   <data name="Settings.Tab.Keybindings" xml:space="preserve">
     <value>Keybindings</value>
   </data>
+
+  <!-- Labels -->
+  <data name="Settings.Label.Preferences" xml:space="preserve">
+    <value>Preferences</value>
+  </data>
+
+  <!-- Toolbar actions -->
   <data name="Settings.Action.RestoreDefaults" xml:space="preserve">
     <value>Restore defaults</value>
   </data>
@@ -74,7 +82,68 @@
   <data name="Settings.Action.SaveAndApply" xml:space="preserve">
     <value>Save and apply</value>
   </data>
+  <data name="Settings.Action.Reset" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="Settings.Action.Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Settings.Action.AddRule" xml:space="preserve">
+    <value>Add rule</value>
+  </data>
+  <data name="Settings.Action.AddCustomId" xml:space="preserve">
+    <value>Add custom ID</value>
+  </data>
+
+  <!-- Search -->
   <data name="Settings.Search.Placeholder" xml:space="preserve">
     <value>Search settings and keybindings</value>
+  </data>
+
+  <!-- String array options -->
+  <data name="Settings.StringArray.AddKnownRule" xml:space="preserve">
+    <value>Add known rule...</value>
+  </data>
+  <data name="Settings.StringArray.CustomIdPlaceholder" xml:space="preserve">
+    <value>Custom ID (e.g. CS0168)</value>
+  </data>
+
+  <!-- Keybindings -->
+  <data name="Settings.Keybinding.Record" xml:space="preserve">
+    <value>Record</value>
+  </data>
+  <data name="Settings.Keybinding.Recording" xml:space="preserve">
+    <value>Press keys...</value>
+  </data>
+  <data name="Settings.Keybinding.Conflict" xml:space="preserve">
+    <value>Conflicting keybinding</value>
+  </data>
+
+  <!-- Status messages -->
+  <data name="Settings.Status.Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Settings.Status.Saved" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="Settings.Status.DefaultsRestored" xml:space="preserve">
+    <value>Defaults restored</value>
+  </data>
+  <data name="Settings.Status.KeybindingReset" xml:space="preserve">
+    <value>Keybinding reset</value>
+  </data>
+  <data name="Settings.Status.ThemeInstallFailed" xml:space="preserve">
+    <value>Theme install failed</value>
+  </data>
+  <data name="Settings.Status.SearchResults" xml:space="preserve">
+    <value>Search results</value>
+  </data>
+  <!-- {0} = setting name -->
+  <data name="Settings.Status.CannotBeEmpty" xml:space="preserve">
+    <value>{0} cannot be empty</value>
+  </data>
+  <!-- {0} = theme display name -->
+  <data name="Settings.Status.ThemeInstalled" xml:space="preserve">
+    <value>Installed {0}</value>
   </data>
 </root>

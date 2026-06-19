@@ -1,6 +1,7 @@
 using System;
 using Avalonia.Data;
 using Avalonia.Markup.Xaml;
+using Fluence.Core.Services.Localization;
 
 namespace Fluence.Desktop.Markup;
 

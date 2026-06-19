@@ -1,26 +1,15 @@
-using System.ComponentModel;
+// Convenience re-export so Desktop XAML files can use xmlns:l="using:Fluence.Desktop.Markup"
+// for both {l:Loc} and {x:Static l:Locale.Current}.
+// The actual implementation lives in Fluence.Core.Services.Localization.Locale.
 using Fluence.Core.Abstractions.Localization;
+using CoreLocale = Fluence.Core.Services.Localization.Locale;
 
 namespace Fluence.Desktop.Markup;
 
-public sealed class Locale : INotifyPropertyChanged
+public static class Locale
 {
-    public static readonly Locale Current = new();
+    public static CoreLocale Current => CoreLocale.Current;
 
-    private ILocalizationService? _service;
-
-    private Locale() { }
-
-    public static void Initialize(ILocalizationService service)
-    {
-        Current._service = service;
-        service.LanguageChanged += Current.OnLanguageChanged;
-    }
-
-    public string this[string key] => _service?.Get(key) ?? key;
-
-    private void OnLanguageChanged()
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
-
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public static void Initialize(ILocalizationService service) =>
+        CoreLocale.Initialize(service);
 }

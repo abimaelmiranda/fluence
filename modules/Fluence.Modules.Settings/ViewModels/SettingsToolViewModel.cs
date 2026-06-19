@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.Keybindings;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Theming;
 using Fluence.Core.Models.Keybindings;
@@ -27,6 +28,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
     private readonly IKeybindingService _keybindings;
     private readonly IThemeLoader _themeLoader;
     private readonly IWorkspaceDialogService _dialogs;
+    private readonly ILocalizationService _loc;
 
     public SettingsToolViewModel(
         ISettingsRegistry settingsRegistry,
@@ -34,7 +36,8 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         ICommandRegistry commands,
         IKeybindingService keybindings,
         IThemeLoader themeLoader,
-        IWorkspaceDialogService dialogs)
+        IWorkspaceDialogService dialogs,
+        ILocalizationService loc)
     {
         _settingsRegistry = settingsRegistry;
         _settings = settings;
@@ -42,10 +45,20 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         _keybindings = keybindings;
         _themeLoader = themeLoader;
         _dialogs = dialogs;
+        _loc = loc;
+        _status = _loc.Get("Settings.Status.Ready");
+        _loc.LanguageChanged += OnLanguageChanged;
         Reload();
         _keybindings.Watch().Subscribe(new ActionObserver<IReadOnlyList<KeybindingDefinition>>(
             _ => Dispatcher.UIThread.Post(ReloadKeybindings)));
         _commands.Changed += (_, _) => Dispatcher.UIThread.Post(ReloadKeybindings);
+    }
+
+    private void OnLanguageChanged()
+    {
+        OnPropertyChanged(nameof(SettingsContextTitle));
+        foreach (var row in Keybindings)
+            row.NotifyLanguageChanged();
     }
 
     [ObservableProperty]
@@ -58,7 +71,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
     }
 
     [ObservableProperty]
-    private string _status = "Ready";
+    private string _status = string.Empty;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -68,8 +81,8 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     public string SettingsContextTitle =>
         string.IsNullOrWhiteSpace(SearchQuery)
-            ? SelectedSection?.DisplayName ?? "Settings"
-            : "Search results";
+            ? SelectedSection?.DisplayName ?? _loc.Get("Settings.Tab.Settings")
+            : _loc.Get("Settings.Status.SearchResults");
 
     public ObservableCollection<SettingsSectionViewModel> Sections { get; } = [];
 
@@ -144,7 +157,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
     {
         _keybindings.ResetKeybinding(commandId);
         ReloadKeybindings();
-        Status = "Keybinding reset";
+        Status = _loc.Get("Settings.Status.KeybindingReset");
     }
 
     [RelayCommand]
@@ -153,13 +166,13 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         var emptySetting = GetEmptyStringSetting();
         if (emptySetting is not null)
         {
-            Status = $"{emptySetting} cannot be empty";
+            Status = string.Format(_loc.Get("Settings.Status.CannotBeEmpty"), emptySetting);
             return;
         }
 
         SaveSettings();
         SaveKeybindings();
-        Status = "Saved";
+        Status = _loc.Get("Settings.Status.Saved");
     }
 
     [RelayCommand]
@@ -174,11 +187,11 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
             var installed = _themeLoader.InstallTheme(path);
             ReloadThemeOptions();
             SelectTheme(installed.Reference);
-            Status = $"Installed {installed.DisplayName}";
+            Status = string.Format(_loc.Get("Settings.Status.ThemeInstalled"), installed.DisplayName);
         }
         catch
         {
-            Status = "Theme install failed";
+            Status = _loc.Get("Settings.Status.ThemeInstallFailed");
         }
     }
 
@@ -188,7 +201,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         _settings.ResetAll();
         _keybindings.ResetAll();
         Reload();
-        Status = "Defaults restored";
+        Status = _loc.Get("Settings.Status.DefaultsRestored");
     }
 
     private void Reload()
@@ -246,7 +259,8 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
                 binding.Scope,
                 binding.Key,
                 hasConflict,
-                this));
+                this,
+                _loc));
         }
 
         RefreshKeybindingsFilter();
