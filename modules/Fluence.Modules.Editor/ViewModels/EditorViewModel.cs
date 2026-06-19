@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.Keybindings;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Theming;
@@ -58,6 +59,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private readonly ICodeActionService? _codeActionService;
     private readonly IFormattingService? _formattingService;
     private readonly IThemeLoader? _themeLoader;
+    private readonly ILocalizationService _loc;
     private readonly DispatcherTimer _autoSaveTimer;
     private readonly DispatcherTimer _formatFeedbackTimer;
     private bool _isRefreshingFromWorkspace;
@@ -92,6 +94,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         EditorViewStateStore viewStateStore,
         IKeybindingService keybindings,
         ICommandRegistry commands,
+        ILocalizationService localization,
         ICompletionService? completionService = null,
         IHoverService? hoverService = null,
         ISignatureHelpService? signatureHelpService = null,
@@ -117,6 +120,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _codeActionService = codeActionService;
         _formattingService = formattingService;
         _themeLoader = themeLoader;
+        _loc = localization;
         _autoSaveTimer = new DispatcherTimer { Interval = AutoSaveDelay };
         _autoSaveTimer.Tick += OnAutoSaveTimerTick;
         _formatFeedbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1_200) };
@@ -133,6 +137,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public ISignatureHelpService? SignatureHelpService => _signatureHelpService;
     public ICodeActionService? CodeActionService => _codeActionService;
     public IThemeLoader? ThemeLoader => _themeLoader;
+    public ILocalizationService Localization => _loc;
     public IShellEventBus EventBus => _events;
     public ITaskScheduler TaskScheduler => _scheduler;
     public ISettingsService Settings => _settings;
@@ -187,27 +192,27 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     {
         _commands.Register(new IdeCommandDefinition(
             CommandIds.EditorTriggerCompletion,
-            "Trigger Completion",
+            _loc.Get("Editor.Command.TriggerCompletion"),
             KeybindingScope.Editor,
             "Ctrl+Space"));
         _commands.Register(new IdeCommandDefinition(
             CommandIds.EditorQuickFix,
-            "Quick Fix",
+            _loc.Get("Editor.Command.QuickFix"),
             KeybindingScope.Editor,
             OperatingSystem.IsMacOS() ? "Meta+." : "Ctrl+."));
         _commands.Register(new IdeCommandDefinition(
             CommandIds.EditorGoToDefinition,
-            "Go to Definition",
+            _loc.Get("Editor.Command.GoToDefinition"),
             KeybindingScope.Editor,
             "F12"));
         _commands.Register(new IdeCommandDefinition(
             CommandIds.EditorGoToImplementation,
-            "Go to Implementation",
+            _loc.Get("Editor.Command.GoToImplementation"),
             KeybindingScope.Editor,
             "Ctrl+F12"));
         _commands.Register(new IdeCommandDefinition(
             CommandIds.EditorGoToTypeDefinition,
-            "Go to Type Definition",
+            _loc.Get("Editor.Command.GoToTypeDefinition"),
             KeybindingScope.Editor,
             "Ctrl+Shift+F12"));
     }
@@ -582,10 +587,10 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         }
 
         _events.Publish(new LspInteractiveRequestStartedEvent(activeDocument.Path));
-        ShowFormatFeedback("Formatting...", autoHide: false);
+        ShowFormatFeedback(_loc.Get("Editor.Format.Feedback.Formatting"), autoHide: false);
         if (_formattingService is null)
         {
-            ShowFormatFeedback("Format unavailable", autoHide: true);
+            ShowFormatFeedback(_loc.Get("Editor.Format.Feedback.Unavailable"), autoHide: true);
             return null;
         }
 
@@ -615,26 +620,26 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
         if (!string.Equals(ActiveText, request.Content, StringComparison.Ordinal))
         {
-            ShowFormatFeedback("Format skipped", autoHide: true);
+            ShowFormatFeedback(_loc.Get("Editor.Format.Feedback.Skipped"), autoHide: true);
             return;
         }
 
         if (edits.Count == 0)
         {
-            ShowFormatFeedback("Already formatted", autoHide: true);
+            ShowFormatFeedback(_loc.Get("Editor.Format.Feedback.AlreadyFormatted"), autoHide: true);
             return;
         }
 
         var formatted = ApplyTextEdits(ActiveText, edits);
         if (string.Equals(formatted, ActiveText, StringComparison.Ordinal))
         {
-            ShowFormatFeedback("Already formatted", autoHide: true);
+            ShowFormatFeedback(_loc.Get("Editor.Format.Feedback.AlreadyFormatted"), autoHide: true);
             return;
         }
 
         ActiveText = formatted;
         PublishLiveDocumentChanged(formatted, flushImmediately: true);
-        ShowFormatFeedback("Formatted", autoHide: true);
+        ShowFormatFeedback(_loc.Get("Editor.Format.Feedback.Formatted"), autoHide: true);
     }
 
     private static string ApplyTextEdits(string text, IReadOnlyList<LspTextEdit> edits)

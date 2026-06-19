@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Debug.Title" xml:space="preserve"><value>Depurar</value></data>
+  <data name="Debug.Session.NoSession" xml:space="preserve"><value>Nenhuma sessão de depuração</value></data>
+  <data name="Debug.Session.Active" xml:space="preserve"><value>Sessão de depuração ativa</value></data>
+  <data name="Debug.Session.Stopped" xml:space="preserve"><value>Parado: {0}</value></data>
+  <data name="Debug.Session.Breakpoint" xml:space="preserve"><value>ponto de interrupção</value></data>
+  <data name="Debug.Status.Inactive" xml:space="preserve"><value>Inativo</value></data>
+  <data name="Debug.Status.Starting" xml:space="preserve"><value>Iniciando</value></data>
+  <data name="Debug.Status.Running" xml:space="preserve"><value>Em execução</value></data>
+  <data name="Debug.Status.Stopped" xml:space="preserve"><value>Parado</value></data>
+  <data name="Debug.Status.Terminated" xml:space="preserve"><value>Encerrado</value></data>
+  <data name="Debug.ToolTip.Continue" xml:space="preserve"><value>Continuar</value></data>
+  <data name="Debug.ToolTip.StepOver" xml:space="preserve"><value>Avançar por cima</value></data>
+  <data name="Debug.ToolTip.StepInto" xml:space="preserve"><value>Entrar</value></data>
+  <data name="Debug.ToolTip.StepOut" xml:space="preserve"><value>Sair</value></data>
+  <data name="Debug.ToolTip.Stop" xml:space="preserve"><value>Parar depuração</value></data>
+  <data name="Debug.ToolTip.Reload" xml:space="preserve"><value>Recarregar sessão</value></data>
+  <data name="Debug.Label.Variables" xml:space="preserve"><value>Variáveis</value></data>
+  <data name="Debug.Label.CallStack" xml:space="preserve"><value>Pilha de chamadas</value></data>
+  <data name="Debug.Label.Breakpoints" xml:space="preserve"><value>Pontos de interrupção</value></data>
+  <data name="Debug.Variable.Loading" xml:space="preserve"><value>Carregando...</value></data>
+  <data name="Debug.Breakpoint.Verified" xml:space="preserve"><value>Verificado</value></data>
+  <data name="Debug.Breakpoint.Pending" xml:space="preserve"><value>Pendente</value></data>
+  <data name="Debug.Notification.SessionAlreadyRunning" xml:space="preserve"><value>Uma sessão de depuração já está em execução.</value></data>
+  <data name="Debug.Notification.NoDebuggableProject" xml:space="preserve"><value>Nenhum projeto depurável foi encontrado para o documento ativo.</value></data>
+  <data name="Debug.Notification.NoActiveSessionToReload" xml:space="preserve"><value>Nenhuma sessão de depuração ativa para recarregar.</value></data>
+  <data name="Debug.Notification.NoWorkspaceRoot" xml:space="preserve"><value>Nenhuma raiz de workspace foi encontrada para a sessão de depuração.</value></data>
+  <data name="Debug.Notification.DebugBuildFailed" xml:space="preserve"><value>A compilação de depuração falhou. Corrija os erros de compilação antes de iniciar uma sessão.</value></data>
+  <data name="Debug.Notification.DebugDllMissing" xml:space="preserve"><value>O DLL de saída da compilação de depuração não foi encontrado.</value></data>
+  <data name="Debug.Notification.JobBlocked" xml:space="preserve"><value>Não é possível iniciar {0} enquanto um(a) {1} estiver em execução.</value></data>
+  <data name="Debug.Job.DebugSession" xml:space="preserve"><value>sessão de depuração</value></data>
+  <data name="Debug.Job.RunProcess" xml:space="preserve"><value>processo de execução</value></data>
+  <data name="Debug.Job.Generic" xml:space="preserve"><value>tarefa</value></data>
+  <data name="Debug.Log.ErrorRefreshingInspection" xml:space="preserve"><value>[debug] Erro ao atualizar a inspeção: {0}</value></data>
+  <data name="Debug.Log.MacTerminatedHint" xml:space="preserve"><value> No macOS isso costuma ser um problema de PATH/dotnet (o .app herda um PATH mínimo) ou de entitlement do depurador (com.apple.security.cs.debugger). Verifique o log DAP para saída de stderr.</value></data>
+  <data name="Debug.Log.TerminatedHint" xml:space="preserve"><value> Verifique o log DAP para detalhes.</value></data>
+  <data name="Debug.Log.NetcoredbgTerminated" xml:space="preserve"><value>[debug] netcoredbg foi encerrado antes de iniciar o debuggee.{0}</value></data>
+  <data name="Debug.Exception.Title" xml:space="preserve"><value>Exceção</value></data>
+  <data name="Debug.Exception.Message" xml:space="preserve"><value>Ocorreu uma exceção.</value></data>
+  <data name="Debug.Log.Exception" xml:space="preserve"><value>[debug] Exceção: {0} - {1}</value></data>
+</root>

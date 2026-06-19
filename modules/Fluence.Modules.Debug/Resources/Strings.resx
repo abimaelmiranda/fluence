@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Debug.Title" xml:space="preserve"><value>Debug</value></data>
+  <data name="Debug.Session.NoSession" xml:space="preserve"><value>No debug session</value></data>
+  <data name="Debug.Session.Active" xml:space="preserve"><value>Debug session active</value></data>
+  <data name="Debug.Session.Stopped" xml:space="preserve"><value>Stopped: {0}</value></data>
+  <data name="Debug.Session.Breakpoint" xml:space="preserve"><value>breakpoint</value></data>
+  <data name="Debug.Status.Inactive" xml:space="preserve"><value>Inactive</value></data>
+  <data name="Debug.Status.Starting" xml:space="preserve"><value>Starting</value></data>
+  <data name="Debug.Status.Running" xml:space="preserve"><value>Running</value></data>
+  <data name="Debug.Status.Stopped" xml:space="preserve"><value>Stopped</value></data>
+  <data name="Debug.Status.Terminated" xml:space="preserve"><value>Terminated</value></data>
+  <data name="Debug.ToolTip.Continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="Debug.ToolTip.StepOver" xml:space="preserve"><value>Step over</value></data>
+  <data name="Debug.ToolTip.StepInto" xml:space="preserve"><value>Step into</value></data>
+  <data name="Debug.ToolTip.StepOut" xml:space="preserve"><value>Step out</value></data>
+  <data name="Debug.ToolTip.Stop" xml:space="preserve"><value>Stop debug</value></data>
+  <data name="Debug.ToolTip.Reload" xml:space="preserve"><value>Reload session</value></data>
+  <data name="Debug.Label.Variables" xml:space="preserve"><value>Variables</value></data>
+  <data name="Debug.Label.CallStack" xml:space="preserve"><value>Call Stack</value></data>
+  <data name="Debug.Label.Breakpoints" xml:space="preserve"><value>Breakpoints</value></data>
+  <data name="Debug.Variable.Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="Debug.Breakpoint.Verified" xml:space="preserve"><value>Verified</value></data>
+  <data name="Debug.Breakpoint.Pending" xml:space="preserve"><value>Pending</value></data>
+  <data name="Debug.Notification.SessionAlreadyRunning" xml:space="preserve"><value>A debug session is already running.</value></data>
+  <data name="Debug.Notification.NoDebuggableProject" xml:space="preserve"><value>No debuggable project was found for the active document.</value></data>
+  <data name="Debug.Notification.NoActiveSessionToReload" xml:space="preserve"><value>No active debug session to reload.</value></data>
+  <data name="Debug.Notification.NoWorkspaceRoot" xml:space="preserve"><value>No workspace root was found for the debug session.</value></data>
+  <data name="Debug.Notification.DebugBuildFailed" xml:space="preserve"><value>The debug build failed. Fix the build errors before starting a debug session.</value></data>
+  <data name="Debug.Notification.DebugDllMissing" xml:space="preserve"><value>The debug build output DLL was not found.</value></data>
+  <data name="Debug.Notification.JobBlocked" xml:space="preserve"><value>Cannot start {0} while a {1} is running.</value></data>
+  <data name="Debug.Job.DebugSession" xml:space="preserve"><value>debug session</value></data>
+  <data name="Debug.Job.RunProcess" xml:space="preserve"><value>run process</value></data>
+  <data name="Debug.Job.Generic" xml:space="preserve"><value>job</value></data>
+  <data name="Debug.Log.ErrorRefreshingInspection" xml:space="preserve"><value>[debug] Error refreshing inspection: {0}</value></data>
+  <data name="Debug.Log.MacTerminatedHint" xml:space="preserve"><value> On macOS this is often a PATH/dotnet issue (the .app inherits a minimal PATH) or a debugger entitlement issue (com.apple.security.cs.debugger). Check the DAP log for stderr output.</value></data>
+  <data name="Debug.Log.TerminatedHint" xml:space="preserve"><value> Check the DAP log for details.</value></data>
+  <data name="Debug.Log.NetcoredbgTerminated" xml:space="preserve"><value>[debug] netcoredbg terminated before starting the debuggee.{0}</value></data>
+  <data name="Debug.Exception.Title" xml:space="preserve"><value>Exception</value></data>
+  <data name="Debug.Exception.Message" xml:space="preserve"><value>An exception occurred.</value></data>
+  <data name="Debug.Log.Exception" xml:space="preserve"><value>[debug] Exception: {0} - {1}</value></data>
+</root>

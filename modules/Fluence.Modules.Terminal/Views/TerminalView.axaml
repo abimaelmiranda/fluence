@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              xmlns:vm="using:Fluence.Modules.Terminal.ViewModels"
              xmlns:terminal="using:Fluence.Modules.Terminal.Terminal"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -47,7 +48,7 @@
                         Classes="ideIcon"
                         Command="{Binding CreateTerminalCommand}"
                         Height="36"
-                        ToolTip.Tip="New terminal">
+                        ToolTip.Tip="{Binding [Terminal.Action.NewSession], Source={x:Static loc:Locale.Current}}">
                     <materialIcons:MaterialIcon Width="20"
                                                 Height="20"
                                                 Kind="Plus"
@@ -58,7 +59,7 @@
                         Classes="ideIcon"
                         Command="{Binding CloseTerminalCommand}"
                         Height="36"
-                        ToolTip.Tip="Close terminal">
+                        ToolTip.Tip="{Binding [Terminal.Action.CloseSession], Source={x:Static loc:Locale.Current}}">
                     <materialIcons:MaterialIcon Width="20"
                                                 Height="20"
                                                 Kind="Close"
@@ -73,7 +74,7 @@
                                       HorizontalAlignment="Stretch"
                                       VerticalAlignment="Stretch"/>
 
-            <TextBlock Text="No terminal sessions"
+            <TextBlock Text="{Binding [Terminal.Status.NoSessions], Source={x:Static loc:Locale.Current}}"
                        IsVisible="{Binding IsEmpty}"
                        Classes="ideLabel"
                        HorizontalAlignment="Center"

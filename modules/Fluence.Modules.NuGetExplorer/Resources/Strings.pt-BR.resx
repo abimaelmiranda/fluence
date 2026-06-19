@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="NuGetExplorer.Title" xml:space="preserve"><value>Gerenciador de Pacotes NuGet</value></data>
+  <data name="NuGetExplorer.Option.IncludePrerelease" xml:space="preserve"><value>Incluir pré-versão</value></data>
+  <data name="NuGetExplorer.Action.Refresh" xml:space="preserve"><value>Atualizar</value></data>
+  <data name="NuGetExplorer.Tab.Browse" xml:space="preserve"><value>Explorar</value></data>
+  <data name="NuGetExplorer.Search.Placeholder" xml:space="preserve"><value>Buscar em nuget.org</value></data>
+  <data name="NuGetExplorer.Action.Search" xml:space="preserve"><value>Buscar</value></data>
+  <data name="NuGetExplorer.Label.SelectVersion" xml:space="preserve"><value>Selecionar versão</value></data>
+  <data name="NuGetExplorer.Action.InstallSelected" xml:space="preserve"><value>Instalar pacote selecionado</value></data>
+  <data name="NuGetExplorer.Tab.Installed" xml:space="preserve"><value>Instalados</value></data>
+  <data name="NuGetExplorer.Column.Package" xml:space="preserve"><value>Pacote</value></data>
+  <data name="NuGetExplorer.Column.Version" xml:space="preserve"><value>Versão</value></data>
+  <data name="NuGetExplorer.Column.Project" xml:space="preserve"><value>Projeto</value></data>
+  <data name="NuGetExplorer.Action.RemoveSelected" xml:space="preserve"><value>Remover pacote selecionado</value></data>
+  <data name="NuGetExplorer.Tab.Updates" xml:space="preserve"><value>Atualizações</value></data>
+  <data name="NuGetExplorer.Column.Latest" xml:space="preserve"><value>Mais recente</value></data>
+  <data name="NuGetExplorer.Column.AffectedProjects" xml:space="preserve"><value>Projetos afetados</value></data>
+  <data name="NuGetExplorer.Action.UpdateSelected" xml:space="preserve"><value>Atualizar pacote selecionado</value></data>
+  <data name="NuGetExplorer.Label.SelectPackage" xml:space="preserve"><value>Selecionar um pacote</value></data>
+  <data name="NuGetExplorer.Warning.SelectAtLeastOneProject" xml:space="preserve"><value>Selecione pelo menos um projeto.</value></data>
+  <data name="NuGetExplorer.Warning.CpmEditingDisabled" xml:space="preserve"><value>Central Package Management detectado. A edição de Directory.Packages.props ainda não é suportada.</value></data>
+  <data name="NuGetExplorer.Status.FoundPackages" xml:space="preserve"><value>Encontrados {0} pacote(s).</value></data>
+  <data name="NuGetExplorer.Status.CpmDetected" xml:space="preserve"><value>Central Package Management detectado. A edição está desativada para este marco.</value></data>
+  <data name="NuGetExplorer.Status.Loaded" xml:space="preserve"><value>Dados de pacotes NuGet carregados.</value></data>
+  <data name="NuGetExplorer.Status.Installed" xml:space="preserve"><value>{0} {1} instalado.</value></data>
+  <data name="NuGetExplorer.Status.Removed" xml:space="preserve"><value>{0} removido.</value></data>
+  <data name="NuGetExplorer.Status.Updated" xml:space="preserve"><value>{0} atualizado para {1}.</value></data>
+  <data name="NuGetExplorer.Status.UnableToReachFeed" xml:space="preserve"><value>Não foi possível acessar nuget.org.</value></data>
+</root>

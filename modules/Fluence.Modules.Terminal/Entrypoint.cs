@@ -1,7 +1,9 @@
 using System;
+using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -46,6 +48,8 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
     public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        host.Services.GetRequiredService<ILocalizationService>()
+            .Register(new ResourceManager("Fluence.Modules.Terminal.Resources.Strings", typeof(Entrypoint).Assembly));
         _terminalService = host.Services.GetRequiredService<ITerminalService>();
         host.SetModuleState(Id, ModuleState.Active);
         return Task.CompletedTask;

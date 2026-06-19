@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              xmlns:vm="using:Fluence.Modules.DotnetCli.ViewModels"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Fluence.Modules.DotnetCli.Views.PublishWizardView"
@@ -22,7 +23,7 @@
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="18" RowSpacing="12">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <TextBlock Text="Publish"
+            <TextBlock Text="{Binding [DotnetCli.Title.Publish], Source={x:Static loc:Locale.Current}}"
                        FontFamily="{StaticResource FluenceFontFamily}"
                        FontSize="{StaticResource FluenceFontSizeTitle}"
                        FontWeight="SemiBold"
@@ -31,7 +32,7 @@
             <Button Grid.Column="1"
                     Classes="ideIcon"
                     Command="{Binding OpenSdkSetupCommand}"
-                    ToolTip.Tip=".NET SDK">
+                    ToolTip.Tip="{Binding [DotnetCli.ToolTip.Sdk], Source={x:Static loc:Locale.Current}}">
                 <materialIcons:MaterialIcon Width="20"
                                             Height="20"
                                             Kind="Download"
@@ -41,7 +42,7 @@
 
         <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="12">
             <Grid Grid.Row="0" ColumnDefinitions="180,*" ColumnSpacing="12">
-                <TextBlock Text="Project"
+                <TextBlock Text="{Binding [DotnetCli.Label.Project], Source={x:Static loc:Locale.Current}}"
                            Foreground="{StaticResource FluenceBrushTextSecondary}"
                            VerticalAlignment="Center"/>
                 <ComboBox Grid.Column="1"
@@ -53,7 +54,7 @@
             </Grid>
 
             <Grid Grid.Row="1" ColumnDefinitions="180,180,220,220,*" ColumnSpacing="12">
-                <TextBlock Text="Configuration"
+                <TextBlock Text="{Binding [DotnetCli.Label.Configuration], Source={x:Static loc:Locale.Current}}"
                            Foreground="{StaticResource FluenceBrushTextSecondary}"
                            VerticalAlignment="Center"/>
                 <ComboBox Grid.Column="1"
@@ -74,7 +75,7 @@
             </Grid>
 
             <Grid Grid.Row="2" ColumnDefinitions="180,*,Auto" ColumnSpacing="12">
-                <TextBlock Text="Output"
+                <TextBlock Text="{Binding [DotnetCli.Label.Output], Source={x:Static loc:Locale.Current}}"
                            Foreground="{StaticResource FluenceBrushTextSecondary}"
                            VerticalAlignment="Center"/>
                 <TextBox Grid.Column="1"
@@ -83,7 +84,7 @@
                 <Button Grid.Column="2"
                         Classes="ideIcon"
                         Command="{Binding BrowseOutputCommand}"
-                        ToolTip.Tip="Choose output folder">
+                        ToolTip.Tip="{Binding [DotnetCli.ToolTip.ChooseOutputFolder], Source={x:Static loc:Locale.Current}}">
                     <materialIcons:MaterialIcon Width="20"
                                                 Height="20"
                                                 Kind="FolderOpen"
@@ -92,35 +93,35 @@
             </Grid>
 
             <Grid Grid.Row="3" ColumnDefinitions="180,*" ColumnSpacing="12">
-                <TextBlock Text="Options"
+                <TextBlock Text="{Binding [DotnetCli.Label.Options], Source={x:Static loc:Locale.Current}}"
                            Foreground="{StaticResource FluenceBrushTextSecondary}"
                            VerticalAlignment="Top"
                            Margin="0,4,0,0"/>
                 <WrapPanel Grid.Column="1">
-                    <CheckBox Content="Self-contained"
+                    <CheckBox Content="{Binding [DotnetCli.Option.SelfContained], Source={x:Static loc:Locale.Current}}"
                               IsChecked="{Binding SelfContained}"
                               Foreground="{StaticResource FluenceBrushTextSecondary}"
                               Margin="0,0,18,0"/>
-                    <CheckBox Content="Single file"
+                    <CheckBox Content="{Binding [DotnetCli.Option.SingleFile], Source={x:Static loc:Locale.Current}}"
                               IsChecked="{Binding SingleFile}"
                               Foreground="{StaticResource FluenceBrushTextSecondary}"
                               Margin="0,0,18,0"/>
-                    <CheckBox Content="ReadyToRun"
+                    <CheckBox Content="{Binding [DotnetCli.Option.ReadyToRun], Source={x:Static loc:Locale.Current}}"
                               IsChecked="{Binding ReadyToRun}"
                               Foreground="{StaticResource FluenceBrushTextSecondary}"
                               Margin="0,0,18,0"/>
-                    <CheckBox Content="Trimmed"
+                    <CheckBox Content="{Binding [DotnetCli.Option.Trimmed], Source={x:Static loc:Locale.Current}}"
                               IsChecked="{Binding Trimmed}"
                               Foreground="{StaticResource FluenceBrushTextSecondary}"/>
                 </WrapPanel>
             </Grid>
 
             <Grid Grid.Row="4" ColumnDefinitions="180,*" ColumnSpacing="12">
-                <TextBlock Text="Profile"
+                <TextBlock Text="{Binding [DotnetCli.Label.Profile], Source={x:Static loc:Locale.Current}}"
                            Foreground="{StaticResource FluenceBrushTextSecondary}"
                            VerticalAlignment="Center"/>
                 <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                    <CheckBox Content="Save"
+                    <CheckBox Content="{Binding [DotnetCli.Option.Save], Source={x:Static loc:Locale.Current}}"
                               IsChecked="{Binding SaveProfile}"
                               Foreground="{StaticResource FluenceBrushTextSecondary}"
                               VerticalAlignment="Center"/>
@@ -155,7 +156,7 @@
                                                 Height="18"
                                                 Kind="PackageVariantClosed"
                                                 Foreground="{StaticResource FluenceBrushAccent}"/>
-                    <TextBlock Text="Publish"/>
+                    <TextBlock Text="{Binding [DotnetCli.Action.Publish], Source={x:Static loc:Locale.Current}}"/>
                 </StackPanel>
             </Button>
         </Grid>

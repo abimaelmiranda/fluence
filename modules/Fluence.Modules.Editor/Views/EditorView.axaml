@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:avaloniaEdit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              xmlns:vm="using:Fluence.Modules.Editor.ViewModels"
              x:Class="Fluence.Modules.Editor.Views.EditorView"
              x:DataType="vm:EditorViewModel"
@@ -18,20 +19,20 @@
             <avaloniaEdit:TextEditor.ContextMenu>
                 <ContextMenu x:Name="EditorContextMenu" Opening="OnContextMenuOpening">
                     <MenuItem x:Name="MenuItemIntelliSense"
-                              Header="IntelliSense"
+                              Header="{Binding [Editor.Menu.IntelliSense], Source={x:Static loc:Locale.Current}}"
                               InputGesture="Ctrl+Space"
                               Click="OnMenuIntelliSense" />
                     <Separator />
                     <MenuItem x:Name="MenuItemGoToDefinition"
-                              Header="Go to Definition"
+                              Header="{Binding [Editor.Menu.GoToDefinition], Source={x:Static loc:Locale.Current}}"
                               InputGesture="F12"
                               Click="OnMenuGoToDefinition" />
                     <MenuItem x:Name="MenuItemGoToImplementation"
-                              Header="Go to Implementation"
+                              Header="{Binding [Editor.Menu.GoToImplementation], Source={x:Static loc:Locale.Current}}"
                               InputGesture="Ctrl+F12"
                               Click="OnMenuGoToImplementation" />
                     <MenuItem x:Name="MenuItemGoToTypeDefinition"
-                              Header="Go to Type Definition"
+                              Header="{Binding [Editor.Menu.GoToTypeDefinition], Source={x:Static loc:Locale.Current}}"
                               InputGesture="Ctrl+Shift+F12"
                               Click="OnMenuGoToTypeDefinition" />
                 </ContextMenu>
@@ -173,7 +174,7 @@
                                Height="1"
                                Margin="0"/>
                     <TextBlock x:Name="CodeActionEmptyText"
-                               Text="No quick fixes available"
+                               Text="{Binding [Editor.CodeAction.NoQuickFixes], Source={x:Static loc:Locale.Current}}"
                                IsVisible="False"
                                Foreground="{StaticResource FluenceBrushTextSecondary}"
                                FontFamily="Menlo,Consolas,Cascadia Mono,monospace"

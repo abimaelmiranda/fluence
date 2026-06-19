@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
@@ -13,18 +14,23 @@ namespace Fluence.Modules.Debug.ViewModels;
 public partial class DebugVariableNode : ObservableObject
 {
     private readonly Func<int, CancellationToken, Task<IReadOnlyList<DebugVariable>>> _loadChildren;
+    private readonly ILocalizationService _loc;
     private bool _loaded;
 
-    public DebugVariableNode(DebugVariable variable, Func<int, CancellationToken, Task<IReadOnlyList<DebugVariable>>> loadChildren)
+    public DebugVariableNode(
+        DebugVariable variable,
+        Func<int, CancellationToken, Task<IReadOnlyList<DebugVariable>>> loadChildren,
+        ILocalizationService loc)
     {
         _loadChildren = loadChildren;
+        _loc = loc;
         Name = variable.Name;
         Value = variable.Value;
         Type = string.IsNullOrWhiteSpace(variable.Type) ? null : variable.Type;
         VariablesReference = variable.VariablesReference;
 
         if (VariablesReference > 0)
-            Children.Add(new LoadingPlaceholderNode(loadChildren));
+            Children.Add(new LoadingPlaceholderNode(loadChildren, loc));
     }
 
     public string Name { get; }
@@ -56,13 +62,15 @@ public partial class DebugVariableNode : ObservableObject
         {
             Children.Clear();
             foreach (var v in vars)
-                Children.Add(new DebugVariableNode(v, _loadChildren));
+                Children.Add(new DebugVariableNode(v, _loadChildren, _loc));
         });
     }
 
     // Sentinel node shown while loading children
-    private sealed class LoadingPlaceholderNode(Func<int, CancellationToken, Task<IReadOnlyList<DebugVariable>>> loadChildren)
-        : DebugVariableNode(new DebugVariable("Loading...", string.Empty, string.Empty), loadChildren)
+    private sealed class LoadingPlaceholderNode(
+        Func<int, CancellationToken, Task<IReadOnlyList<DebugVariable>>> loadChildren,
+        ILocalizationService loc)
+        : DebugVariableNode(new DebugVariable(loc.Get("Debug.Variable.Loading"), string.Empty, string.Empty), loadChildren, loc)
     {
     }
 }

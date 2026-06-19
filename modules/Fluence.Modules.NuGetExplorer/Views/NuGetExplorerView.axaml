@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              xmlns:vm="using:Fluence.Modules.NuGetExplorer.ViewModels"
              xmlns:models="using:Fluence.Modules.NuGetExplorer.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -10,14 +11,14 @@
     <Grid RowDefinitions="Auto,*" Margin="10" RowSpacing="8">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
             <TextBlock Grid.Column="0"
-                       Text="NuGet Package Manager"
+                       Text="{Binding [NuGetExplorer.Title], Source={x:Static loc:Locale.Current}}"
                        FontFamily="{StaticResource FluenceFontFamily}"
                        FontSize="{StaticResource FluenceFontSizeBody}"
                        FontWeight="SemiBold"
                        Foreground="{StaticResource FluenceBrushTextPrimary}"
                        VerticalAlignment="Center"/>
             <CheckBox Grid.Column="1"
-                      Content="Include prerelease"
+                      Content="{Binding [NuGetExplorer.Option.IncludePrerelease], Source={x:Static loc:Locale.Current}}"
                       IsChecked="{Binding IncludePrerelease}"
                       FontFamily="{StaticResource FluenceFontFamily}"
                       Foreground="{StaticResource FluenceBrushTextSecondary}"
@@ -25,7 +26,7 @@
             <Button Grid.Column="2"
                     Classes="ideIcon"
                     Command="{Binding RefreshCommand}"
-                    ToolTip.Tip="Refresh">
+                    ToolTip.Tip="{Binding [NuGetExplorer.Action.Refresh], Source={x:Static loc:Locale.Current}}">
                 <materialIcons:MaterialIcon Width="20"
                                             Height="20"
                                             Kind="Refresh"
@@ -34,18 +35,18 @@
         </Grid>
 
         <TabControl Grid.Row="1">
-            <TabItem Header="Browse">
+            <TabItem Header="{Binding [NuGetExplorer.Tab.Browse], Source={x:Static loc:Locale.Current}}">
                 <Grid RowDefinitions="Auto,*" RowSpacing="8" Margin="0,8,0,0">
                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <TextBox x:Name="SearchTextBox"
                                  Classes="ideCompact"
                                  Grid.Column="0"
-                                 PlaceholderText="Search nuget.org"
+                                 PlaceholderText="{Binding [NuGetExplorer.Search.Placeholder], Source={x:Static loc:Locale.Current}}"
                                  Text="{Binding SearchQuery}"/>
                         <Button Grid.Column="1"
                                 Classes="ideIcon ideAccent"
                                 Command="{Binding SearchCommand}"
-                                ToolTip.Tip="Search">
+                                ToolTip.Tip="{Binding [NuGetExplorer.Action.Search], Source={x:Static loc:Locale.Current}}">
                             <materialIcons:MaterialIcon Width="20"
                                                         Height="20"
                                                         Kind="Magnify"
@@ -113,12 +114,12 @@
                                        Foreground="{StaticResource FluenceBrushTextPrimary}"/>
                             <ComboBox Grid.Row="1"
                                       Classes="ideCompact"
-                                      PlaceholderText="Select version"
+                                      PlaceholderText="{Binding [NuGetExplorer.Label.SelectVersion], Source={x:Static loc:Locale.Current}}"
                                       ItemsSource="{Binding AvailableVersions}"
                                       SelectedItem="{Binding SelectedVersion}"
                                       MaxDropDownHeight="260"
                                       MaxWidth="240"
-                                      HorizontalAlignment="Left"/>
+                                      HorizontalAlignment="Left" />
                             <Border Grid.Row="2"
                                     Classes="idePanel">
                                 <ScrollViewer>
@@ -139,7 +140,7 @@
                                     Command="{Binding InstallSelectedPackageCommand}"
                                     IsEnabled="{Binding CanModifyPackages}"
                                     HorizontalAlignment="Right"
-                                    ToolTip.Tip="Install selected package">
+                                    ToolTip.Tip="{Binding [NuGetExplorer.Action.InstallSelected], Source={x:Static loc:Locale.Current}}">
                                 <materialIcons:MaterialIcon Width="20"
                                                             Height="20"
                                                             Kind="Download"
@@ -150,7 +151,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Installed">
+            <TabItem Header="{Binding [NuGetExplorer.Tab.Installed], Source={x:Static loc:Locale.Current}}">
                 <Grid RowDefinitions="*,Auto" RowSpacing="8" Margin="0,8,0,0">
                     <Border Grid.Row="0"
                             Classes="idePanel">
@@ -158,9 +159,9 @@
                             <Grid Grid.Row="0"
                                   ColumnDefinitions="2*,*,*"
                                   Margin="6,4">
-                                <TextBlock Grid.Column="0" Text="Package" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
-                                <TextBlock Grid.Column="1" Text="Version" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
-                                <TextBlock Grid.Column="2" Text="Project" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="0" Text="{Binding [NuGetExplorer.Column.Package], Source={x:Static loc:Locale.Current}}" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding [NuGetExplorer.Column.Version], Source={x:Static loc:Locale.Current}}" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="2" Text="{Binding [NuGetExplorer.Column.Project], Source={x:Static loc:Locale.Current}}" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
                             </Grid>
                             <ListBox Grid.Row="1"
                                      ItemsSource="{Binding InstalledPackages}"
@@ -182,7 +183,7 @@
                             Command="{Binding RemoveSelectedPackageCommand}"
                             IsEnabled="{Binding CanModifyPackages}"
                             HorizontalAlignment="Right"
-                            ToolTip.Tip="Remove selected package">
+                            ToolTip.Tip="{Binding [NuGetExplorer.Action.RemoveSelected], Source={x:Static loc:Locale.Current}}">
                         <materialIcons:MaterialIcon Width="20"
                                                     Height="20"
                                                     Kind="Delete"
@@ -191,7 +192,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Updates">
+            <TabItem Header="{Binding [NuGetExplorer.Tab.Updates], Source={x:Static loc:Locale.Current}}">
                 <Grid RowDefinitions="*,Auto" RowSpacing="8" Margin="0,8,0,0">
                     <Border Grid.Row="0"
                             Classes="idePanel">
@@ -199,9 +200,9 @@
                             <Grid Grid.Row="0"
                                   ColumnDefinitions="2*,*,*"
                                   Margin="6,4">
-                                <TextBlock Grid.Column="0" Text="Package" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
-                                <TextBlock Grid.Column="1" Text="Latest" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
-                                <TextBlock Grid.Column="2" Text="Affected projects" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="0" Text="{Binding [NuGetExplorer.Column.Package], Source={x:Static loc:Locale.Current}}" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding [NuGetExplorer.Column.Latest], Source={x:Static loc:Locale.Current}}" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                <TextBlock Grid.Column="2" Text="{Binding [NuGetExplorer.Column.AffectedProjects], Source={x:Static loc:Locale.Current}}" Foreground="{StaticResource FluenceBrushTextSecondary}"/>
                             </Grid>
                             <ListBox Grid.Row="1"
                                      ItemsSource="{Binding UpdateCandidates}"
@@ -223,7 +224,7 @@
                             Command="{Binding UpdateSelectedPackageCommand}"
                             IsEnabled="{Binding CanModifyPackages}"
                             HorizontalAlignment="Right"
-                            ToolTip.Tip="Update selected package">
+                            ToolTip.Tip="{Binding [NuGetExplorer.Action.UpdateSelected], Source={x:Static loc:Locale.Current}}">
                         <materialIcons:MaterialIcon Width="20"
                                                     Height="20"
                                                     Kind="Update"

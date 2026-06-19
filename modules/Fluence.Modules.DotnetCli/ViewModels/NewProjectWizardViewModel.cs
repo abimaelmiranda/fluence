@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
@@ -32,6 +33,7 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
     private readonly IShellEventBus _events;
     private readonly IDotnetSdkProvisioningService _sdk;
     private readonly IUserNotificationService _notifications;
+    private readonly ILocalizationService _loc;
     private bool _isInitializing;
     private bool _syncSolutionNameWithProjectName = true;
 
@@ -41,7 +43,8 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         IProcessHost processHost,
         IShellEventBus events,
         IDotnetSdkProvisioningService sdk,
-        IUserNotificationService notifications)
+        IUserNotificationService notifications,
+        ILocalizationService loc)
     {
         _dialogs = dialogs;
         _output = output;
@@ -49,20 +52,21 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         _events = events;
         _sdk = sdk;
         _notifications = notifications;
+        _loc = loc;
         _isInitializing = true;
 
         Templates =
         [
-            new("Console App", "console", "Command-line application"),
-            new("Class Library", "classlib", "Reusable C# library"),
-            new("Worker Service", "worker", "Background service"),
-            new("ASP.NET Core Web API", "webapi", "HTTP API service"),
-            new("ASP.NET Core MVC", "mvc", "MVC web application"),
-            new("Razor Pages", "webapp", "Page-focused web app"),
-            new("Blazor Web App", "blazor", "Interactive web UI"),
-            new("xUnit Test Project", "xunit", "xUnit test project"),
-            new("NUnit Test Project", "nunit", "NUnit test project"),
-            new("MSTest Test Project", "mstest", "MSTest test project"),
+            new(_loc.Get("DotnetCli.Template.ConsoleApp"), "console", _loc.Get("DotnetCli.Template.ConsoleApp.Description")),
+            new(_loc.Get("DotnetCli.Template.ClassLibrary"), "classlib", _loc.Get("DotnetCli.Template.ClassLibrary.Description")),
+            new(_loc.Get("DotnetCli.Template.WorkerService"), "worker", _loc.Get("DotnetCli.Template.WorkerService.Description")),
+            new(_loc.Get("DotnetCli.Template.WebApi"), "webapi", _loc.Get("DotnetCli.Template.WebApi.Description")),
+            new(_loc.Get("DotnetCli.Template.Mvc"), "mvc", _loc.Get("DotnetCli.Template.Mvc.Description")),
+            new(_loc.Get("DotnetCli.Template.RazorPages"), "webapp", _loc.Get("DotnetCli.Template.RazorPages.Description")),
+            new(_loc.Get("DotnetCli.Template.BlazorWebApp"), "blazor", _loc.Get("DotnetCli.Template.BlazorWebApp.Description")),
+            new(_loc.Get("DotnetCli.Template.XUnit"), "xunit", _loc.Get("DotnetCli.Template.XUnit.Description")),
+            new(_loc.Get("DotnetCli.Template.NUnit"), "nunit", _loc.Get("DotnetCli.Template.NUnit.Description")),
+            new(_loc.Get("DotnetCli.Template.MSTest"), "mstest", _loc.Get("DotnetCli.Template.MSTest.Description")),
         ];
 
         Frameworks = ["net10.0", "net9.0", "net8.0"];
@@ -75,6 +79,7 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
             "source",
             "repos");
         _isInitializing = false;
+        Status = _loc.Get("DotnetCli.Status.ChooseTemplateAndLocation");
     }
 
     public ObservableCollection<DotnetTemplateOption> Templates { get; }
@@ -109,7 +114,7 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
     private bool _isRunning;
 
     [ObservableProperty]
-    private string _status = "Choose a template and location.";
+    private string _status = string.Empty;
 
     partial void OnProjectNameChanged(string value)
     {
@@ -158,7 +163,7 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         }
 
         IsRunning = true;
-        Status = "Creating project...";
+        Status = _loc.Get("DotnetCli.Status.CreatingProject");
 
         try
         {
@@ -188,14 +193,14 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
                     cancellationToken);
                 solutionPath = ResolveSolutionFile(solutionLocation, solutionName);
                 if (solutionPath is null)
-                    throw new FileNotFoundException($"The solution file was not created in '{solutionLocation}'.");
+                    throw new FileNotFoundException(string.Format(_loc.Get("DotnetCli.Error.SolutionFileNotCreated"), solutionLocation));
                 await RunDotnetAsync(
                     ["sln", solutionPath, "add", FindProjectFile(projectRoot) ?? projectRoot],
                     solutionLocation,
                     cancellationToken);
             }
 
-            Status = "Project created.";
+            Status = _loc.Get("DotnetCli.Status.ProjectCreated");
 
             if (OpenAfterCreate)
             {
@@ -207,8 +212,8 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Status = "Unable to create project.";
-            _notifications.ShowError("Unable to create project", ex.Message);
+            Status = _loc.Get("DotnetCli.Status.UnableToCreateProject");
+            _notifications.ShowError(_loc.Get("DotnetCli.Error.CreateProjectTitle"), ex.Message);
         }
         finally
         {
@@ -222,26 +227,26 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
 
         if (SelectedTemplate is null)
         {
-            Status = "Select a template.";
+            Status = _loc.Get("DotnetCli.Validation.SelectTemplate");
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(ProjectName) || ProjectName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
-            Status = "Enter a valid project name.";
+            Status = _loc.Get("DotnetCli.Validation.ValidProjectName");
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(Location))
         {
-            Status = "Choose a project location.";
+            Status = _loc.Get("DotnetCli.Validation.ProjectLocation");
             return false;
         }
 
         projectRoot = Path.Combine(Location, ProjectName.Trim());
         if (Directory.Exists(projectRoot) && Directory.EnumerateFileSystemEntries(projectRoot).Any())
         {
-            Status = "The target project folder is not empty.";
+            Status = _loc.Get("DotnetCli.Validation.TargetFolderNotEmpty");
             return false;
         }
 

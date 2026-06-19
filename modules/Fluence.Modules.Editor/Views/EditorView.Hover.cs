@@ -48,7 +48,9 @@ public partial class EditorView
             else
             {
                 var isError = diag.Severity == LspDiagnosticSeverity.Error;
-                var prefix  = isError ? "Error" : "Warning";
+                var prefix  = isError
+                    ? _viewModel?.Localization.Get("Editor.Diagnostic.Error") ?? "Error"
+                    : _viewModel?.Localization.Get("Editor.Diagnostic.Warning") ?? "Warning";
                 Dispatcher.UIThread.Post(() =>
                 {
                     DiagnosticTooltipText.Text             = $"[{prefix}] {diag.Message}";

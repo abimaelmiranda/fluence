@@ -13,6 +13,7 @@ using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Services.File;
@@ -41,6 +42,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
     private readonly IUserNotificationService _notifications;
     private readonly IShellEventBus _eventBus;
     private readonly IOutputChannelService _output;
+    private readonly ILocalizationService _loc;
     private string? _solutionPath;
     private CancellationTokenSource? _loadCts;
 
@@ -78,7 +80,8 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         PackageIconLoader icons,
         IUserNotificationService notifications,
         IShellEventBus eventBus,
-        IOutputChannelService output)
+        IOutputChannelService output,
+        ILocalizationService loc)
     {
         _workspace = workspace;
         _packageSource = packageSource;
@@ -87,6 +90,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         _notifications = notifications;
         _eventBus = eventBus;
         _output = output;
+        _loc = loc;
     }
 
     public ObservableCollection<NuGetPackageSearchItem> BrowseResults { get; } = [];
@@ -101,7 +105,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
 
     public bool HasSelectedBrowsePackage => SelectedBrowsePackage is not null;
 
-    public string SelectedBrowsePackageTitle => SelectedBrowsePackage?.Id ?? "Select a package";
+    public string SelectedBrowsePackageTitle => SelectedBrowsePackage?.Id ?? _loc.Get("NuGetExplorer.Label.SelectPackage");
 
     public bool CanModifyPackages => !UsesCentralPackageManagement;
 
@@ -115,7 +119,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
 
         _solutionPath = solutionPath;
         WriteOutput($"[NuGetExplorer] Opening package manager for {Path.GetFileName(solutionPath)}\r\n");
-        _workspace.OpenToolTab(GetToolTabId(solutionPath), "NuGet Package Manager", this);
+        _workspace.OpenToolTab(GetToolTabId(solutionPath), _loc.Get("NuGetExplorer.Title"), this);
         _ = RefreshAsync();
     }
 
@@ -161,7 +165,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
                 _ = LoadIconAsync(item, token);
             }
 
-            StatusMessage = $"Found {BrowseResults.Count} package(s).";
+            StatusMessage = string.Format(_loc.Get("NuGetExplorer.Status.FoundPackages"), BrowseResults.Count);
         }, cancellationToken);
     }
 
@@ -187,8 +191,8 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             UpdateAlreadyInstalledFlags();
 
             StatusMessage = UsesCentralPackageManagement
-                ? "Central Package Management detected. Editing is disabled for this milestone."
-                : "NuGet package data loaded.";
+                ? _loc.Get("NuGetExplorer.Status.CpmDetected")
+                : _loc.Get("NuGetExplorer.Status.Loaded");
         }, token);
     }
 
@@ -204,7 +208,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         var selectedProjects = TargetProjects.Where(project => project.IsSelected).ToArray();
         if (selectedProjects.Length == 0)
         {
-            _notifications.ShowWarning("NuGet Package Manager", "Select at least one project.");
+            _notifications.ShowWarning(_loc.Get("NuGetExplorer.Title"), _loc.Get("NuGetExplorer.Warning.SelectAtLeastOneProject"));
             return;
         }
 
@@ -224,7 +228,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             await LoadInstalledPackagesAsync(token);
             await LoadUpdatesAsync(token);
             UpdateAlreadyInstalledFlags();
-            StatusMessage = $"Installed {SelectedBrowsePackage.Id} {SelectedVersion}.";
+            StatusMessage = string.Format(_loc.Get("NuGetExplorer.Status.Installed"), SelectedBrowsePackage.Id, SelectedVersion);
         }, cancellationToken);
     }
 
@@ -248,7 +252,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             NotifySolutionChanged();
             await LoadInstalledPackagesAsync(token);
             await LoadUpdatesAsync(token);
-            StatusMessage = $"Removed {package.Id}.";
+            StatusMessage = string.Format(_loc.Get("NuGetExplorer.Status.Removed"), package.Id);
         }, cancellationToken);
     }
 
@@ -276,7 +280,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             NotifySolutionChanged();
             await LoadInstalledPackagesAsync(token);
             await LoadUpdatesAsync(token);
-            StatusMessage = $"Updated {SelectedUpdate.Id} to {SelectedUpdate.LatestVersion}.";
+            StatusMessage = string.Format(_loc.Get("NuGetExplorer.Status.Updated"), SelectedUpdate.Id, SelectedUpdate.LatestVersion);
         }, cancellationToken);
     }
 
@@ -391,13 +395,13 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         {
             StatusMessage = ex.Message;
             WriteOutput($"[NuGetExplorer] Failed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
-            _notifications.ShowError("NuGet Package Manager", ex.Message);
+            _notifications.ShowError(_loc.Get("NuGetExplorer.Title"), ex.Message);
         }
         catch (Exception ex)
         {
-            StatusMessage = "Unable to reach nuget.org.";
+            StatusMessage = _loc.Get("NuGetExplorer.Status.UnableToReachFeed");
             WriteOutput($"[NuGetExplorer] Crashed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
-            _notifications.ShowError("NuGet Package Manager", ex.Message);
+            _notifications.ShowError(_loc.Get("NuGetExplorer.Title"), ex.Message);
         }
         finally
         {
@@ -437,8 +441,8 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         if (UsesCentralPackageManagement)
         {
             _notifications.ShowWarning(
-                "NuGet Package Manager",
-                "Central Package Management is detected. Editing Directory.Packages.props is not supported yet.");
+                _loc.Get("NuGetExplorer.Title"),
+                _loc.Get("NuGetExplorer.Warning.CpmEditingDisabled"));
         }
     }
 
