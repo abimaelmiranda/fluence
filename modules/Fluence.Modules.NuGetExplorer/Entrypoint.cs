@@ -12,6 +12,7 @@ using Fluence.Modules.NuGetExplorer.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Fluence.Modules.NuGetExplorer.Services;
 using Fluence.Modules.NuGetExplorer.Abstractions;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.NuGetExplorer;
 

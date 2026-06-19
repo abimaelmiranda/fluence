@@ -13,6 +13,7 @@ using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.DotnetCli.Services;
+using Fluence.Core.Events.Ui;
 
 namespace Fluence.Modules.DotnetCli.Commands.Project.Run;
 

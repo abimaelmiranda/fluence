@@ -30,6 +30,9 @@ using Fluence.Modules.DotnetCli.Commands.Workspace.Restore;
 using Fluence.Modules.DotnetCli.Commands.Workspace.Clean;
 using Fluence.Modules.DotnetCli.Commands.Workspace.Build;
 using Fluence.Modules.DotnetCli.Commands.Workspace.Test;
+using Fluence.Core.Events.Build;
+using Fluence.Core.Events.Ui;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.DotnetCli;
 

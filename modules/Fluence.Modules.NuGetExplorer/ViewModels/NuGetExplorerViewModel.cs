@@ -25,6 +25,7 @@ using Fluence.Core.Services.Workspace;
 using Fluence.Modules.NuGetExplorer.Abstractions;
 using Fluence.Modules.NuGetExplorer.Models;
 using Fluence.Modules.NuGetExplorer.Services;
+using Fluence.Core.Events.Workspace;
 using NuGet.Versioning;
 
 namespace Fluence.Modules.NuGetExplorer.ViewModels;

@@ -27,6 +27,12 @@ using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Editor.Commands;
 using Fluence.Modules.Editor.Services;
+using Fluence.Core.Events.Debug;
+using Fluence.Core.Events.Document;
+using Fluence.Core.Events.Lsp;
+using Fluence.Core.Events.Provisioning;
+using Fluence.Core.Events.Workspace;
+using Fluence.Core.Requests.Lsp;
 
 namespace Fluence.Modules.Editor.ViewModels;
 
@@ -39,7 +45,9 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private readonly IDebugStateService _debugState;
     private readonly IDebugService _debugService;
     private readonly IShellEventBus _events;
+    private readonly IShellRequestBus _requests;
     private readonly ITaskScheduler _scheduler;
+    private readonly IUiDispatcher _dispatcher;
     private readonly ISettingsService _settings;
     private readonly EditorViewStateStore _viewStateStore;
     private readonly IKeybindingService _keybindings;
@@ -77,7 +85,9 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         IDebugStateService debugState,
         IDebugService debugService,
         IShellEventBus events,
+        IShellRequestBus requests,
         ITaskScheduler scheduler,
+        IUiDispatcher dispatcher,
         ISettingsService settings,
         EditorViewStateStore viewStateStore,
         IKeybindingService keybindings,
@@ -94,7 +104,9 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _debugState = debugState;
         _debugService = debugService;
         _events = events;
+        _requests = requests;
         _scheduler = scheduler;
+        _dispatcher = dispatcher;
         _settings = settings;
         _viewStateStore = viewStateStore;
         _keybindings = keybindings;
@@ -263,6 +275,9 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public Task<IReadOnlyList<DebugVariable>> GetChildVariablesAsync(int variablesReference, CancellationToken cancellationToken) =>
         _debugService.GetChildVariablesAsync(variablesReference, cancellationToken);
 
+    public HoverVariableNode CreateHoverNode(DebugVariable variable) =>
+        new(variable, GetChildVariablesAsync, _dispatcher);
+
     public void ToggleBreakpoint(int line)
     {
         if (string.IsNullOrWhiteSpace(ActiveDocumentPath) || line <= 0)
@@ -273,20 +288,39 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     public void PublishGoToDefinition(int line, int character)
     {
-        if (string.IsNullOrWhiteSpace(ActiveDocumentPath)) return;
-        _events.Publish(new GoToDefinitionRequestedEvent(ActiveDocumentPath, line, character));
+        var path = ActiveDocumentPath;
+        if (string.IsNullOrWhiteSpace(path)) return;
+        _scheduler.Schedule("editor.goto.definition", TaskPriority.Interactive,
+            ct => SendNavigationRequestAsync(new GoToDefinitionRequest(path, line, character), ct));
     }
 
     public void PublishGoToImplementation(int line, int character)
     {
-        if (string.IsNullOrWhiteSpace(ActiveDocumentPath)) return;
-        _events.Publish(new GoToImplementationRequestedEvent(ActiveDocumentPath, line, character));
+        var path = ActiveDocumentPath;
+        if (string.IsNullOrWhiteSpace(path)) return;
+        _scheduler.Schedule("editor.goto.implementation", TaskPriority.Interactive,
+            ct => SendNavigationRequestAsync(new GoToImplementationRequest(path, line, character), ct));
     }
 
     public void PublishGoToTypeDefinition(int line, int character)
     {
-        if (string.IsNullOrWhiteSpace(ActiveDocumentPath)) return;
-        _events.Publish(new GoToTypeDefinitionRequestedEvent(ActiveDocumentPath, line, character));
+        var path = ActiveDocumentPath;
+        if (string.IsNullOrWhiteSpace(path)) return;
+        _scheduler.Schedule("editor.goto.typedefinition", TaskPriority.Interactive,
+            ct => SendNavigationRequestAsync(new GoToTypeDefinitionRequest(path, line, character), ct));
+    }
+
+    private async Task SendNavigationRequestAsync<TRequest>(TRequest request, CancellationToken ct)
+        where TRequest : IShellRequest<LspLocation>
+    {
+        _events.Publish(new LspInteractiveRequestStartedEvent(ActiveDocumentPath ?? string.Empty));
+        var location = await _requests.SendAsync<TRequest, LspLocation>(request, ct).ConfigureAwait(false);
+        if (location is null || ct.IsCancellationRequested) return;
+
+        if (!string.Equals(location.FilePath, ActiveDocumentPath, StringComparison.OrdinalIgnoreCase))
+            _events.Publish(new OpenFileRequestedEvent(location.FilePath));
+
+        _events.Publish(new NavigationResolvedEvent(location.FilePath, location.Line, location.Character));
     }
 
     public void PublishLiveDocumentChanged(string content, bool flushImmediately)
@@ -367,13 +401,13 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     private void OnDebugStateChanged(object? sender, EventArgs e)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        if (_dispatcher.CheckAccess())
         {
             RefreshDebugStateProperties();
             return;
         }
 
-        Dispatcher.UIThread.Post(RefreshDebugStateProperties);
+        _dispatcher.Post(RefreshDebugStateProperties);
     }
 
     private void RefreshDebugStateProperties()
@@ -529,7 +563,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     private Task<ManualFormatRequest?> PrepareManualFormatAsync(CancellationToken cancellationToken)
     {
-        if (!Dispatcher.UIThread.CheckAccess())
+        if (!_dispatcher.CheckAccess())
             return RunOnUiThreadAsync(PrepareManualFormatOnUiThread, cancellationToken);
 
         return Task.FromResult(PrepareManualFormatOnUiThread());
@@ -567,7 +601,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         IReadOnlyList<LspTextEdit> edits,
         CancellationToken cancellationToken)
     {
-        if (!Dispatcher.UIThread.CheckAccess())
+        if (!_dispatcher.CheckAccess())
             return RunOnUiThreadAsync(() => CompleteManualFormatOnUiThread(request, edits), cancellationToken);
 
         CompleteManualFormatOnUiThread(request, edits);
@@ -635,19 +669,19 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
                 _formatFeedbackTimer.Start();
         }
 
-        if (Dispatcher.UIThread.CheckAccess())
+        if (_dispatcher.CheckAccess())
             Apply();
         else
-            Dispatcher.UIThread.Post(Apply);
+            _dispatcher.Post(Apply);
     }
 
-    private static Task<T> RunOnUiThreadAsync<T>(Func<T> action, CancellationToken cancellationToken)
+    private Task<T> RunOnUiThreadAsync<T>(Func<T> action, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             return Task.FromCanceled<T>(cancellationToken);
 
         var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             try
             {
@@ -667,7 +701,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         return completion.Task;
     }
 
-    private static Task RunOnUiThreadAsync(Action action, CancellationToken cancellationToken) =>
+    private Task RunOnUiThreadAsync(Action action, CancellationToken cancellationToken) =>
         RunOnUiThreadAsync(() =>
         {
             action();

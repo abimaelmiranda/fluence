@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Modules.SourceControl.Models;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.SourceControl.ViewModels;
 

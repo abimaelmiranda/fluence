@@ -20,6 +20,8 @@ using Fluence.Core.Services;
 using Fluence.Modules.Editor.Completion;
 using Fluence.Modules.Editor.Rendering;
 using Fluence.Modules.Editor.ViewModels;
+using Fluence.Core.Events.Document;
+using Fluence.Core.Events.Lsp;
 using TextMateSharp.Grammars;
 
 namespace Fluence.Modules.Editor.Views;

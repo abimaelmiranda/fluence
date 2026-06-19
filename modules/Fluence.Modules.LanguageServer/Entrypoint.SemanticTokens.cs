@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Modules.LanguageServer.Services;
+using Fluence.Core.Events.Lsp;
 
 namespace Fluence.Modules.LanguageServer;
 

@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using AvaloniaEdit.Rendering;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Core.Events.Lsp;
 
 namespace Fluence.Modules.Editor.Views;
 
@@ -62,7 +63,7 @@ public partial class EditorView
         LspHoverPopup.IsOpen = false;
         HoverPopup.IsOpen = false;
         CodeActionPopup.IsOpen = false;
-        viewModel.EventBus.Publish(new Fluence.Core.Abstractions.Modules.LspInteractiveRequestStartedEvent(filePath));
+        viewModel.EventBus.Publish(new LspInteractiveRequestStartedEvent(filePath));
         viewModel.PublishLiveDocumentChanged(Editor.Text, flushImmediately: true);
 
         viewModel.TaskScheduler.ScheduleLatest(

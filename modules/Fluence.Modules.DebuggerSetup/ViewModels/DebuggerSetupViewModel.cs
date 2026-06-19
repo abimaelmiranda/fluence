@@ -16,6 +16,8 @@ using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
+using Fluence.Core.Events.Debug;
+using Fluence.Core.Events.Provisioning;
 
 namespace Fluence.Modules.DebuggerSetup.ViewModels;
 
