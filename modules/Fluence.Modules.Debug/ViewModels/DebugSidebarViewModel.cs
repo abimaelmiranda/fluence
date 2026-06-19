@@ -11,6 +11,7 @@ using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.ViewModels;
 using Fluence.Modules.Debug.Models;
+using Fluence.Core.Events.Debug;
 
 namespace Fluence.Modules.Debug.ViewModels;
 
