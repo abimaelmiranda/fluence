@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.LanguageServer;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
@@ -20,6 +21,7 @@ public sealed partial class LspSetupViewModel : ViewModelBase
     private readonly IWorkspaceContext _workspace;
     private readonly IShellEventBus _eventBus;
     private readonly IUiDispatcher _dispatcher;
+    private readonly ILocalizationService _loc;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -37,12 +39,14 @@ public sealed partial class LspSetupViewModel : ViewModelBase
         ILspProvisioningService provisioning,
         IWorkspaceContext workspace,
         IShellEventBus eventBus,
-        IUiDispatcher dispatcher)
+        IUiDispatcher dispatcher,
+        ILocalizationService loc)
     {
         _provisioning = provisioning;
         _workspace = workspace;
         _eventBus = eventBus;
         _dispatcher = dispatcher;
+        _loc = loc;
     }
 
     public async Task StartProvisioningAsync(CancellationToken cancellationToken = default)
@@ -59,7 +63,7 @@ public sealed partial class LspSetupViewModel : ViewModelBase
         {
             await _provisioning.ProvisionAsync(AppendOutput, _cts.Token).ConfigureAwait(false);
 
-            AppendOutput("[Fluence] Setup complete. Starting language server...");
+            AppendOutput(_loc.Get("LspSetup.Log.SetupComplete"));
             await _dispatcher.InvokeAsync(() =>
             {
                 _eventBus.Publish(new LspProvisioningCompletedEvent());
@@ -68,13 +72,13 @@ public sealed partial class LspSetupViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
-            AppendOutput("[Fluence] Setup cancelled.");
-            await SetErrorAsync("Setup was cancelled.").ConfigureAwait(false);
+            AppendOutput(_loc.Get("LspSetup.Log.SetupCancelled"));
+            await SetErrorAsync(_loc.Get("LspSetup.Error.SetupCancelled")).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            AppendOutput($"[Fluence] Setup failed: {ex.Message}");
-            await SetErrorAsync("Setup failed. Click Retry to try again.").ConfigureAwait(false);
+            AppendOutput(string.Format(_loc.Get("LspSetup.Log.SetupFailed"), ex.Message));
+            await SetErrorAsync(_loc.Get("LspSetup.Error.SetupFailed")).ConfigureAwait(false);
         }
         finally
         {
