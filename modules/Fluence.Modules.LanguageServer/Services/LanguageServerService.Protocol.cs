@@ -77,30 +77,30 @@ internal sealed partial class LanguageServerService
         },
     };
 
-    private static JsonObject BuildConfigurationParams() => new()
+    private static JsonObject BuildConfigurationParams(LanguageServerRuntimeSettings settings) => new()
     {
         ["settings"] = new JsonObject
         {
             ["msbuild"] = new JsonObject
             {
-                ["enabled"] = true,
-                ["loadProjectsOnDemand"] = false,
-                ["EnablePackageAutoRestore"] = true,
+                ["enabled"] = settings.EnableMsBuild,
+                ["loadProjectsOnDemand"] = settings.LoadProjectsOnDemand,
+                ["EnablePackageAutoRestore"] = settings.EnablePackageAutoRestore,
             },
             ["RoslynExtensionsOptions"] = new JsonObject
             {
-                ["enableAnalyzersSupport"] = true,
-                ["enableDecompilationSupport"] = true,
-                ["enableImportCompletion"] = true,
-                ["diagnosticWorkersThreadCount"] = 1,
+                ["enableAnalyzersSupport"] = settings.EnableAnalyzersSupport,
+                ["enableDecompilationSupport"] = settings.EnableDecompilationSupport,
+                ["enableImportCompletion"] = settings.EnableImportCompletion,
+                ["diagnosticWorkersThreadCount"] = settings.DiagnosticWorkersThreadCount,
             },
             ["FormattingOptions"] = new JsonObject
             {
-                ["enableEditorConfigSupport"] = true,
+                ["enableEditorConfigSupport"] = settings.EnableEditorConfigSupport,
             },
             ["sdk"] = new JsonObject
             {
-                ["includePrereleases"] = true,
+                ["includePrereleases"] = settings.IncludePrereleases,
             },
         },
     };

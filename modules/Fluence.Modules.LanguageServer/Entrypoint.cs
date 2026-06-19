@@ -9,12 +9,14 @@ using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Problems;
+using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.LanguageServer;
 using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Problems;
 using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Modules.LanguageServer.Json;
 using Fluence.Modules.LanguageServer.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -51,6 +53,7 @@ public sealed partial class Entrypoint : IModule
                 provider.GetRequiredService<IDiagnosticsService>(),
                 provider.GetRequiredService<IShellEventBus>(),
                 provider.GetRequiredService<IOutputChannelService>(),
+                provider.GetRequiredService<ISettingsService>(),
                 provider.GetRequiredService<LspClientHolder>()));
         services.AddSingleton<ICompletionService>(provider =>
             new CompletionService(
@@ -111,6 +114,11 @@ public sealed partial class Entrypoint : IModule
 
     public void Initialize(IModuleHost host)
     {
+        host.Services.GetRequiredService<ISettingsRegistry>()
+            .Register(LanguageServerSettingsJsonContext.Default.LanguageServerSettings);
+        host.Services.GetRequiredService<ISettingsService>()
+            .Get<LanguageServerSettings>();
+
         var lsp = host.Services.GetRequiredService<ILanguageServerService>();
         var provisioning = host.Services.GetRequiredService<ILspProvisioningService>();
         var nav = host.Services.GetRequiredService<INavigationService>();
