@@ -13,6 +13,7 @@ using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Problems;
 using Fluence.Core.Models.Workspace.Enums;
@@ -22,7 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.LanguageServer;
 
-public sealed partial class Entrypoint : IModule
+public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
 {
     private static readonly TimeSpan DidChangeDebounceDelay = TimeSpan.FromMilliseconds(750);
     private static readonly TimeSpan SemanticTokensDebounceDelay = TimeSpan.FromMilliseconds(800);
@@ -110,6 +111,20 @@ public sealed partial class Entrypoint : IModule
         _semanticTokensService = null;
         _eventBus = null;
         _scheduler = null;
+    }
+
+    public async Task StopAsync(ModuleShutdownContext context)
+    {
+        _scheduler?.CancelAndForget("lsp.start");
+        _scheduler?.CancelAndForget("lsp.problems");
+        _scheduler?.CancelAndForget("lsp.diagnostics-output");
+
+        var languageServer = _languageServer;
+        _languageServer = null;
+        if (languageServer is IAsyncDisposable asyncDisposable)
+            await asyncDisposable.DisposeAsync().AsTask()
+                .WaitAsync(context.CancellationToken)
+                .ConfigureAwait(false);
     }
 
     public void Initialize(IModuleHost host)
