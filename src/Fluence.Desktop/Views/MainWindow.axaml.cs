@@ -30,12 +30,78 @@ public partial class MainWindow : Window
         if (viewModel.IsRecordingKeybinding)
             return;
 
+        if (viewModel.QuickOpen.IsVisible)
+        {
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    viewModel.QuickOpen.Close();
+                    e.Handled = true;
+                    return;
+                case Key.Enter:
+                    viewModel.QuickOpen.Confirm();
+                    e.Handled = true;
+                    return;
+                case Key.Down:
+                    MoveQuickOpenSelection(1);
+                    e.Handled = true;
+                    return;
+                case Key.Up:
+                    MoveQuickOpenSelection(-1);
+                    e.Handled = true;
+                    return;
+            }
+        }
+
         var gesture = KeyGestureFormatter.FromEvent(e);
         if (string.IsNullOrWhiteSpace(gesture))
             return;
 
         if (await viewModel.TryHandleKeybindingAsync("global", gesture))
+        {
             e.Handled = true;
+            if (viewModel.QuickOpen.IsVisible)
+                QuickOpenSearchBox?.Focus();
+        }
+    }
+
+    private void MoveQuickOpenSelection(int delta)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+            return;
+
+        var results = vm.QuickOpen.Results;
+        if (results.Count == 0)
+            return;
+
+        var current = results.IndexOf(vm.QuickOpen.SelectedResult!);
+        var next = Math.Clamp(current + delta, 0, results.Count - 1);
+        vm.QuickOpen.SelectedResult = results[next];
+    }
+
+    private void OnQuickOpenBackdropPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (e.Source != sender)
+            return;
+
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.QuickOpen.Close();
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnPropertyChanged(Avalonia.AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == DataContextProperty && DataContext is MainWindowViewModel vm)
+        {
+            vm.QuickOpen.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(QuickOpenViewModel.IsVisible) && vm.QuickOpen.IsVisible)
+                    QuickOpenSearchBox?.Focus();
+            };
+        }
     }
 
     private void OnTerminalResizeHandlePointerPressed(object? sender, PointerPressedEventArgs e)

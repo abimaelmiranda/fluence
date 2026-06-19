@@ -633,6 +633,52 @@
         </Border>
     </Border>
 
+    <!-- Quick Open overlay -->
+    <Border x:Name="QuickOpenBackdrop"
+            IsVisible="{Binding QuickOpen.IsVisible}"
+            Background="#BB000000"
+            PointerReleased="OnQuickOpenBackdropPointerReleased">
+        <Border Background="{StaticResource FluenceBrushSurface}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Width="620"
+                MaxHeight="480"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,80,0,0">
+            <Grid RowDefinitions="Auto,*">
+                <TextBox x:Name="QuickOpenSearchBox"
+                         Grid.Row="0"
+                         Text="{Binding QuickOpen.SearchQuery, Mode=TwoWay}"
+                         PlaceholderText="{Binding [Desktop.QuickOpen.Placeholder], Source={x:Static loc:Locale.Current}}"
+                         Classes="ideCompact"
+                         Margin="8,8,8,4"/>
+                <ListBox x:Name="QuickOpenList"
+                         Grid.Row="1"
+                         ItemsSource="{Binding QuickOpen.Results}"
+                         SelectedItem="{Binding QuickOpen.SelectedResult}"
+                         Margin="4,0,4,4">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FileSearchResult">
+                            <StackPanel Spacing="2" Margin="4,2">
+                                <TextBlock Text="{Binding FileName}"
+                                           FontFamily="{StaticResource FluenceFontFamily}"
+                                           FontSize="{StaticResource FluenceFontSizeBody}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                                <TextBlock Text="{Binding RelativePath}"
+                                           FontFamily="{StaticResource FluenceFontFamily}"
+                                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                                           Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+    </Border>
+
     </Panel>
 
 </Window>

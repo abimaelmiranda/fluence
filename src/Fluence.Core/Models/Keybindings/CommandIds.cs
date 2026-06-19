@@ -25,6 +25,7 @@ public static class CommandIds
     public const string OpenKeybindings = "workbench.openKeybindings";
     public const string NextTab = "workbench.nextTab";
     public const string ToggleSidebar = "workbench.toggleSidebar";
+    public const string QuickOpenFile = "workbench.quickOpenFile";
 
     // Debug session commands (owned by the Debug module).
     public const string DebugContinue = "debug.continue";

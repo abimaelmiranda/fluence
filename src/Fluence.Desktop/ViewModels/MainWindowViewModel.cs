@@ -35,6 +35,7 @@ using Fluence.Core.Events.Build;
 using Fluence.Core.Events.Debug;
 using Fluence.Core.Events.Provisioning;
 using Fluence.Core.Events.Workspace;
+using Fluence.Desktop.Services;
 
 namespace Fluence.Desktop.ViewModels;
 
@@ -55,6 +56,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly List<IDisposable> _eventSubscriptions = [];
     private readonly HashSet<string> _semanticTokensPendingFiles = new(StringComparer.OrdinalIgnoreCase);
     private IDisposable? _shellSettingsSubscription;
+
+    public QuickOpenViewModel QuickOpen { get; }
 
     [ObservableProperty]
     private WorkspaceMode _workspaceMode;
@@ -95,7 +98,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         ICommandRegistry commands,
         IKeybindingService keybindings,
         ISettingsTool settingsTool,
-        ILocalizationService loc)
+        ILocalizationService loc,
+        QuickOpenViewModel quickOpen)
     {
         _workspace = workspace;
         _notifications = notifications;
@@ -109,6 +113,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         ActivityBar = activityBar;
         BottomBar = bottomBar;
         Welcome = welcome;
+        QuickOpen = quickOpen;
         _workspaceMode = workspace.Current.Mode;
         _shutdownStatusText = _loc.Get("Desktop.Status.SavingWorkspace");
         ApplyShellSettings(_settings.Get<ShellSettings>());
@@ -504,6 +509,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 _isSidebarExpanded = !_isSidebarExpanded;
                 OnPropertyChanged(nameof(IsSidebarVisible));
+                return Task.CompletedTask;
+            }));
+        _commands.Register(new IdeCommandDefinition(
+            CommandIds.QuickOpenFile,
+            _loc.Get("Desktop.QuickOpen.CommandTitle"),
+            KeybindingScope.Global,
+            $"{primary}+P",
+            ct =>
+            {
+                QuickOpen.Open();
                 return Task.CompletedTask;
             }));
     }

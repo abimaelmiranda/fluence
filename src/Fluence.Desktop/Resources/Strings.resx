@@ -91,4 +91,6 @@
   <data name="Desktop.SidebarDetail.NoFolderOpened" xml:space="preserve"><value>No folder opened</value></data>
   <data name="Desktop.SidebarDetail.NoSolutionOpened" xml:space="preserve"><value>No solution opened</value></data>
   <data name="Desktop.SidebarDetail.DebugSession" xml:space="preserve"><value>Debug session</value></data>
+  <data name="Desktop.QuickOpen.CommandTitle" xml:space="preserve"><value>Go to File...</value></data>
+  <data name="Desktop.QuickOpen.Placeholder" xml:space="preserve"><value>Go to file...</value></data>
 </root>

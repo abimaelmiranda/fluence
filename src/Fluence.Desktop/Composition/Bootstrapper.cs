@@ -123,6 +123,8 @@ internal static class Bootstrapper
         services.AddSingleton<ActivityBarViewModel>();
         services.AddSingleton<ProblemsViewModel>();
         services.AddSingleton<BottomBarViewModel>();
+        services.AddSingleton<FileIndexService>();
+        services.AddSingleton<QuickOpenViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 
         var modules = new IModule[]
