@@ -46,7 +46,6 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         _themeLoader = themeLoader;
         _dialogs = dialogs;
         _loc = loc;
-        _status = _loc.Get("Settings.Status.Ready");
         _loc.LanguageChanged += OnLanguageChanged;
         Reload();
         _keybindings.Watch().Subscribe(new ActionObserver<IReadOnlyList<KeybindingDefinition>>(
@@ -56,7 +55,10 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     private void OnLanguageChanged()
     {
+        ReloadSettings();
+        ReloadKeybindings();
         OnPropertyChanged(nameof(SettingsContextTitle));
+        OnPropertyChanged(nameof(Status));
         foreach (var row in Keybindings)
             row.NotifyLanguageChanged();
     }
@@ -70,8 +72,19 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
             ReloadKeybindings();
     }
 
-    [ObservableProperty]
-    private string _status = string.Empty;
+    private string _statusKey = "Settings.Status.Ready";
+    private object[] _statusArgs = [];
+
+    public string Status => _statusArgs.Length == 0
+        ? _loc.Get(_statusKey)
+        : string.Format(_loc.Get(_statusKey), _statusArgs);
+
+    private void SetStatus(string key, params object[] args)
+    {
+        _statusKey = key;
+        _statusArgs = args;
+        OnPropertyChanged(nameof(Status));
+    }
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -157,7 +170,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
     {
         _keybindings.ResetKeybinding(commandId);
         ReloadKeybindings();
-        Status = _loc.Get("Settings.Status.KeybindingReset");
+        SetStatus("Settings.Status.KeybindingReset");
     }
 
     [RelayCommand]
@@ -166,13 +179,13 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         var emptySetting = GetEmptyStringSetting();
         if (emptySetting is not null)
         {
-            Status = string.Format(_loc.Get("Settings.Status.CannotBeEmpty"), emptySetting);
+            SetStatus("Settings.Status.CannotBeEmpty", emptySetting);
             return;
         }
 
         SaveSettings();
         SaveKeybindings();
-        Status = _loc.Get("Settings.Status.Saved");
+        SetStatus("Settings.Status.Saved");
     }
 
     [RelayCommand]
@@ -187,11 +200,11 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
             var installed = _themeLoader.InstallTheme(path);
             ReloadThemeOptions();
             SelectTheme(installed.Reference);
-            Status = string.Format(_loc.Get("Settings.Status.ThemeInstalled"), installed.DisplayName);
+            SetStatus("Settings.Status.ThemeInstalled", installed.DisplayName);
         }
         catch
         {
-            Status = _loc.Get("Settings.Status.ThemeInstallFailed");
+            SetStatus("Settings.Status.ThemeInstallFailed");
         }
     }
 
@@ -201,7 +214,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         _settings.ResetAll();
         _keybindings.ResetAll();
         Reload();
-        Status = _loc.Get("Settings.Status.DefaultsRestored");
+        SetStatus("Settings.Status.DefaultsRestored");
     }
 
     private void Reload()
@@ -212,6 +225,7 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     private void ReloadSettings()
     {
+        var selectedSectionName = SelectedSection?.Name;
         Sections.Clear();
         ReloadThemeOptions();
         foreach (var section in _settingsRegistry.Sections
@@ -232,7 +246,9 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
             Sections.Add(sectionViewModel);
         }
 
-        SelectedSection = Sections.FirstOrDefault();
+        SelectedSection = Sections.FirstOrDefault(section =>
+            string.Equals(section.Name, selectedSectionName, StringComparison.OrdinalIgnoreCase))
+            ?? Sections.FirstOrDefault();
         OnPropertyChanged(nameof(SettingsContextTitle));
         RefreshSettingsFilter();
     }

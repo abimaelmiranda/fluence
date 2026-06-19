@@ -37,22 +37,27 @@ public sealed class LocalizationService : ILocalizationService
 
     public void SetLanguage(string cultureName)
     {
+        CultureInfo newCulture;
         if (string.IsNullOrWhiteSpace(cultureName) || cultureName.Equals("en", StringComparison.OrdinalIgnoreCase))
         {
-            _culture = CultureInfo.InvariantCulture;
+            newCulture = CultureInfo.InvariantCulture;
         }
         else
         {
             try
             {
-                _culture = CultureInfo.GetCultureInfo(cultureName);
+                newCulture = CultureInfo.GetCultureInfo(cultureName);
             }
             catch (CultureNotFoundException)
             {
-                _culture = CultureInfo.InvariantCulture;
+                newCulture = CultureInfo.InvariantCulture;
             }
         }
 
+        if (Equals(newCulture, _culture))
+            return;
+
+        _culture = newCulture;
         LanguageChanged?.Invoke();
     }
 }
