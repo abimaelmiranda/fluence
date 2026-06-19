@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Fluence.Core.Services.Localization;
 
 namespace Fluence.Modules.Settings.ViewModels;
 
@@ -77,25 +78,30 @@ internal static class SettingsDisplayMetadata
         ["debug.ExceptionBreakMode"] = "Controls when the debugger stops on exceptions.",
     };
 
-    public static string GetSectionDisplayName(string sectionName) =>
-        SectionNames.TryGetValue(sectionName, out var displayName)
+    public static string GetSectionDisplayName(string sectionName)
+    {
+        var fallback = SectionNames.TryGetValue(sectionName, out var displayName)
             ? displayName
             : SplitIdentifier(sectionName);
+        return Localize($"Settings.Section.{sectionName}", fallback);
+    }
 
     public static string GetPropertyDisplayName(string sectionName, string propertyName)
     {
         var key = $"{sectionName}.{propertyName}";
-        return PropertyNames.TryGetValue(key, out var displayName)
+        var fallback = PropertyNames.TryGetValue(key, out var displayName)
             ? displayName
             : $"{GetSectionDisplayName(sectionName)}: {SplitIdentifier(propertyName)}";
+        return Localize($"Settings.Property.{key}", fallback);
     }
 
     public static string GetPropertyDescription(string sectionName, string propertyName)
     {
         var key = $"{sectionName}.{propertyName}";
-        return PropertyDescriptions.TryGetValue(key, out var description)
+        var fallback = PropertyDescriptions.TryGetValue(key, out var description)
             ? description
             : $"Controls {SplitIdentifier(propertyName).ToLowerInvariant()}.";
+        return Localize($"Settings.Description.{key}", fallback);
     }
 
     public static int GetSectionSortKey(string sectionName) =>
@@ -127,5 +133,11 @@ internal static class SettingsDisplayMetadata
         }
 
         return new string(chars.ToArray());
+    }
+
+    private static string Localize(string key, string fallback)
+    {
+        var value = Locale.Current[key];
+        return string.Equals(value, key, StringComparison.Ordinal) ? fallback : value;
     }
 }

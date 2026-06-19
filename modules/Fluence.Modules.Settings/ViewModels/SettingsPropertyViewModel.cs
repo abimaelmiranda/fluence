@@ -10,22 +10,33 @@ namespace Fluence.Modules.Settings.ViewModels;
 
 public sealed partial class SettingsPropertyViewModel : ObservableObject
 {
+    private static readonly LanguageOptionViewModel[] SupportedLanguages =
+    [
+        new("en", "English"),
+        new("pt-BR", "Português (Brasil)"),
+    ];
+
     public SettingsPropertyViewModel(
         string name,
         string displayName,
         string description,
         Type valueType,
         object? value,
-        ObservableCollection<ThemeDescriptor>? themeOptions = null)
+        ObservableCollection<ThemeDescriptor>? themeOptions = null,
+        bool isLanguageSelector = false)
     {
         Name = name;
         DisplayName = displayName;
         Description = description;
         ValueType = valueType;
         IsThemeSelector = themeOptions is not null;
+        IsLanguageSelector = isLanguageSelector;
         ThemeOptions = themeOptions ?? [];
         EnumOptions = valueType.IsEnum
             ? new ObservableCollection<string>(Enum.GetNames(valueType))
+            : [];
+        LanguageOptions = isLanguageSelector
+            ? new ObservableCollection<LanguageOptionViewModel>(SupportedLanguages)
             : [];
         TextValue = Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
         BoolValue = value is bool boolValue && boolValue;
@@ -34,6 +45,9 @@ public sealed partial class SettingsPropertyViewModel : ObservableObject
                 ?? Enum.GetNames(valueType).FirstOrDefault()
                 ?? string.Empty
             : string.Empty;
+        SelectedLanguage = isLanguageSelector
+            ? FindLanguageOption(NormalizeLanguage(Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)))
+            : null;
         SelectedTheme = themeOptions is null
             ? null
             : FindTheme(themeOptions, Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture));
@@ -67,6 +81,8 @@ public sealed partial class SettingsPropertyViewModel : ObservableObject
 
     public bool IsThemeSelector { get; }
 
+    public bool IsLanguageSelector { get; }
+
     public bool IsBoolean => ValueType == typeof(bool);
 
     public bool IsEnum => ValueType.IsEnum;
@@ -79,11 +95,13 @@ public sealed partial class SettingsPropertyViewModel : ObservableObject
 
     public bool IsLabeledCompact => IsCompactEditor && !IsBoolean;
 
-    public bool IsText => !IsBoolean && !IsThemeSelector && !IsEnum && !IsStringArray;
+    public bool IsText => !IsBoolean && !IsThemeSelector && !IsLanguageSelector && !IsEnum && !IsStringArray;
 
     public ObservableCollection<ThemeDescriptor> ThemeOptions { get; }
 
     public ObservableCollection<string> EnumOptions { get; }
+
+    public ObservableCollection<LanguageOptionViewModel> LanguageOptions { get; }
 
     public ObservableCollection<SettingsStringArrayOption> KnownStringArrayOptions => RoslynRuleCatalog.KnownRules;
 
@@ -108,6 +126,9 @@ public sealed partial class SettingsPropertyViewModel : ObservableObject
 
     [ObservableProperty]
     private string _selectedEnumValue = string.Empty;
+
+    [ObservableProperty]
+    private LanguageOptionViewModel? _selectedLanguage;
 
     [ObservableProperty]
     private ThemeDescriptor? _selectedTheme;
@@ -138,6 +159,12 @@ public sealed partial class SettingsPropertyViewModel : ObservableObject
     {
         if (IsEnum)
             TextValue = value;
+    }
+
+    partial void OnSelectedLanguageChanged(LanguageOptionViewModel? value)
+    {
+        if (IsLanguageSelector && value is not null)
+            TextValue = value.Code;
     }
 
     [RelayCommand]
@@ -262,4 +289,20 @@ public sealed partial class SettingsPropertyViewModel : ObservableObject
 
         return options[0];
     }
+
+    private static string NormalizeLanguage(string? value)
+    {
+        var normalized = value?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+            return "en";
+
+        if (string.Equals(normalized, "pt-BR", StringComparison.OrdinalIgnoreCase))
+            return "pt-BR";
+
+        return "en";
+    }
+
+    private static LanguageOptionViewModel FindLanguageOption(string code) =>
+        SupportedLanguages.FirstOrDefault(option => string.Equals(option.Code, code, StringComparison.OrdinalIgnoreCase))
+        ?? SupportedLanguages[0];
 }

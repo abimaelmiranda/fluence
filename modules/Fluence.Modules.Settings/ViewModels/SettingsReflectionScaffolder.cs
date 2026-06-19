@@ -27,7 +27,9 @@ internal static class SettingsReflectionScaffolder
                     SettingsDisplayMetadata.GetPropertyDescription(sectionName, p.Name),
                     p.PropertyType,
                     p.GetValue(currentValues),
-                    isTheme ? themeOptions : null);
+                    isTheme ? themeOptions : null,
+                    sectionName.Equals("global", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(p.Name, nameof(GlobalSettings.Language), StringComparison.OrdinalIgnoreCase));
             });
 
         return new ObservableCollection<SettingsPropertyViewModel>(items);

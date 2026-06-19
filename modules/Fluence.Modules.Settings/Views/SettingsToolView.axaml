@@ -218,7 +218,8 @@
                                                                               Classes="ideCompact"
                                                                               ItemsSource="{Binding ThemeOptions}"
                                                                               SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
-                                                                              IsVisible="{Binding IsThemeSelector}">
+                                                                              IsVisible="{Binding IsThemeSelector}"
+                                                                              VerticalAlignment="Center">
                                                                         <ComboBox.ItemTemplate>
                                                                             <DataTemplate x:DataType="theming:ThemeDescriptor">
                                                                                 <TextBlock Text="{Binding DisplayName}"/>
@@ -227,9 +228,22 @@
                                                                     </ComboBox>
                                                                     <ComboBox Width="360"
                                                                               Classes="ideCompact"
+                                                                              ItemsSource="{Binding LanguageOptions}"
+                                                                              SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                                                                              IsVisible="{Binding IsLanguageSelector}"
+                                                                              VerticalAlignment="Center">
+                                                                        <ComboBox.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:LanguageOptionViewModel">
+                                                                                <TextBlock Text="{Binding DisplayName}"/>
+                                                                            </DataTemplate>
+                                                                        </ComboBox.ItemTemplate>
+                                                                    </ComboBox>
+                                                                    <ComboBox Width="360"
+                                                                              Classes="ideCompact"
                                                                               ItemsSource="{Binding EnumOptions}"
                                                                               SelectedItem="{Binding SelectedEnumValue, Mode=TwoWay}"
-                                                                              IsVisible="{Binding IsEnum}"/>
+                                                                              IsVisible="{Binding IsEnum}"
+                                                                              VerticalAlignment="Center"/>
                                                                     <CheckBox IsChecked="{Binding BoolValue, Mode=TwoWay}"
                                                                               IsVisible="{Binding IsBoolean}"
                                                                               VerticalAlignment="Center"

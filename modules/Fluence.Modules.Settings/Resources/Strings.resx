@@ -72,6 +72,192 @@
     <value>Preferences</value>
   </data>
 
+  <!-- Sections -->
+  <data name="Settings.Section.global" xml:space="preserve">
+    <value>Global</value>
+  </data>
+  <data name="Settings.Section.editor" xml:space="preserve">
+    <value>Editor</value>
+  </data>
+  <data name="Settings.Section.languageServer" xml:space="preserve">
+    <value>Language Server</value>
+  </data>
+  <data name="Settings.Section.shell" xml:space="preserve">
+    <value>Shell</value>
+  </data>
+  <data name="Settings.Section.problems" xml:space="preserve">
+    <value>Problems</value>
+  </data>
+  <data name="Settings.Section.debug" xml:space="preserve">
+    <value>Debug</value>
+  </data>
+
+  <!-- Property names -->
+  <data name="Settings.Property.global.FontFamily" xml:space="preserve">
+    <value>Global: Font Family</value>
+  </data>
+  <data name="Settings.Property.global.FontSize" xml:space="preserve">
+    <value>Global: Font Size</value>
+  </data>
+  <data name="Settings.Property.global.Theme" xml:space="preserve">
+    <value>Global: Theme</value>
+  </data>
+  <data name="Settings.Property.editor.FontFamily" xml:space="preserve">
+    <value>Editor: Font Family</value>
+  </data>
+  <data name="Settings.Property.editor.FontSize" xml:space="preserve">
+    <value>Editor: Font Size</value>
+  </data>
+  <data name="Settings.Property.editor.LineHeightFactor" xml:space="preserve">
+    <value>Editor: Line Height</value>
+  </data>
+  <data name="Settings.Property.editor.ShowLineNumbers" xml:space="preserve">
+    <value>Editor: Show Line Numbers</value>
+  </data>
+  <data name="Settings.Property.editor.AutoPairBrackets" xml:space="preserve">
+    <value>Editor: Auto Pair Brackets</value>
+  </data>
+  <data name="Settings.Property.editor.FormatOnSave" xml:space="preserve">
+    <value>Editor: Format On Save</value>
+  </data>
+  <data name="Settings.Property.editor.CompletionTriggerDelayMs" xml:space="preserve">
+    <value>Editor: Completion Trigger Delay</value>
+  </data>
+  <data name="Settings.Property.languageServer.SuppressedDiagnosticCodes" xml:space="preserve">
+    <value>Language Server: Suppressed Diagnostic Codes</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableMsBuild" xml:space="preserve">
+    <value>Language Server: Enable MSBuild</value>
+  </data>
+  <data name="Settings.Property.languageServer.LoadProjectsOnDemand" xml:space="preserve">
+    <value>Language Server: Load Projects On Demand</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnablePackageAutoRestore" xml:space="preserve">
+    <value>Language Server: Enable Package Auto Restore</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableAnalyzersSupport" xml:space="preserve">
+    <value>Language Server: Enable Analyzers Support</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableDecompilationSupport" xml:space="preserve">
+    <value>Language Server: Enable Decompilation Support</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableImportCompletion" xml:space="preserve">
+    <value>Language Server: Enable Import Completion</value>
+  </data>
+  <data name="Settings.Property.languageServer.DiagnosticWorkersThreadCount" xml:space="preserve">
+    <value>Language Server: Diagnostic Workers Thread Count</value>
+  </data>
+  <data name="Settings.Property.languageServer.EnableEditorConfigSupport" xml:space="preserve">
+    <value>Language Server: Enable EditorConfig Support</value>
+  </data>
+  <data name="Settings.Property.languageServer.IncludePrereleases" xml:space="preserve">
+    <value>Language Server: Include Prereleases</value>
+  </data>
+  <data name="Settings.Property.shell.SidebarWidth" xml:space="preserve">
+    <value>Shell: Sidebar Width</value>
+  </data>
+  <data name="Settings.Property.shell.TerminalHeight" xml:space="preserve">
+    <value>Shell: Terminal Height</value>
+  </data>
+  <data name="Settings.Property.shell.AnimationsEnabled" xml:space="preserve">
+    <value>Shell: Animations Enabled</value>
+  </data>
+  <data name="Settings.Property.problems.ShowWarningsFromAllFiles" xml:space="preserve">
+    <value>Problems: Show Warnings From All Files</value>
+  </data>
+  <data name="Settings.Property.problems.ShowInformationFromAllFiles" xml:space="preserve">
+    <value>Problems: Show Information From All Files</value>
+  </data>
+  <data name="Settings.Property.problems.MaxVisibleProblems" xml:space="preserve">
+    <value>Problems: Max Visible Problems</value>
+  </data>
+  <data name="Settings.Property.debug.ExceptionBreakMode" xml:space="preserve">
+    <value>Debug: Exception Break Mode</value>
+  </data>
+
+  <!-- Property descriptions -->
+  <data name="Settings.Description.global.FontFamily" xml:space="preserve">
+    <value>Controls the default UI font family used by the IDE.</value>
+  </data>
+  <data name="Settings.Description.global.FontSize" xml:space="preserve">
+    <value>Controls the default UI font size in pixels.</value>
+  </data>
+  <data name="Settings.Description.global.Theme" xml:space="preserve">
+    <value>Selects the active application theme.</value>
+  </data>
+  <data name="Settings.Description.editor.FontFamily" xml:space="preserve">
+    <value>Controls the font family used in the code editor.</value>
+  </data>
+  <data name="Settings.Description.editor.FontSize" xml:space="preserve">
+    <value>Controls the editor font size in pixels.</value>
+  </data>
+  <data name="Settings.Description.editor.LineHeightFactor" xml:space="preserve">
+    <value>Controls editor line spacing as a multiplier of the font size.</value>
+  </data>
+  <data name="Settings.Description.editor.ShowLineNumbers" xml:space="preserve">
+    <value>Shows line numbers in editor gutters.</value>
+  </data>
+  <data name="Settings.Description.editor.AutoPairBrackets" xml:space="preserve">
+    <value>Automatically inserts the matching bracket while typing.</value>
+  </data>
+  <data name="Settings.Description.editor.FormatOnSave" xml:space="preserve">
+    <value>Formats files when they are saved, when a formatter is available.</value>
+  </data>
+  <data name="Settings.Description.editor.CompletionTriggerDelayMs" xml:space="preserve">
+    <value>Controls the delay before completion suggestions are requested.</value>
+  </data>
+  <data name="Settings.Description.languageServer.SuppressedDiagnosticCodes" xml:space="preserve">
+    <value>Suppresses Roslyn or OmniSharp diagnostic IDs and related code actions.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableMsBuild" xml:space="preserve">
+    <value>Enables MSBuild project loading in OmniSharp.</value>
+  </data>
+  <data name="Settings.Description.languageServer.LoadProjectsOnDemand" xml:space="preserve">
+    <value>Loads projects only when they are needed by the language server.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnablePackageAutoRestore" xml:space="preserve">
+    <value>Allows OmniSharp to restore missing packages automatically.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableAnalyzersSupport" xml:space="preserve">
+    <value>Enables analyzer diagnostics and code fixes from Roslyn analyzers.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableDecompilationSupport" xml:space="preserve">
+    <value>Allows navigation into decompiled symbols when source is unavailable.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableImportCompletion" xml:space="preserve">
+    <value>Includes import suggestions in completion results.</value>
+  </data>
+  <data name="Settings.Description.languageServer.DiagnosticWorkersThreadCount" xml:space="preserve">
+    <value>Controls how many workers OmniSharp uses for diagnostics.</value>
+  </data>
+  <data name="Settings.Description.languageServer.EnableEditorConfigSupport" xml:space="preserve">
+    <value>Applies .editorconfig formatting and analyzer preferences.</value>
+  </data>
+  <data name="Settings.Description.languageServer.IncludePrereleases" xml:space="preserve">
+    <value>Allows prerelease SDKs when resolving the language server SDK.</value>
+  </data>
+  <data name="Settings.Description.shell.SidebarWidth" xml:space="preserve">
+    <value>Controls the default width of the left sidebar.</value>
+  </data>
+  <data name="Settings.Description.shell.TerminalHeight" xml:space="preserve">
+    <value>Controls the default height of the bottom terminal panel.</value>
+  </data>
+  <data name="Settings.Description.shell.AnimationsEnabled" xml:space="preserve">
+    <value>Enables or disables shell transition animations.</value>
+  </data>
+  <data name="Settings.Description.problems.ShowWarningsFromAllFiles" xml:space="preserve">
+    <value>Shows warning diagnostics from files that are not currently open.</value>
+  </data>
+  <data name="Settings.Description.problems.ShowInformationFromAllFiles" xml:space="preserve">
+    <value>Shows informational diagnostics from files that are not currently open.</value>
+  </data>
+  <data name="Settings.Description.problems.MaxVisibleProblems" xml:space="preserve">
+    <value>Limits the number of problems shown in the Problems panel.</value>
+  </data>
+  <data name="Settings.Description.debug.ExceptionBreakMode" xml:space="preserve">
+    <value>Controls when the debugger stops on exceptions.</value>
+  </data>
+
   <!-- Toolbar actions -->
   <data name="Settings.Action.RestoreDefaults" xml:space="preserve">
     <value>Restore defaults</value>
