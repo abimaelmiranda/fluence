@@ -1,14 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
+using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Models.LanguageServer;
+using Fluence.Modules.LanguageServer;
 
 namespace Fluence.Modules.LanguageServer.Services;
 
-internal sealed class CodeActionService(ILanguageServerService lsp, LspClientHolder holder) : ICodeActionService
+internal sealed class CodeActionService(
+    ILanguageServerService lsp,
+    LspClientHolder holder,
+    ISettingsService settings) : ICodeActionService
 {
     public async Task<LspCodeAction[]> GetCodeActionsAsync(
         string filePath,
@@ -52,7 +58,8 @@ internal sealed class CodeActionService(ILanguageServerService lsp, LspClientHol
                 },
             }, cancellationToken).ConfigureAwait(false);
 
-            return ParseCodeActions(result);
+            var suppressedCodes = SuppressedDiagnosticCodes.From(settings.Get<LanguageServerSettings>());
+            return ParseCodeActions(result, suppressedCodes);
         }
         catch
         {
@@ -127,7 +134,7 @@ internal sealed class CodeActionService(ILanguageServerService lsp, LspClientHol
         }
     }
 
-    private static LspCodeAction[] ParseCodeActions(JsonNode? result)
+    private static LspCodeAction[] ParseCodeActions(JsonNode? result, IReadOnlySet<string> suppressedCodes)
     {
         if (result is not JsonArray arr)
             return [];
@@ -139,6 +146,7 @@ internal sealed class CodeActionService(ILanguageServerService lsp, LspClientHol
 
             var title = obj["title"]?.GetValue<string>() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(title)) continue;
+            if (IsSuppressedCodeAction(obj, title, suppressedCodes)) continue;
 
             var isPreferred = obj["isPreferred"]?.GetValue<bool>() ?? false;
 
@@ -169,6 +177,59 @@ internal sealed class CodeActionService(ILanguageServerService lsp, LspClientHol
         }
 
         return [.. actions];
+    }
+
+    private static bool IsSuppressedCodeAction(
+        JsonObject obj,
+        string title,
+        IReadOnlySet<string> suppressedCodes)
+    {
+        if (suppressedCodes.Count == 0)
+            return false;
+
+        foreach (var code in ExtractDiagnosticCodes(obj))
+        {
+            if (SuppressedDiagnosticCodes.Contains(suppressedCodes, code))
+                return true;
+        }
+
+        return suppressedCodes.Any(code => title.Contains(code, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IEnumerable<string> ExtractDiagnosticCodes(JsonObject obj)
+    {
+        if (obj["diagnostics"] is not JsonArray diagnostics)
+            yield break;
+
+        foreach (var diagnostic in diagnostics)
+        {
+            var code = diagnostic?["code"];
+            if (code is null)
+                continue;
+
+            string? text;
+            try
+            {
+                text = code switch
+                {
+                    JsonValue value => value.GetValueKind() switch
+                    {
+                        System.Text.Json.JsonValueKind.String => value.GetValue<string>(),
+                        System.Text.Json.JsonValueKind.Number => value.GetValue<int>().ToString(),
+                        _ => null,
+                    },
+                    JsonObject objectCode => objectCode["value"]?.GetValue<string>(),
+                    _ => null,
+                };
+            }
+            catch
+            {
+                text = null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(text))
+                yield return text;
+        }
     }
 
     private static LspWorkspaceEdit? ParseWorkspaceEdit(JsonObject editObj)

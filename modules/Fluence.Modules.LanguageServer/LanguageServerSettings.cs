@@ -5,6 +5,13 @@ namespace Fluence.Modules.LanguageServer;
 [SettingsSection("languageServer")]
 public sealed class LanguageServerSettings
 {
+    public string[] SuppressedDiagnosticCodes { get; set; } =
+    [
+        "IDE0008",
+        "IDE0160",
+        "IDE0058",
+    ];
+
     public bool EnableMsBuild { get; set; } = true;
 
     public bool LoadProjectsOnDemand { get; set; } = false;

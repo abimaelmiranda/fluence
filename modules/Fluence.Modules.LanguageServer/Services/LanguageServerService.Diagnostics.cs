@@ -11,6 +11,7 @@ using Fluence.Core.Models.LanguageServer;
 using Fluence.Modules.LanguageServer.Protocol;
 using Fluence.Core.Events.Document;
 using Fluence.Core.Events.Lsp;
+using Fluence.Modules.LanguageServer;
 
 namespace Fluence.Modules.LanguageServer.Services;
 
@@ -133,6 +134,7 @@ internal sealed partial class LanguageServerService
         if (msg is null) return;
 
         var filePath = UriToFilePath(msg.Uri);
+        var suppressedCodes = SuppressedDiagnosticCodes.From(_settings.Get<LanguageServerSettings>());
         var diagnostics = new List<LspDiagnostic>(msg.Diagnostics.Length);
 
         foreach (var d in msg.Diagnostics)
@@ -143,6 +145,9 @@ internal sealed partial class LanguageServerService
                 JsonValueKind.Number => d.Code.Value.GetInt32().ToString(),
                 _ => null,
             };
+
+            if (SuppressedDiagnosticCodes.Contains(suppressedCodes, code))
+                continue;
 
             diagnostics.Add(new LspDiagnostic(
                 Message: d.Message,
