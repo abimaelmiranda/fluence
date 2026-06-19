@@ -1,4 +1,5 @@
 using System;
+using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 
@@ -11,6 +12,10 @@ public interface IModuleHost
     IWorkspaceContext Workspace { get; }
 
     IShellEventBus Events { get; }
+
+    IShellRequestBus Requests { get; }
+
+    IUiDispatcher Dispatcher { get; }
 
     IShellRegionHost ShellRegions { get; }
 

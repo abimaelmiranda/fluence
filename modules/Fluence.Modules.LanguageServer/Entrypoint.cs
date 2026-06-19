@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Requests.Lsp;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Problems;
 using Fluence.Core.Abstractions.Settings;
@@ -19,6 +20,9 @@ using Fluence.Core.Models.Problems;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.LanguageServer.Json;
 using Fluence.Modules.LanguageServer.Services;
+using Fluence.Core.Events.Document;
+using Fluence.Core.Events.Lsp;
+using Fluence.Core.Events.Provisioning;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.LanguageServer;
@@ -247,20 +251,14 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
             CancelSemanticTokens(e.FilePath);
         }));
 
-        _subscriptions.Add(host.Events.SubscribeSync<GoToDefinitionRequestedEvent>(e =>
-            _scheduler.Schedule("lsp.navigation", TaskPriority.Interactive,
-                ct => HandleNavigation(host, nav, "definition", e.FilePath, e.Line, e.Character, ct),
-                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}")));
+        _subscriptions.Add(host.Requests.Handle<GoToDefinitionRequest, LspLocation>(
+            (req, ct) => nav.GetDefinitionAsync(req.FilePath, req.Line, req.Character, ct)));
 
-        _subscriptions.Add(host.Events.SubscribeSync<GoToImplementationRequestedEvent>(e =>
-            _scheduler.Schedule("lsp.navigation", TaskPriority.Interactive,
-                ct => HandleNavigation(host, nav, "implementation", e.FilePath, e.Line, e.Character, ct),
-                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}")));
+        _subscriptions.Add(host.Requests.Handle<GoToImplementationRequest, LspLocation>(
+            (req, ct) => nav.GetImplementationAsync(req.FilePath, req.Line, req.Character, ct)));
 
-        _subscriptions.Add(host.Events.SubscribeSync<GoToTypeDefinitionRequestedEvent>(e =>
-            _scheduler.Schedule("lsp.navigation", TaskPriority.Interactive,
-                ct => HandleNavigation(host, nav, "typeDefinition", e.FilePath, e.Line, e.Character, ct),
-                correlationId: $"{e.FilePath}:{e.Line}:{e.Character}")));
+        _subscriptions.Add(host.Requests.Handle<GoToTypeDefinitionRequest, LspLocation>(
+            (req, ct) => nav.GetTypeDefinitionAsync(req.FilePath, req.Line, req.Character, ct)));
 
         _subscriptions.Add(host.Events.SubscribeSync<LspProvisioningCompletedEvent>(_ =>
         {
