@@ -15,6 +15,8 @@ using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
+using Fluence.Core.Events.Git;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.FileExplorer.ViewModels;
 

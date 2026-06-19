@@ -19,6 +19,8 @@ using Fluence.Modules.SolutionView.Commands.OpenSolution;
 using Fluence.Modules.SolutionView.Commands.SetStartupProject;
 using Fluence.Modules.SolutionView.Commands.AddProjectReference;
 using Fluence.Modules.SolutionView.Commands.RemoveProjectReference;
+using Fluence.Core.Events.Git;
+using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.SolutionView;
 

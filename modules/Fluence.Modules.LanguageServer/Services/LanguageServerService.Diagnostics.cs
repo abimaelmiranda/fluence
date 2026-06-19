@@ -9,6 +9,8 @@ using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Models.LanguageServer;
 using Fluence.Modules.LanguageServer.Protocol;
+using Fluence.Core.Events.Document;
+using Fluence.Core.Events.Lsp;
 
 namespace Fluence.Modules.LanguageServer.Services;
 
