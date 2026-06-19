@@ -10,6 +10,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Exceptions;
+using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Events.Lsp;
@@ -50,6 +51,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly ICommandRegistry _commands;
     private readonly IKeybindingService _keybindings;
     private readonly ISettingsTool _settingsTool;
+    private readonly ILocalizationService _loc;
     private readonly List<IDisposable> _eventSubscriptions = [];
     private readonly HashSet<string> _semanticTokensPendingFiles = new(StringComparer.OrdinalIgnoreCase);
     private IDisposable? _shellSettingsSubscription;
@@ -61,7 +63,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isShutdownOverlayVisible;
 
     [ObservableProperty]
-    private string _shutdownStatusText = "Saving workspace...";
+    private string _shutdownStatusText = string.Empty;
 
     [ObservableProperty]
     private bool _isSemanticTokensLoading;
@@ -92,7 +94,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         ISettingsService settings,
         ICommandRegistry commands,
         IKeybindingService keybindings,
-        ISettingsTool settingsTool)
+        ISettingsTool settingsTool,
+        ILocalizationService loc)
     {
         _workspace = workspace;
         _notifications = notifications;
@@ -102,12 +105,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _commands = commands;
         _keybindings = keybindings;
         _settingsTool = settingsTool;
+        _loc = loc;
         ActivityBar = activityBar;
         BottomBar = bottomBar;
         Welcome = welcome;
         _workspaceMode = workspace.Current.Mode;
+        _shutdownStatusText = _loc.Get("Desktop.Status.SavingWorkspace");
         ApplyShellSettings(_settings.Get<ShellSettings>());
         RegisterCommands();
+        _loc.LanguageChanged += OnLanguageChanged;
         _shellSettingsSubscription = _settings.Watch<ShellSettings>()
             .Subscribe(new ActionObserver<ShellSettings>(ApplyShellSettings));
         _workspace.Changed += OnWorkspaceChanged;
@@ -138,7 +144,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public string SidebarTitle => _regions.SidebarContent?.Title ?? SidebarPlaceholder;
 
-    public string BottomBarTitle => _regions.BottomBarContent?.Title ?? "Terminal";
+    public string BottomBarTitle => _regions.BottomBarContent?.Title ?? _loc.Get("Desktop.BottomBar.Terminal");
 
     public bool IsTerminalExpanded
     {
@@ -181,11 +187,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public string WorkspaceTitle => WorkspaceMode switch
     {
-        WorkspaceMode.FileOnly => ActiveDocumentName ?? "File Workspace",
-        WorkspaceMode.Folder => Path.GetFileName(_workspace.Current.CurrentFolderPath) ?? "Folder Workspace",
-        WorkspaceMode.Solution => Path.GetFileName(_workspace.Current.CurrentSolutionPath) ?? "Solution Workspace",
-        WorkspaceMode.Debugging => "Debugging",
-        _ => "Fluence IDE",
+        WorkspaceMode.FileOnly => ActiveDocumentName ?? _loc.Get("Desktop.Workspace.FileOnly"),
+        WorkspaceMode.Folder => Path.GetFileName(_workspace.Current.CurrentFolderPath) ?? _loc.Get("Desktop.Workspace.Folder"),
+        WorkspaceMode.Solution => Path.GetFileName(_workspace.Current.CurrentSolutionPath) ?? _loc.Get("Desktop.Workspace.Solution"),
+        WorkspaceMode.Debugging => _loc.Get("Desktop.Workspace.Debugging"),
+        _ => _loc.Get("Desktop.Workspace.App"),
     };
 
     public string? WorkspacePath => WorkspaceMode switch
@@ -199,28 +205,39 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public string EditorPlaceholder => WorkspaceMode switch
     {
-        WorkspaceMode.FileOnly => "Open a text file to start editing",
-        WorkspaceMode.Folder => "Open a file from the folder workspace",
-        WorkspaceMode.Solution => "Open a file from the solution workspace",
-        WorkspaceMode.Debugging => "Debug session active",
-        _ => "Editor",
+        WorkspaceMode.FileOnly => _loc.Get("Desktop.EditorPlaceholder.FileOnly"),
+        WorkspaceMode.Folder => _loc.Get("Desktop.EditorPlaceholder.Folder"),
+        WorkspaceMode.Solution => _loc.Get("Desktop.EditorPlaceholder.Solution"),
+        WorkspaceMode.Debugging => _loc.Get("Desktop.EditorPlaceholder.Debugging"),
+        _ => _loc.Get("Desktop.EditorPlaceholder.Default"),
     };
 
     public string SidebarPlaceholder => WorkspaceMode switch
     {
-        WorkspaceMode.Folder => "File Explorer",
-        WorkspaceMode.Solution => "Solution View",
-        WorkspaceMode.Debugging => "Debug",
-        _ => "Sidebar",
+        WorkspaceMode.Folder => _loc.Get("Desktop.SidebarPlaceholder.FileExplorer"),
+        WorkspaceMode.Solution => _loc.Get("Desktop.SidebarPlaceholder.SolutionView"),
+        WorkspaceMode.Debugging => _loc.Get("Desktop.SidebarPlaceholder.Debug"),
+        _ => _loc.Get("Desktop.SidebarPlaceholder.Default"),
     };
 
     public string SidebarDetail => WorkspaceMode switch
     {
-        WorkspaceMode.Folder => _workspace.Current.CurrentFolderPath ?? "No folder opened",
-        WorkspaceMode.Solution => _workspace.Current.CurrentSolutionPath ?? "No solution opened",
-        WorkspaceMode.Debugging => _workspace.Current.StartupProjectPath ?? "Debug session",
+        WorkspaceMode.Folder => _workspace.Current.CurrentFolderPath ?? _loc.Get("Desktop.SidebarDetail.NoFolderOpened"),
+        WorkspaceMode.Solution => _workspace.Current.CurrentSolutionPath ?? _loc.Get("Desktop.SidebarDetail.NoSolutionOpened"),
+        WorkspaceMode.Debugging => _workspace.Current.StartupProjectPath ?? _loc.Get("Desktop.SidebarDetail.DebugSession"),
         _ => string.Empty,
     };
+
+    private void OnLanguageChanged()
+    {
+        OnPropertyChanged(nameof(ShutdownStatusText));
+        OnPropertyChanged(nameof(BottomBarTitle));
+        OnPropertyChanged(nameof(WorkspaceTitle));
+        OnPropertyChanged(nameof(EditorPlaceholder));
+        OnPropertyChanged(nameof(SidebarPlaceholder));
+        OnPropertyChanged(nameof(SidebarDetail));
+        RefreshSemanticTokensStatus();
+    }
 
     private void OnWorkspaceChanged(object? sender, EventArgs e)
     {
@@ -310,7 +327,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         var activePath = ActiveDocumentPath;
         IsSemanticTokensLoading = activePath is not null &&
                                   _semanticTokensPendingFiles.Contains(activePath);
-        SemanticTokensStatusText = IsSemanticTokensLoading ? "Analyzing C#..." : string.Empty;
+        SemanticTokensStatusText = IsSemanticTokensLoading ? _loc.Get("Desktop.Status.AnalyzingCSharp") : string.Empty;
     }
 
     [RelayCommand]

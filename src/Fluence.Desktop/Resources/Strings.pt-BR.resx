@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Desktop.Menu.About" xml:space="preserve"><value>Sobre o Fluence...</value></data>
+  <data name="Desktop.Menu.File" xml:space="preserve"><value>Arquivo</value></data>
+  <data name="Desktop.Menu.Edit" xml:space="preserve"><value>Editar</value></data>
+  <data name="Desktop.Menu.View" xml:space="preserve"><value>Exibir</value></data>
+  <data name="Desktop.Menu.Run" xml:space="preserve"><value>Executar</value></data>
+  <data name="Desktop.Menu.Tools" xml:space="preserve"><value>Ferramentas</value></data>
+  <data name="Desktop.Menu.Debug" xml:space="preserve"><value>Depurar</value></data>
+  <data name="Desktop.Menu.Preferences" xml:space="preserve"><value>Preferências</value></data>
+  <data name="Desktop.Menu.NewProject" xml:space="preserve"><value>Novo Projeto</value></data>
+  <data name="Desktop.Menu.OpenFile" xml:space="preserve"><value>Abrir Arquivo</value></data>
+  <data name="Desktop.Menu.OpenFolder" xml:space="preserve"><value>Abrir Pasta</value></data>
+  <data name="Desktop.Menu.OpenSolution" xml:space="preserve"><value>Abrir Solução</value></data>
+  <data name="Desktop.Menu.Save" xml:space="preserve"><value>Salvar</value></data>
+  <data name="Desktop.Menu.DotnetSdk" xml:space="preserve"><value>.NET SDK</value></data>
+  <data name="Desktop.Menu.Settings" xml:space="preserve"><value>Configurações</value></data>
+  <data name="Desktop.Menu.KeyboardShortcuts" xml:space="preserve"><value>Atalhos de Teclado</value></data>
+  <data name="Desktop.Menu.Undo" xml:space="preserve"><value>Desfazer</value></data>
+  <data name="Desktop.Menu.Redo" xml:space="preserve"><value>Refazer</value></data>
+  <data name="Desktop.Menu.Build" xml:space="preserve"><value>Compilar</value></data>
+  <data name="Desktop.Menu.Restore" xml:space="preserve"><value>Restaurar</value></data>
+  <data name="Desktop.Menu.Publish" xml:space="preserve"><value>Publicar</value></data>
+  <data name="Desktop.Menu.RunProject" xml:space="preserve"><value>Executar</value></data>
+  <data name="Desktop.Menu.DebugProject" xml:space="preserve"><value>Depurar</value></data>
+  <data name="Desktop.Menu.StopDebugging" xml:space="preserve"><value>Parar Depuração</value></data>
+  <data name="Desktop.Menu.Test" xml:space="preserve"><value>Testar</value></data>
+  <data name="Desktop.Menu.Clean" xml:space="preserve"><value>Limpar</value></data>
+  <data name="Desktop.Menu.NuGetPackageManager" xml:space="preserve"><value>Gerenciador de Pacotes NuGet</value></data>
+  <data name="Desktop.Menu.ToggleBottomBar" xml:space="preserve"><value>Alternar Barra Inferior</value></data>
+  <data name="Desktop.Menu.SimulateSolutionLoadFailure" xml:space="preserve"><value>Simular falha ao carregar solução</value></data>
+  <data name="Desktop.Menu.SimulateMissingProject" xml:space="preserve"><value>Simular projeto ausente</value></data>
+  <data name="Desktop.Menu.SimulateBrokenMsBuildProject" xml:space="preserve"><value>Simular projeto MSBuild quebrado</value></data>
+  <data name="Desktop.Menu.SimulateUnsupportedFileOpen" xml:space="preserve"><value>Simular abertura de arquivo não suportado</value></data>
+  <data name="Desktop.Menu.SimulateDeletedFileOpen" xml:space="preserve"><value>Simular abertura de arquivo excluído</value></data>
+  <data name="Desktop.Menu.SimulateUnauthorizedFileOpen" xml:space="preserve"><value>Simular abertura de arquivo sem autorização</value></data>
+  <data name="Desktop.Menu.TriggerCrash" xml:space="preserve"><value>Forçar travamento</value></data>
+  <data name="Desktop.About.Title" xml:space="preserve"><value>Sobre o Fluence</value></data>
+  <data name="Desktop.About.ProductName" xml:space="preserve"><value>Fluence</value></data>
+  <data name="Desktop.About.Description" xml:space="preserve"><value>IDE de código aberto para desenvolvimento C#</value></data>
+  <data name="Desktop.About.Close" xml:space="preserve"><value>Fechar</value></data>
+  <data name="Desktop.About.VersionPrefix" xml:space="preserve"><value>Versão {0}</value></data>
+  <data name="Desktop.Crash.Title" xml:space="preserve"><value>O Fluence travou</value></data>
+  <data name="Desktop.Crash.Description" xml:space="preserve"><value>Ocorreu um erro fatal. Revise a pilha abaixo e feche o aplicativo.</value></data>
+  <data name="Desktop.Crash.Quit" xml:space="preserve"><value>Sair</value></data>
+  <data name="Desktop.Problems.Title" xml:space="preserve"><value>Problemas</value></data>
+  <data name="Desktop.Problems.Empty" xml:space="preserve"><value>Nenhum problema</value></data>
+  <data name="Desktop.Welcome.Title" xml:space="preserve"><value>Fluence</value></data>
+  <data name="Desktop.Welcome.Subtitle" xml:space="preserve"><value>Abra um workspace C# focado</value></data>
+  <data name="Desktop.Welcome.Section.Start" xml:space="preserve"><value>Iniciar</value></data>
+  <data name="Desktop.Welcome.Action.NewProject" xml:space="preserve"><value>Novo Projeto</value></data>
+  <data name="Desktop.Welcome.Action.OpenFile" xml:space="preserve"><value>Abrir Arquivo</value></data>
+  <data name="Desktop.Welcome.Action.OpenFolder" xml:space="preserve"><value>Abrir Pasta</value></data>
+  <data name="Desktop.Welcome.Action.OpenSolution" xml:space="preserve"><value>Abrir Solução</value></data>
+  <data name="Desktop.Welcome.Section.RecentSolutions" xml:space="preserve"><value>Soluções Recentes</value></data>
+  <data name="Desktop.Welcome.Empty.NoRecentSolutions" xml:space="preserve"><value>Nenhuma solução recente</value></data>
+  <data name="Desktop.Status.NoWorkspaceOpened" xml:space="preserve"><value>Nenhum workspace aberto</value></data>
+  <data name="Desktop.Status.CreateProject" xml:space="preserve"><value>Criar um novo projeto</value></data>
+  <data name="Desktop.Status.UnableToOpenFile" xml:space="preserve"><value>Não foi possível abrir o arquivo</value></data>
+  <data name="Desktop.Status.SavingWorkspace" xml:space="preserve"><value>Salvando workspace...</value></data>
+  <data name="Desktop.Status.AnalyzingCSharp" xml:space="preserve"><value>Analisando C#...</value></data>
+  <data name="Desktop.Toolbar.CloseTab" xml:space="preserve"><value>Fechar aba</value></data>
+  <data name="Desktop.Toolbar.Run" xml:space="preserve"><value>Executar</value></data>
+  <data name="Desktop.Toolbar.Debug" xml:space="preserve"><value>Depurar</value></data>
+  <data name="Desktop.Toolbar.StopDebug" xml:space="preserve"><value>Parar depuração</value></data>
+  <data name="Desktop.Toolbar.ClearOutput" xml:space="preserve"><value>Limpar saída</value></data>
+  <data name="Desktop.Toolbar.ClearDebug" xml:space="preserve"><value>Limpar debug</value></data>
+  <data name="Desktop.Toolbar.ClearRun" xml:space="preserve"><value>Limpar execução</value></data>
+  <data name="Desktop.Activity.Files" xml:space="preserve"><value>Arquivos</value></data>
+  <data name="Desktop.Activity.SourceControl" xml:space="preserve"><value>Controle de versão</value></data>
+  <data name="Desktop.Activity.Debug" xml:space="preserve"><value>Depuração</value></data>
+  <data name="Desktop.BottomBar.Terminal" xml:space="preserve"><value>Terminal</value></data>
+  <data name="Desktop.Workspace.FileOnly" xml:space="preserve"><value>Workspace de Arquivo</value></data>
+  <data name="Desktop.Workspace.Folder" xml:space="preserve"><value>Workspace de Pasta</value></data>
+  <data name="Desktop.Workspace.Solution" xml:space="preserve"><value>Workspace de Solução</value></data>
+  <data name="Desktop.Workspace.Debugging" xml:space="preserve"><value>Depurando</value></data>
+  <data name="Desktop.Workspace.App" xml:space="preserve"><value>Fluence IDE</value></data>
+  <data name="Desktop.EditorPlaceholder.FileOnly" xml:space="preserve"><value>Abra um arquivo de texto para começar a editar</value></data>
+  <data name="Desktop.EditorPlaceholder.Folder" xml:space="preserve"><value>Abra um arquivo do workspace de pasta</value></data>
+  <data name="Desktop.EditorPlaceholder.Solution" xml:space="preserve"><value>Abra um arquivo do workspace de solução</value></data>
+  <data name="Desktop.EditorPlaceholder.Debugging" xml:space="preserve"><value>Sessão de depuração ativa</value></data>
+  <data name="Desktop.EditorPlaceholder.Default" xml:space="preserve"><value>Editor</value></data>
+  <data name="Desktop.SidebarPlaceholder.FileExplorer" xml:space="preserve"><value>Explorador de Arquivos</value></data>
+  <data name="Desktop.SidebarPlaceholder.SolutionView" xml:space="preserve"><value>Visão da Solução</value></data>
+  <data name="Desktop.SidebarPlaceholder.Debug" xml:space="preserve"><value>Depuração</value></data>
+  <data name="Desktop.SidebarPlaceholder.Default" xml:space="preserve"><value>Barra lateral</value></data>
+  <data name="Desktop.SidebarDetail.NoFolderOpened" xml:space="preserve"><value>Nenhuma pasta aberta</value></data>
+  <data name="Desktop.SidebarDetail.NoSolutionOpened" xml:space="preserve"><value>Nenhuma solução aberta</value></data>
+  <data name="Desktop.SidebarDetail.DebugSession" xml:space="preserve"><value>Sessão de depuração</value></data>
+</root>

@@ -90,6 +90,9 @@ public partial class App : Avalonia.Application
                 });
             };
 
+            // TODO: investigate "[Control] PlatformImpl is null, couldn't handle input" logged by
+            // Avalonia during close. The OS destroys the native window handle while the framework
+            // is still tearing down, causing stray input events to hit controls with no backend.
             mainWindow.Closing += async (_, e) =>
             {
                 try

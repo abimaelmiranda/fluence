@@ -1,7 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:Fluence.Core.Services.Localization"
         x:Class="Fluence.Desktop.Views.CrashDialog"
-        Title="Fluence crashed"
+        Title="{Binding [Desktop.Crash.Title], Source={x:Static loc:Locale.Current}}"
         Width="820"
         Height="540"
         CanResize="False"
@@ -9,12 +10,12 @@
         Background="{StaticResource FluenceBrushShell}">
     <Grid RowDefinitions="Auto,*,Auto" Margin="24" RowSpacing="14">
         <StackPanel Grid.Row="0" Spacing="6">
-            <TextBlock Text="Fluence crashed"
+            <TextBlock Text="{Binding [Desktop.Crash.Title], Source={x:Static loc:Locale.Current}}"
                        FontFamily="{StaticResource FluenceFontFamily}"
                        FontSize="{StaticResource FluenceFontSizeTitle}"
                        FontWeight="SemiBold"
                        Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-            <TextBlock Text="A fatal error occurred. Review the stacktrace below, then quit the application."
+            <TextBlock Text="{Binding [Desktop.Crash.Description], Source={x:Static loc:Locale.Current}}"
                        FontFamily="{StaticResource FluenceFontFamily}"
                        FontSize="{StaticResource FluenceFontSizeBody}"
                        Foreground="{StaticResource FluenceBrushTextSecondary}"
@@ -44,7 +45,7 @@
         </Border>
 
         <Button Grid.Row="2"
-                Content="Quit"
+                Content="{Binding [Desktop.Crash.Quit], Source={x:Static loc:Locale.Current}}"
                 Click="OnQuitClicked"
                 HorizontalAlignment="Right"
                 MinWidth="96"/>

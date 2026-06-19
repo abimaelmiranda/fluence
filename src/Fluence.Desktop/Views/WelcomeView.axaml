@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Fluence.Desktop.ViewModels"
              xmlns:models="using:Fluence.Core.Models.Workspace"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Fluence.Desktop.Views.WelcomeView"
              x:DataType="vm:WelcomeViewModel">
@@ -31,12 +32,12 @@
               RowSpacing="22">
             <StackPanel Grid.Row="0"
                         Spacing="8">
-                <TextBlock Text="Fluence"
+                <TextBlock Text="{Binding [Desktop.Welcome.Title], Source={x:Static loc:Locale.Current}}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeDisplay}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                <TextBlock Text="Start a focused C# workspace"
+                <TextBlock Text="{Binding [Desktop.Welcome.Subtitle], Source={x:Static loc:Locale.Current}}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeBody}"
                            Foreground="{StaticResource FluenceBrushTextSecondary}"/>
@@ -47,7 +48,7 @@
                   ColumnSpacing="30">
                 <StackPanel Grid.Column="0"
                             Spacing="10">
-                    <TextBlock Text="Start"
+                    <TextBlock Text="{Binding [Desktop.Welcome.Section.Start], Source={x:Static loc:Locale.Current}}"
                                FontFamily="{StaticResource FluenceFontFamily}"
                                FontSize="{StaticResource FluenceFontSizeSmall}"
                                FontWeight="SemiBold"
@@ -62,7 +63,7 @@
                                                         Foreground="{StaticResource FluenceBrushTextSecondary}"
                                                         VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1"
-                                       Text="New Project"
+                                       Text="{Binding [Desktop.Welcome.Action.NewProject], Source={x:Static loc:Locale.Current}}"
                                        Classes="ideValue"
                                        FontWeight="SemiBold"/>
                         </Grid>
@@ -76,7 +77,7 @@
                                                         Foreground="{StaticResource FluenceBrushTextSecondary}"
                                                         VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1"
-                                       Text="Open File"
+                                       Text="{Binding [Desktop.Welcome.Action.OpenFile], Source={x:Static loc:Locale.Current}}"
                                        Classes="ideValue"
                                        FontWeight="SemiBold"/>
                         </Grid>
@@ -90,7 +91,7 @@
                                                         Foreground="{StaticResource FluenceBrushTextSecondary}"
                                                         VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1"
-                                       Text="Open Folder"
+                                       Text="{Binding [Desktop.Welcome.Action.OpenFolder], Source={x:Static loc:Locale.Current}}"
                                        Classes="ideValue"
                                        FontWeight="SemiBold"/>
                         </Grid>
@@ -104,7 +105,7 @@
                                                         Foreground="{StaticResource FluenceBrushTextSecondary}"
                                                         VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1"
-                                       Text="Open Solution"
+                                       Text="{Binding [Desktop.Welcome.Action.OpenSolution], Source={x:Static loc:Locale.Current}}"
                                        Classes="ideValue"
                                        FontWeight="SemiBold"/>
                         </Grid>
@@ -118,14 +119,14 @@
                 <Grid Grid.Column="2"
                       RowDefinitions="Auto,*"
                       RowSpacing="10">
-                    <TextBlock Text="Recent Solutions"
+                    <TextBlock Text="{Binding [Desktop.Welcome.Section.RecentSolutions], Source={x:Static loc:Locale.Current}}"
                                FontFamily="{StaticResource FluenceFontFamily}"
                                FontSize="{StaticResource FluenceFontSizeSmall}"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
 
                     <Grid Grid.Row="1">
-                        <TextBlock Text="No recent solutions"
+                        <TextBlock Text="{Binding [Desktop.Welcome.Empty.NoRecentSolutions], Source={x:Static loc:Locale.Current}}"
                                    Classes="ideLabel"
                                    IsVisible="{Binding !HasRecentSolutions}"
                                    VerticalAlignment="Top"/>
