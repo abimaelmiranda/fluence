@@ -28,7 +28,7 @@ using Fluence.Modules.Debug.Services;
 
 namespace Fluence.Modules.Debug;
 
-public sealed class Entrypoint : IModule
+public sealed class Entrypoint : IModule, IModuleShutdownParticipant
 {
     private string? _activeTabId;
     private readonly List<IDisposable> _subscriptions = [];
@@ -135,9 +135,16 @@ public sealed class Entrypoint : IModule
             subscription.Dispose();
         _subscriptions.Clear();
 
-        if (_debugService is not null)
-            await _debugService.StopAsync().ConfigureAwait(false);
-
+        var service = _debugService;
         _debugService = null;
+        if (service is not null)
+            await service.StopAsync().ConfigureAwait(false);
+    }
+
+    public Task StopAsync(ModuleShutdownContext context)
+    {
+        var service = _debugService;
+        _debugService = null;
+        return service?.StopAsync(context.CancellationToken) ?? Task.CompletedTask;
     }
 }
