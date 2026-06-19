@@ -20,7 +20,10 @@ public sealed class SolutionTreeItemIconConverter : IValueConverter
         return item.Kind switch
         {
             SolutionTreeNodeKind.Solution => MaterialIconTheme.Instance.GetFileIcon(item.Path ?? item.Name)!,
-            SolutionTreeNodeKind.SolutionFolder or SolutionTreeNodeKind.Folder => MaterialIconTheme.Instance.GetFolderIcon(item.Name)!,
+            SolutionTreeNodeKind.SolutionFolder or SolutionTreeNodeKind.Folder =>
+                MaterialIconTheme.Instance.GetFolderIcon(item.Name) ??
+                MaterialIconTheme.Instance.GetIconById("folder") ??
+                MaterialIconTheme.Instance.GetIconById("file")!,
             SolutionTreeNodeKind.Project => MaterialIconTheme.Instance.GetFileIcon(item.Path ?? item.Name)!,
             SolutionTreeNodeKind.Dependencies or SolutionTreeNodeKind.DependencyGroup => MaterialIconTheme.Instance.GetIconById("dependencies-update")!,
             SolutionTreeNodeKind.ProjectReference => MaterialIconTheme.Instance.GetFileIcon(item.ReferencedProjectPath ?? item.Name)!,
