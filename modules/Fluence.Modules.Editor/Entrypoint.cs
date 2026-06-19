@@ -21,6 +21,8 @@ using Fluence.Modules.Editor.Commands;
 using Fluence.Modules.Editor.Json;
 using Fluence.Modules.Editor.Services;
 using Fluence.Modules.Editor.ViewModels;
+using Fluence.Core.Events.Lsp;
+using Fluence.Core.Events.Workspace;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.Editor;
