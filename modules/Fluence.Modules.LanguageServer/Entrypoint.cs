@@ -83,7 +83,8 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
         services.AddSingleton<ICodeActionService>(provider =>
             new CodeActionService(
                 provider.GetRequiredService<ILanguageServerService>(),
-                provider.GetRequiredService<LspClientHolder>()));
+                provider.GetRequiredService<LspClientHolder>(),
+                provider.GetRequiredService<ISettingsService>()));
         services.AddSingleton<IFormattingService>(provider =>
             new FormattingService(
                 provider.GetRequiredService<ILanguageServerService>(),

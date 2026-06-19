@@ -63,6 +63,14 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
     [ObservableProperty]
     private string _searchQuery = string.Empty;
 
+    [ObservableProperty]
+    private SettingsSectionViewModel? _selectedSection;
+
+    public string SettingsContextTitle =>
+        string.IsNullOrWhiteSpace(SearchQuery)
+            ? SelectedSection?.DisplayName ?? "Settings"
+            : "Search results";
+
     public ObservableCollection<SettingsSectionViewModel> Sections { get; } = [];
 
     public ObservableCollection<SettingsSectionViewModel> FilteredSections { get; } = [];
@@ -75,7 +83,17 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     public bool IsRecordingKeybinding => Keybindings.Any(row => row.IsRecording);
 
-    partial void OnSearchQueryChanged(string value) => RefreshFilters();
+    partial void OnSearchQueryChanged(string value)
+    {
+        OnPropertyChanged(nameof(SettingsContextTitle));
+        RefreshFilters();
+    }
+
+    partial void OnSelectedSectionChanged(SettingsSectionViewModel? value)
+    {
+        OnPropertyChanged(nameof(SettingsContextTitle));
+        RefreshSettingsFilter();
+    }
 
     public void ShowSettings()
     {
@@ -100,6 +118,14 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
         row.HandleCapture(gesture, isCancel);
         return true;
+    }
+
+    public void CancelKeybindingCapture()
+    {
+        foreach (var row in Keybindings.Where(row => row.IsRecording))
+            row.CancelCapture();
+
+        OnPropertyChanged(nameof(IsRecordingKeybinding));
     }
 
     internal void StartKeybindingCapture(KeybindingRowViewModel activeRow)
@@ -175,18 +201,26 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
     {
         Sections.Clear();
         ReloadThemeOptions();
-        foreach (var section in _settingsRegistry.Sections)
+        foreach (var section in _settingsRegistry.Sections
+            .OrderBy(section => SettingsDisplayMetadata.GetSectionSortKey(section.SectionName))
+            .ThenBy(section => section.SectionName, StringComparer.Ordinal))
         {
             var current = _settings.Get(section.SettingsType);
             var properties = SettingsReflectionScaffolder.BuildProperties(
-                section.SettingsType, current, ThemeOptions);
-            var sectionViewModel = new SettingsSectionViewModel(section.SectionName, section.SettingsType, properties);
+                section.SectionName, section.SettingsType, current, ThemeOptions);
+            var sectionViewModel = new SettingsSectionViewModel(
+                section.SectionName,
+                SettingsDisplayMetadata.GetSectionDisplayName(section.SectionName),
+                section.SettingsType,
+                properties);
             foreach (var property in sectionViewModel.Properties)
                 property.PropertyChanged += OnSettingPropertyChanged;
 
             Sections.Add(sectionViewModel);
         }
 
+        SelectedSection = Sections.FirstOrDefault();
+        OnPropertyChanged(nameof(SettingsContextTitle));
         RefreshSettingsFilter();
     }
 
@@ -231,7 +265,11 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
         foreach (var section in Sections)
         {
             section.FilteredProperties.Clear();
-            if (string.IsNullOrWhiteSpace(query) || ContainsSearch(section.Name, query))
+
+            if (string.IsNullOrWhiteSpace(query) && !ReferenceEquals(section, SelectedSection))
+                continue;
+
+            if (string.IsNullOrWhiteSpace(query) || ContainsSearch(section.Name, query) || ContainsSearch(section.DisplayName, query))
             {
                 foreach (var property in section.Properties)
                     section.FilteredProperties.Add(property);
@@ -260,10 +298,13 @@ public sealed partial class SettingsToolViewModel : ViewModelBase, ISettingsTool
 
     private static bool MatchesSettingProperty(SettingsPropertyViewModel property, string query) =>
         ContainsSearch(property.Name, query) ||
+        ContainsSearch(property.DisplayName, query) ||
+        ContainsSearch(property.Description, query) ||
         ContainsSearch(property.TextValue, query) ||
         ContainsSearch(property.ThemeReference, query) ||
         ContainsSearch(property.SelectedTheme?.DisplayName, query) ||
         ContainsSearch(property.SelectedTheme?.Reference, query) ||
+        ContainsSearch(property.StringArraySearchText, query) ||
         ContainsSearch(property.BoolValue.ToString(), query);
 
     private static bool MatchesKeybinding(KeybindingRowViewModel keybinding, string query) =>

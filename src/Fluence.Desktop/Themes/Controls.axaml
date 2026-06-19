@@ -40,11 +40,13 @@
         <Setter Property="FontSize" Value="{DynamicResource FluenceFontSizeSmall}"/>
         <Setter Property="MinHeight" Value="28"/>
         <Setter Property="Padding" Value="8,3"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
     <Style Selector="ComboBox.ideCompact">
         <Setter Property="MinHeight" Value="26"/>
         <Setter Property="Height" Value="26"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
     <Style Selector="CheckBox">
