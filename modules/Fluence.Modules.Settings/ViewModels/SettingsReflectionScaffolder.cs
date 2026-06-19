@@ -10,6 +10,7 @@ namespace Fluence.Modules.Settings.ViewModels;
 internal static class SettingsReflectionScaffolder
 {
     public static ObservableCollection<SettingsPropertyViewModel> BuildProperties(
+        string sectionName,
         Type settingsType,
         object currentValues,
         ObservableCollection<ThemeDescriptor> themeOptions)
@@ -22,6 +23,8 @@ internal static class SettingsReflectionScaffolder
                 var isTheme = p.GetCustomAttribute<ThemeReferenceAttribute>() is not null;
                 return new SettingsPropertyViewModel(
                     p.Name,
+                    SettingsDisplayMetadata.GetPropertyDisplayName(sectionName, p.Name),
+                    SettingsDisplayMetadata.GetPropertyDescription(sectionName, p.Name),
                     p.PropertyType,
                     p.GetValue(currentValues),
                     isTheme ? themeOptions : null);

@@ -24,6 +24,9 @@ internal static class SettingsValueConverter
                 return item.TextValue.Trim();
             }
 
+            if (property.PropertyType == typeof(string[]))
+                return item.GetStringArrayValues();
+
             if (property.PropertyType.IsEnum)
                 return Enum.Parse(property.PropertyType, item.SelectedEnumValue, ignoreCase: true);
 
