@@ -1,9 +1,9 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -19,7 +19,11 @@ public sealed class Entrypoint : IModule
 {
     private IDisposable? _managePackagesSubscription;
 
-    public string Name => "NuGetExplorer";
+    public string Id => "NuGetExplorer";
+
+    public string DisplayName => "NuGet Explorer";
+
+    public int StartupOrder => 500;
 
     public void Register(IServiceCollection services)
     {
@@ -29,13 +33,15 @@ public sealed class Entrypoint : IModule
         services.AddSingleton<PackageIconLoader>();
     }
 
-    public void Initialize(IModuleHost host)
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _managePackagesSubscription = host.Events.SubscribeSync<ManageNuGetPackagesRequestedEvent>(e =>
         {
             host.Services.GetRequiredService<NuGetExplorerViewModel>().OpenForSolution(e.SolutionPath);
         });
-        host.SetModuleState(Name, ModuleState.Active);
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     public ValueTask DisposeAsync()

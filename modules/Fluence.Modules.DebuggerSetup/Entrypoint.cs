@@ -1,10 +1,10 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -18,15 +18,20 @@ public sealed class Entrypoint : IModule
 {
     private IDisposable? _provisioningSubscription;
 
-    public string Name => "DebuggerSetup";
+    public string Id => "DebuggerSetup";
+
+    public string DisplayName => "Debugger Setup";
+
+    public int StartupOrder => 1000;
 
     public void Register(IServiceCollection services)
     {
         services.AddSingleton<DebuggerSetupViewModel>();
     }
 
-    public void Initialize(IModuleHost host)
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
         _provisioningSubscription = host.Events.SubscribeSync<DebuggerProvisioningRequiredEvent>(e =>
@@ -39,7 +44,8 @@ public sealed class Entrypoint : IModule
                 ct => vm.StartProvisioningAsync(ct));
         });
 
-        host.SetModuleState(Name, ModuleState.Active);
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     public ValueTask DisposeAsync()

@@ -23,7 +23,7 @@ The agent must prioritize delivering a working vertical slice before adding soph
 - [x] Phase 8 - Terminal Module
 - [x] Phase 9 - Infrastructure Layer
 - [x] Phase 10 - DotnetCLI Module
-- [x] Modular Architecture Refactor (IViewRegistry, IShellEventBus, IPanelDescriptor)
+- [x] Modular Architecture Refactor (IShellEventBus, ModuleContributions, ShellPanelContribution)
 - [x] MainWindow data-driven via ContentControl + ViewLocator (no module types in shell)
 - [x] Application layer merged into Core; modules own their handlers and domain impls
 - [x] Bootstrapper decoupled: only registers shell, platform adapters, and the module array

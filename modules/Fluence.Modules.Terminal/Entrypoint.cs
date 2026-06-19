@@ -1,10 +1,10 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
-using Fluence.Core.Services.Modules;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -18,22 +18,37 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
 {
     private ITerminalService? _terminalService;
 
-    public string Name => "Terminal";
+    public string Id => "Terminal";
+
+    public string DisplayName => "Terminal";
+
+    public int StartupOrder => 600;
 
     public void Register(IServiceCollection services)
     {
         services.AddSingleton<TerminalViewModel>();
     }
 
-    public void Initialize(IModuleHost host)
+    public ModuleContributions GetContributions() =>
+        new()
+        {
+            Panels =
+            [
+                new ShellPanelContribution(
+                    ShellRegion.BottomBar,
+                    Id,
+                    "Terminal",
+                    services => services.GetRequiredService<TerminalViewModel>(),
+                    PanelVisibilityRule.Always),
+            ],
+        };
+
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _terminalService = host.Services.GetRequiredService<ITerminalService>();
-        host.ShellRegions.SetContent(
-            ShellRegion.BottomBar,
-            Name,
-            "Terminal",
-            host.Services.GetRequiredService<TerminalViewModel>());
-        host.SetModuleState(Name, ModuleState.Active);
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()

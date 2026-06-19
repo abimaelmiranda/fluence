@@ -15,6 +15,7 @@ using Fluence.Desktop.Views;
 using Fluence.Infrastructure;
 using Fluence.Core.Abstractions.Lifecycle;
 using Fluence.Core.Abstractions.Keybindings;
+using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Lifecycle;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,7 +42,6 @@ public partial class App : Avalonia.Application
         {
             _serviceProvider = Bootstrapper.BuildServices();
             DataTemplates.Add(new ViewLocator());
-            Bootstrapper.InitializeModules(_serviceProvider);
 
             // Resolve eagerly to subscribe to workspace.Changed for auto-save
             _serviceProvider.GetRequiredService<WorkspaceSnapshotCoordinator>();
@@ -96,9 +96,26 @@ public partial class App : Avalonia.Application
             desktop.MainWindow = mainWindow;
             desktop.ShutdownRequested += OnDesktopShutdownRequested;
             desktop.Exit += OnDesktopExit;
+
+            _ = StartApplicationAsync(_serviceProvider);
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private async Task StartApplicationAsync(IServiceProvider serviceProvider)
+    {
+        try
+        {
+            await serviceProvider.GetRequiredService<IStartupCoordinator>()
+                .StartAsync();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[startup] Application startup failed: {ex}");
+            ShowFatalException(ex);
+        }
     }
 
     private void OnAboutClicked(object? sender, EventArgs e)

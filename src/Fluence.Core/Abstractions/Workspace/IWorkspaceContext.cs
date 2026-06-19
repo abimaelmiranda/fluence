@@ -34,5 +34,5 @@ public interface IWorkspaceContext
 
     void Reset();
 
-    void SetModuleState(string moduleName, ModuleState state);
+    void SetModuleState(string moduleId, ModuleState state);
 }

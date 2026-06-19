@@ -38,9 +38,9 @@ public sealed class ShutdownCoordinator(
             if (IsShutdownComplete)
                 return;
 
-            foreach (var module in modules.Reverse())
+            foreach (var module in modules.OrderByDescending(static module => module.StartupOrder))
             {
-                progress?.Report(new ModuleShutdownProgress($"Stopping {module.Name}..."));
+                progress?.Report(new ModuleShutdownProgress($"Stopping {module.DisplayName}..."));
                 var started = Stopwatch.StartNew();
                 if (module is IModuleShutdownParticipant participant)
                 {
@@ -53,16 +53,16 @@ public sealed class ShutdownCoordinator(
                     }
                     catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
                     {
-                        Debug.WriteLine($"Module {module.Name} stop canceled after {started.ElapsedMilliseconds}ms: {ex.Message}");
+                        Debug.WriteLine($"Module {module.Id} stop canceled after {started.ElapsedMilliseconds}ms: {ex.Message}");
                     }
                     catch (TimeoutException ex)
                     {
-                        Debug.WriteLine($"Module {module.Name} stop timed out after {started.ElapsedMilliseconds}ms: {ex.Message}");
+                        Debug.WriteLine($"Module {module.Id} stop timed out after {started.ElapsedMilliseconds}ms: {ex.Message}");
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"Module {module.Name} stop failed after {started.ElapsedMilliseconds}ms: {ex}");
-                        host.SetModuleState(module.Name, ModuleState.Faulted);
+                        Debug.WriteLine($"Module {module.Id} stop failed after {started.ElapsedMilliseconds}ms: {ex}");
+                        host.SetModuleState(module.Id, ModuleState.Faulted);
                     }
                 }
 
@@ -75,16 +75,16 @@ public sealed class ShutdownCoordinator(
                 }
                 catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
                 {
-                    Debug.WriteLine($"Module {module.Name} dispose canceled after {started.ElapsedMilliseconds}ms: {ex.Message}");
+                    Debug.WriteLine($"Module {module.Id} dispose canceled after {started.ElapsedMilliseconds}ms: {ex.Message}");
                 }
                 catch (TimeoutException ex)
                 {
-                    Debug.WriteLine($"Module {module.Name} dispose timed out after {started.ElapsedMilliseconds}ms: {ex.Message}");
+                    Debug.WriteLine($"Module {module.Id} dispose timed out after {started.ElapsedMilliseconds}ms: {ex.Message}");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Module {module.Name} dispose failed after {started.ElapsedMilliseconds}ms: {ex}");
-                    host.SetModuleState(module.Name, ModuleState.Faulted);
+                    Debug.WriteLine($"Module {module.Id} dispose failed after {started.ElapsedMilliseconds}ms: {ex}");
+                    host.SetModuleState(module.Id, ModuleState.Faulted);
                 }
             }
 
