@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -21,6 +22,8 @@ public partial class MainWindow : Window
     private double _terminalResizeStartY;
     private double _terminalResizeStartHeight;
     private IDisposable? _keybindingSubscription;
+    private MainWindowViewModel? _observedViewModel;
+    private PropertyChangedEventHandler? _quickOpenPropertyChangedHandler;
 
     public MainWindow()
     {
@@ -132,17 +135,42 @@ public partial class MainWindow : Window
 
         _keybindingSubscription?.Dispose();
         _keybindingSubscription = null;
+        if (_observedViewModel is not null &&
+            _quickOpenPropertyChangedHandler is not null)
+        {
+            _observedViewModel.QuickOpen.PropertyChanged -= _quickOpenPropertyChangedHandler;
+        }
+
+        _observedViewModel = null;
+        _quickOpenPropertyChangedHandler = null;
 
         if (DataContext is not MainWindowViewModel vm)
             return;
 
+        _observedViewModel = vm;
         _keybindingSubscription = vm.Keybindings.Watch()
             .Subscribe(new ActionObserver<IReadOnlyList<KeybindingDefinition>>(RebuildDynamicKeyBindings));
-        vm.QuickOpen.PropertyChanged += (_, args) =>
+        _quickOpenPropertyChangedHandler = (_, args) =>
         {
             if (args.PropertyName == nameof(QuickOpenViewModel.IsVisible) && vm.QuickOpen.IsVisible)
-                QuickOpenSearchBox?.Focus();
+                FocusQuickOpenSearchBox();
         };
+        vm.QuickOpen.PropertyChanged += _quickOpenPropertyChangedHandler;
+
+        if (vm.QuickOpen.IsVisible)
+            FocusQuickOpenSearchBox();
+    }
+
+    private void FocusQuickOpenSearchBox()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (QuickOpenSearchBox is null || !QuickOpenSearchBox.IsVisible)
+                return;
+
+            QuickOpenSearchBox.Focus();
+            QuickOpenSearchBox.SelectAll();
+        }, DispatcherPriority.Loaded);
     }
 
     private void OnTerminalResizeHandlePointerPressed(object? sender, PointerPressedEventArgs e)
