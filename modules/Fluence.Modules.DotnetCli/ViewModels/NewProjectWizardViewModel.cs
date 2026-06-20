@@ -64,6 +64,7 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
             new(_loc.Get("DotnetCli.Template.Mvc"), "mvc", _loc.Get("DotnetCli.Template.Mvc.Description")),
             new(_loc.Get("DotnetCli.Template.RazorPages"), "webapp", _loc.Get("DotnetCli.Template.RazorPages.Description")),
             new(_loc.Get("DotnetCli.Template.BlazorWebApp"), "blazor", _loc.Get("DotnetCli.Template.BlazorWebApp.Description")),
+            new(_loc.Get("DotnetCli.Template.WpfApp"), "wpf", _loc.Get("DotnetCli.Template.WpfApp.Description"), SupportsFramework: false),
             new(_loc.Get("DotnetCli.Template.XUnit"), "xunit", _loc.Get("DotnetCli.Template.XUnit.Description")),
             new(_loc.Get("DotnetCli.Template.NUnit"), "nunit", _loc.Get("DotnetCli.Template.NUnit.Description")),
             new(_loc.Get("DotnetCli.Template.MSTest"), "mstest", _loc.Get("DotnetCli.Template.MSTest.Description")),
@@ -152,21 +153,21 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         if (!Validate(out var projectRoot))
             return;
 
-        _output.Clear(OutputChannelIds.Run);
-
-        var sdkStatus = await _sdk.GetStatusAsync(cancellationToken);
-        if (!sdkStatus.IsDotnetAvailable || sdkStatus.InstalledSdks.Count == 0)
-        {
-            _events.Publish(new DotnetSdkSetupRequestedEvent());
-            Status = ".NET SDK is required before creating projects.";
-            return;
-        }
-
         IsRunning = true;
-        Status = _loc.Get("DotnetCli.Status.CreatingProject");
+        Status = _loc.Get("DotnetCli.Status.Checking");
+        _output.Clear(OutputChannelIds.Run);
 
         try
         {
+            var sdkStatus = await _sdk.GetStatusAsync(cancellationToken);
+            if (!sdkStatus.IsDotnetAvailable || sdkStatus.InstalledSdks.Count == 0)
+            {
+                _events.Publish(new DotnetSdkSetupRequestedEvent());
+                Status = _loc.Get("DotnetCli.Status.SdkRequiredCreate");
+                return;
+            }
+
+            Status = _loc.Get("DotnetCli.Status.CreatingProject");
             Directory.CreateDirectory(Location);
             var template = SelectedTemplate!;
             var newProjectArguments = new List<string> { "new", template.ShortName, "-n", ProjectName, "-o", projectRoot };

@@ -56,6 +56,7 @@ using DebugEntrypoint = Fluence.Modules.Debug.Entrypoint;
 using SourceControlEntrypoint = Fluence.Modules.SourceControl.Entrypoint;
 using LspSetupEntrypoint = Fluence.Modules.LspSetup.Entrypoint;
 using LanguageServerEntrypoint = Fluence.Modules.LanguageServer.Entrypoint;
+using XamlViewerEntrypoint = Fluence.Modules.XamlViewer.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -69,8 +70,7 @@ internal static class Bootstrapper
 
         services.AddLogging(logging => logging.SetMinimumLevel(LogLevel.Debug));
 
-        // TODO [XamlViewer]: Register IFileViewerRegistry here when implementing the XAML Viewer module.
-        // services.AddSingleton<IFileViewerRegistry, FileViewerRegistry>();
+        services.AddSingleton<IFileViewerRegistry, FileViewerRegistry>();
 
         services.AddSingleton<ILocalizationService, LocalizationService>();
 
@@ -141,6 +141,7 @@ internal static class Bootstrapper
             new DebuggerSetupEntrypoint(),
             new DebugEntrypoint(),
             new SourceControlEntrypoint(),
+            new XamlViewerEntrypoint(),
         };
 
         foreach (var module in modules)
