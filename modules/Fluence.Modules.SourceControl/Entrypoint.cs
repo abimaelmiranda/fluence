@@ -5,12 +5,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.SourceControl.Abstractions;
 using Fluence.Modules.SourceControl.Infrastructure;
+using Fluence.Modules.SourceControl.Json;
 using Fluence.Modules.SourceControl.Services;
 using Fluence.Modules.SourceControl.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,7 @@ public sealed class Entrypoint : IModule
 {
     private IWorkspaceContext? _workspace;
     private EventHandler? _workspaceChanged;
+    private SourceControlViewModel? _viewModel;
     private string? _lastWorkspaceRoot;
     private bool _hasInitializedWorkspaceRoot;
 
@@ -57,6 +60,10 @@ public sealed class Entrypoint : IModule
 
         host.Services.GetRequiredService<ILocalizationService>()
             .Register(new ResourceManager("Fluence.Modules.SourceControl.Resources.Strings", typeof(Entrypoint).Assembly));
+        host.Services.GetRequiredService<ISettingsRegistry>()
+            .Register(SourceControlSettingsJsonContext.Default.SourceControlSettings);
+        host.Services.GetRequiredService<ISettingsService>()
+            .Get<SourceControlSettings>();
 
         _workspace = host.Workspace;
         _workspaceChanged = (_, _) =>
@@ -69,7 +76,8 @@ public sealed class Entrypoint : IModule
 
             _hasInitializedWorkspaceRoot = true;
             _lastWorkspaceRoot = root;
-            host.Services.GetRequiredService<SourceControlViewModel>().Initialize(root);
+            _viewModel = host.Services.GetRequiredService<SourceControlViewModel>();
+            _viewModel.Initialize(root);
         };
         host.Workspace.Changed += _workspaceChanged;
 
@@ -94,6 +102,8 @@ public sealed class Entrypoint : IModule
     {
         if (_workspace is not null && _workspaceChanged is not null)
             _workspace.Changed -= _workspaceChanged;
+        _viewModel?.Dispose();
+        _viewModel = null;
         _workspace = null;
         _workspaceChanged = null;
         _lastWorkspaceRoot = null;

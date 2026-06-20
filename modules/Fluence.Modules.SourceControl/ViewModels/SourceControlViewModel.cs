@@ -1,10 +1,13 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Threading;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Output;
+using Fluence.Core.Services;
 using Fluence.Core.ViewModels;
 using Fluence.Modules.SourceControl.Abstractions;
 using Fluence.Modules.SourceControl.Models;
@@ -13,14 +16,22 @@ namespace Fluence.Modules.SourceControl.ViewModels;
 
 public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
 {
+    private static readonly TimeSpan MinimumRefreshInterval = TimeSpan.FromSeconds(5);
+
     private readonly IGitService _git;
     private readonly ISourceControlDialogService _dialogs;
     private readonly IWorkspaceContext _workspace;
     private readonly IShellEventBus _events;
     private readonly IOutputChannelService _output;
     private readonly ILocalizationService _loc;
-    private System.IO.FileSystemWatcher? _watcher;
-    private System.Threading.CancellationTokenSource? _debounce;
+    private readonly ISettingsService _settings;
+    private IDisposable? _settingsSubscription;
+    private System.IO.FileSystemWatcher? _gitIndexWatcher;
+    private System.Threading.CancellationTokenSource? _gitIndexDebounce;
+    private System.Threading.CancellationTokenSource? _periodicRefreshCts;
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private TimeSpan _refreshInterval;
+    private bool _disposed;
     private string? _repoRoot;
     private GitBranch? _pendingCheckoutBranchData;
 
@@ -47,7 +58,8 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
         IWorkspaceContext workspace,
         IShellEventBus events,
         IOutputChannelService output,
-        ILocalizationService loc)
+        ILocalizationService loc,
+        ISettingsService settings)
     {
         _git = git;
         _dialogs = dialogs;
@@ -55,6 +67,8 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
         _events = events;
         _output = output;
         _loc = loc;
+        _settings = settings;
+        _refreshInterval = MinimumRefreshInterval;
         loc.LanguageChanged += OnLanguageChanged;
         StagedChanges.CollectionChanged += (_, _) => OnPropertyChanged(nameof(StagedChangesTitle));
         UnstagedChanges.CollectionChanged += (_, _) => OnPropertyChanged(nameof(UnstagedChangesTitle));
@@ -68,20 +82,54 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(StashesTitle));
     }
 
+    private void OnSettingsChanged(SourceControlSettings settings)
+    {
+        var nextInterval = NormalizeRefreshInterval(settings);
+        if (nextInterval == _refreshInterval)
+            return;
+
+        _refreshInterval = nextInterval;
+        if (_repoRoot is not null)
+            RestartPeriodicRefreshLoop();
+    }
+
     public void Initialize(string? workspaceRoot)
     {
         WriteOutput("[SourceControl] Initializing\r\n");
-        DisposeWatcher();
+        EnsureSettingsSubscription();
+        StopGitIndexWatcher();
+        StopPeriodicRefreshLoop();
         _ = InitializeCoreAsync(workspaceRoot);
     }
 
     public void Dispose()
     {
+        if (_disposed)
+            return;
+
+        _disposed = true;
         _loc.LanguageChanged -= OnLanguageChanged;
-        _debounce?.Cancel();
-        _debounce?.Dispose();
-        DisposeWatcher();
+        _settingsSubscription?.Dispose();
+        _settingsSubscription = null;
+        _gitIndexDebounce?.Cancel();
+        _gitIndexDebounce?.Dispose();
+        _gitIndexDebounce = null;
+        StopPeriodicRefreshLoop();
+        StopGitIndexWatcher();
     }
+
+    private void EnsureSettingsSubscription()
+    {
+        _refreshInterval = NormalizeRefreshInterval(_settings.Get<SourceControlSettings>());
+        _settingsSubscription ??= _settings
+            .Watch<SourceControlSettings>()
+            .Subscribe(new ActionObserver<SourceControlSettings>(OnSettingsChanged));
+    }
+
+    private static TimeSpan NormalizeRefreshInterval(SourceControlSettings settings) =>
+        TimeSpan.FromSeconds(Math.Max(
+            (int)MinimumRefreshInterval.TotalSeconds,
+            settings.RefreshIntervalSeconds));
 
     private void WriteOutput(string text, OutputChannelEntryKind kind = OutputChannelEntryKind.Information) =>
         _ = _output.WriteAsync(OutputChannelIds.Output, text, kind);

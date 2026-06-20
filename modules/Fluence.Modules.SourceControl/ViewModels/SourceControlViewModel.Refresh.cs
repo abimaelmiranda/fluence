@@ -32,21 +32,33 @@ public sealed partial class SourceControlViewModel
         IsGitRepository = true;
         WriteOutput($"[SourceControl] Repository: {root}\r\n");
         await RefreshCoreAsync();
-        StartWatcher(Path.Combine(root, ".git"));
+        StartGitIndexWatcher(Path.Combine(root, ".git"));
+        RestartPeriodicRefreshLoop();
     }
 
     [RelayCommand]
     private async Task RefreshAsync()
         => await RefreshCoreAsync();
 
-    private async Task RefreshCoreAsync()
+    private async Task RefreshCoreAsync(bool writeLog = true, bool skipIfBusy = false)
     {
         var repoRoot = _repoRoot;
         if (repoRoot is null) return;
+        if (skipIfBusy)
+        {
+            if (!await _refreshGate.WaitAsync(0).ConfigureAwait(false))
+                return;
+        }
+        else
+        {
+            await _refreshGate.WaitAsync().ConfigureAwait(false);
+        }
 
         try
         {
-            WriteOutput("[SourceControl] Refreshing status\r\n");
+            if (writeLog)
+                WriteOutput("[SourceControl] Refreshing status\r\n");
+
             var statusTask = _git.GetStatusAsync(repoRoot);
             var branchesTask = _git.GetBranchesAsync(repoRoot);
             var aheadBehindTask = _git.GetAheadBehindAsync(repoRoot);
@@ -61,6 +73,9 @@ public sealed partial class SourceControlViewModel
 
             Dispatcher.UIThread.Post(() =>
             {
+                if (!string.Equals(_repoRoot, repoRoot, StringComparison.OrdinalIgnoreCase))
+                    return;
+
                 ApplyStatus(status);
                 ApplyBranches(branches);
                 ApplyStashes(stashes);
@@ -76,6 +91,10 @@ public sealed partial class SourceControlViewModel
         {
             Debug.WriteLine($"Source control refresh failed: {ex}");
             WriteOutput($"[SourceControl] Refresh failed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
+        }
+        finally
+        {
+            _refreshGate.Release();
         }
     }
 
@@ -97,6 +116,8 @@ public sealed partial class SourceControlViewModel
 
     private void SetNoRepository()
     {
+        StopGitIndexWatcher();
+        StopPeriodicRefreshLoop();
         _repoRoot = null;
         IsGitRepository = false;
         CurrentBranch = string.Empty;
@@ -122,37 +143,91 @@ public sealed partial class SourceControlViewModel
         OnPropertyChanged(nameof(IsWorkingTreeClean));
     }
 
-    private void StartWatcher(string gitDirectory)
+    private void StartGitIndexWatcher(string gitDirectory)
     {
         if (!Directory.Exists(gitDirectory)) return;
 
-        _watcher = new FileSystemWatcher(gitDirectory, "index")
+        _gitIndexWatcher = new FileSystemWatcher(gitDirectory, "index")
         {
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size,
             EnableRaisingEvents = true,
         };
-        _watcher.Changed += OnGitIndexChanged;
+        _gitIndexWatcher.Changed += OnGitIndexChanged;
     }
 
     private void OnGitIndexChanged(object sender, FileSystemEventArgs e)
     {
-        _debounce?.Cancel();
-        _debounce = new CancellationTokenSource();
-        var token = _debounce.Token;
+        var previousDebounce = _gitIndexDebounce;
+        previousDebounce?.Cancel();
+        var debounce = new CancellationTokenSource();
+        _gitIndexDebounce = debounce;
+        var token = debounce.Token;
 
         _ = Task.Delay(500, token).ContinueWith(t =>
         {
-            if (!t.IsCanceled) _ = RefreshCoreAsync();
+            try
+            {
+                if (!t.IsCanceled) _ = RefreshCoreAsync(writeLog: false, skipIfBusy: true);
+            }
+            finally
+            {
+                if (ReferenceEquals(_gitIndexDebounce, debounce))
+                    _gitIndexDebounce = null;
+                debounce.Dispose();
+            }
         }, TaskScheduler.Default);
     }
 
-    private void DisposeWatcher()
+    private void RestartPeriodicRefreshLoop()
     {
-        if (_watcher is null) return;
+        StopPeriodicRefreshLoop();
 
-        _watcher.EnableRaisingEvents = false;
-        _watcher.Changed -= OnGitIndexChanged;
-        _watcher.Dispose();
-        _watcher = null;
+        if (_repoRoot is null)
+            return;
+
+        _periodicRefreshCts = new CancellationTokenSource();
+        _ = RunPeriodicRefreshLoopAsync(_periodicRefreshCts.Token);
+    }
+
+    private async Task RunPeriodicRefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(_refreshInterval);
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+                await RefreshCoreAsync(writeLog: false, skipIfBusy: true).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Source control periodic refresh failed: {ex}");
+            WriteOutput($"[SourceControl] Periodic refresh stopped: {ex.Message}\r\n", OutputChannelEntryKind.Error);
+        }
+    }
+
+    private void StopPeriodicRefreshLoop()
+    {
+        if (_periodicRefreshCts is null)
+            return;
+
+        _periodicRefreshCts.Cancel();
+        _periodicRefreshCts.Dispose();
+        _periodicRefreshCts = null;
+    }
+
+    private void StopGitIndexWatcher()
+    {
+        var debounce = _gitIndexDebounce;
+        _gitIndexDebounce = null;
+        debounce?.Cancel();
+
+        if (_gitIndexWatcher is null) return;
+
+        _gitIndexWatcher.EnableRaisingEvents = false;
+        _gitIndexWatcher.Changed -= OnGitIndexChanged;
+        _gitIndexWatcher.Dispose();
+        _gitIndexWatcher = null;
     }
 }

@@ -248,6 +248,15 @@
   <data name="Settings.Description.debug.ExceptionBreakMode" xml:space="preserve">
     <value>Controla quando o depurador para em exceções.</value>
   </data>
+  <data name="Settings.Section.sourceControl" xml:space="preserve">
+    <value>Controle de versão</value>
+  </data>
+  <data name="Settings.Property.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
+    <value>Controle de versão: intervalo de atualização</value>
+  </data>
+  <data name="Settings.Description.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
+    <value>Controla com que frequência o Controle de versão atualiza o status do Git enquanto um workspace está aberto. Mínimo: 5 segundos.</value>
+  </data>
   <data name="Settings.Action.RestoreDefaults" xml:space="preserve">
     <value>Restaurar padrões</value>
   </data>

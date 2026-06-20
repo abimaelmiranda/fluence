@@ -257,6 +257,15 @@
   <data name="Settings.Description.debug.ExceptionBreakMode" xml:space="preserve">
     <value>Controls when the debugger stops on exceptions.</value>
   </data>
+  <data name="Settings.Section.sourceControl" xml:space="preserve">
+    <value>Source Control</value>
+  </data>
+  <data name="Settings.Property.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
+    <value>Source Control: Refresh Interval</value>
+  </data>
+  <data name="Settings.Description.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
+    <value>Controls how often Source Control refreshes Git status while a workspace is open. Minimum: 5 seconds.</value>
+  </data>
 
   <!-- Toolbar actions -->
   <data name="Settings.Action.RestoreDefaults" xml:space="preserve">
