@@ -1,8 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Fluence.Modules.Settings.Services;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Input;
+using Fluence.Core.Models.Keybindings;
+using Fluence.Core.Services;
 using Fluence.Desktop.ViewModels;
 
 namespace Fluence.Desktop.Views;
@@ -15,11 +20,50 @@ public partial class MainWindow : Window
     private bool _isTerminalResizeDragging;
     private double _terminalResizeStartY;
     private double _terminalResizeStartHeight;
+    private IDisposable? _keybindingSubscription;
 
     public MainWindow()
     {
         InitializeComponent();
+        KeyboardNavigation.SetTabNavigation(this, KeyboardNavigationMode.None);
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Bubble);
+    }
+
+    // NOTE: Gestures containing Ctrl+Tab (or any Ctrl+<Tab> combo) are not dispatched
+    // through the keybinding service. Avalonia's KeyboardNavigationHandler intercepts
+    // Ctrl+Tab at the KeyboardDevice level — before routing begins — and never raises
+    // the KeyDownEvent for Tab when Ctrl is held. Window.KeyBindings and InputManager.
+    // PreProcess (via reflection) were both attempted without success. Until Avalonia
+    // exposes a public API to suppress tab-group navigation, Ctrl+Tab cannot be
+    // reliably bound to IDE commands.
+    private void RebuildDynamicKeyBindings(IReadOnlyList<KeybindingDefinition> bindings)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            KeyBindings.Clear();
+            foreach (var binding in bindings)
+            {
+                if (!string.Equals(binding.Scope, KeybindingScope.Global, StringComparison.Ordinal))
+                    continue;
+                if (string.IsNullOrWhiteSpace(binding.Key))
+                    continue;
+                var gesture = KeyGestureParser.TryParse(binding.Key);
+                if (gesture is null)
+                    continue;
+                var capturedKey = binding.Key;
+                KeyBindings.Add(new KeyBinding
+                {
+                    Gesture = gesture,
+                    Command = new RelayCommand(() => _ = DispatchGlobalKeyAsync(capturedKey))
+                });
+            }
+        });
+    }
+
+    private async Task DispatchGlobalKeyAsync(string key)
+    {
+        if (DataContext is MainWindowViewModel vm)
+            await vm.TryHandleKeybindingAsync("global", key);
     }
 
     private async void OnWindowKeyDown(object? sender, KeyEventArgs e)
@@ -52,17 +96,6 @@ public partial class MainWindow : Window
                     return;
             }
         }
-
-        var gesture = KeyGestureFormatter.FromEvent(e);
-        if (string.IsNullOrWhiteSpace(gesture))
-            return;
-
-        if (await viewModel.TryHandleKeybindingAsync("global", gesture))
-        {
-            e.Handled = true;
-            if (viewModel.QuickOpen.IsVisible)
-                QuickOpenSearchBox?.Focus();
-        }
     }
 
     private void MoveQuickOpenSelection(int delta)
@@ -94,14 +127,22 @@ public partial class MainWindow : Window
     protected override void OnPropertyChanged(Avalonia.AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == DataContextProperty && DataContext is MainWindowViewModel vm)
+        if (change.Property != DataContextProperty)
+            return;
+
+        _keybindingSubscription?.Dispose();
+        _keybindingSubscription = null;
+
+        if (DataContext is not MainWindowViewModel vm)
+            return;
+
+        _keybindingSubscription = vm.Keybindings.Watch()
+            .Subscribe(new ActionObserver<IReadOnlyList<KeybindingDefinition>>(RebuildDynamicKeyBindings));
+        vm.QuickOpen.PropertyChanged += (_, args) =>
         {
-            vm.QuickOpen.PropertyChanged += (_, args) =>
-            {
-                if (args.PropertyName == nameof(QuickOpenViewModel.IsVisible) && vm.QuickOpen.IsVisible)
-                    QuickOpenSearchBox?.Focus();
-            };
-        }
+            if (args.PropertyName == nameof(QuickOpenViewModel.IsVisible) && vm.QuickOpen.IsVisible)
+                QuickOpenSearchBox?.Focus();
+        };
     }
 
     private void OnTerminalResizeHandlePointerPressed(object? sender, PointerPressedEventArgs e)

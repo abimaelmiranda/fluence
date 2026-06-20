@@ -12,7 +12,7 @@ namespace Fluence.Modules.DotnetCli.Services;
 
 public sealed class DotnetProjectExecutionTargetResolver(
     IWorkspaceContext workspace,
-    IProjectAssociationService projectAssociations		
+    IProjectAssociationService projectAssociations,
     ILaunchSettingsService launchSettingsService,
     ILaunchSettingsCoordinator launchSettings)
     : IProjectExecutionTargetResolver
