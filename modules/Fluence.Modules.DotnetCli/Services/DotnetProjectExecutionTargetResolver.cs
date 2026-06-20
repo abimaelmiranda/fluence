@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Workspace;
-using Fluence.Core.Models.Workspace;
+using Fluence.Core.Models.Workspace;		
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
 
@@ -12,7 +12,7 @@ namespace Fluence.Modules.DotnetCli.Services;
 
 public sealed class DotnetProjectExecutionTargetResolver(
     IWorkspaceContext workspace,
-    IProjectAssociationService projectAssociations,
+    IProjectAssociationService projectAssociations		
     ILaunchSettingsService launchSettingsService,
     ILaunchSettingsCoordinator launchSettings)
     : IProjectExecutionTargetResolver

@@ -17,16 +17,6 @@ public sealed class OpenFileWorkspaceCommandHandler(IWorkspaceContext workspace,
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        // TODO [XamlViewer]: Before opening as text, check IFileViewerRegistry for a specialized viewer.
-        // If one is registered for this file extension (e.g. .axaml, .xaml), publish
-        // OpenSpecializedFileRequestedEvent instead and return early. Example:
-        //   if (_fileViewerRegistry.HasViewer(command.Path))
-        //   {
-        //       _eventBus.Publish(new OpenSpecializedFileRequestedEvent(command.Path));
-        //       return;
-        //   }
-        // IFileViewerRegistry and OpenSpecializedFileRequestedEvent must be added to Fluence.Core first.
-
         if (!textFiles.CanOpenAsText(command.Path))
         {
             throw new UnsupportedTextFileException(command.Path);
