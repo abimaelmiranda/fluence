@@ -39,4 +39,6 @@ public static class CommandIds
     public const string EditorGoToDefinition = "editor.goToDefinition";
     public const string EditorGoToImplementation = "editor.goToImplementation";
     public const string EditorGoToTypeDefinition = "editor.goToTypeDefinition";
+
+    public const string ToggleXamlPreview = "xamlViewer.togglePreview";
 }

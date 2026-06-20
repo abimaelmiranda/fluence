@@ -53,6 +53,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IKeybindingService _keybindings;
     private readonly ISettingsTool _settingsTool;
     private readonly ILocalizationService _loc;
+    private readonly IFileViewerRegistry _fileViewerRegistry;
     private readonly List<IDisposable> _eventSubscriptions = [];
     private readonly HashSet<string> _semanticTokensPendingFiles = new(StringComparer.OrdinalIgnoreCase);
     private IDisposable? _shellSettingsSubscription;
@@ -99,6 +100,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         IKeybindingService keybindings,
         ISettingsTool settingsTool,
         ILocalizationService loc,
+        IFileViewerRegistry fileViewerRegistry,
         QuickOpenViewModel quickOpen)
     {
         _workspace = workspace;
@@ -110,6 +112,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _keybindings = keybindings;
         _settingsTool = settingsTool;
         _loc = loc;
+        _fileViewerRegistry = fileViewerRegistry;
         ActivityBar = activityBar;
         BottomBar = bottomBar;
         Welcome = welcome;
@@ -174,6 +177,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     public bool HasNoActiveDocument => !HasActiveDocument;
 
     private bool HasActiveToolDocument => _workspace.Current.TabSession.ActiveDocument?.Kind == OpenDocumentKind.Tool;
+
+    public bool IsXamlPreviewToggleVisible
+    {
+        get
+        {
+            var active = _workspace.Current.TabSession.ActiveDocument;
+            if (active is null) return false;
+            return _fileViewerRegistry.HasViewer(active.Path)
+                || active.Path == ToolTabIds.XamlPreview;
+        }
+    }
 
     public IReadOnlyList<DocumentTabViewModel> OpenDocuments => _workspace.Current.TabSession.Documents
         .Select(document => new DocumentTabViewModel(
@@ -266,6 +280,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         ManageNuGetPackagesCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(HasActiveDocument));
         OnPropertyChanged(nameof(HasNoActiveDocument));
+        OnPropertyChanged(nameof(IsXamlPreviewToggleVisible));
         OnPropertyChanged(nameof(OpenDocuments));
         OnPropertyChanged(nameof(ActiveDocumentName));
         OnPropertyChanged(nameof(ActiveDocumentPath));
@@ -525,6 +540,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
                 return Task.CompletedTask;
             }));
     }
+
+    [RelayCommand]
+    private Task ToggleXamlPreviewAsync(CancellationToken cancellationToken) =>
+        _commands.ExecuteAsync(CommandIds.ToggleXamlPreview, cancellationToken);
 
     [RelayCommand]
     private void OpenAbout()

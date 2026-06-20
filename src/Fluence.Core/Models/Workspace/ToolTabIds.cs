@@ -24,4 +24,6 @@ public static class ToolTabIds
 
     public const string DotnetSdkSetup = "tool://fluence/dotnet-sdk";
     public const string DotnetSdkSetupTitle = ".NET SDK";
+
+    public const string XamlPreview = "tool://fluence/xaml-preview";
 }

@@ -181,6 +181,15 @@
                                         Spacing="4"
                                         VerticalAlignment="Center">
                                 <Button Classes="ideIcon"
+                                        Command="{Binding ToggleXamlPreviewCommand}"
+                                        IsVisible="{Binding IsXamlPreviewToggleVisible}"
+                                        ToolTip.Tip="Toggle XAML Preview (Alt+F7)">
+                                    <materialIcons:MaterialIcon Width="22"
+                                                                Height="22"
+                                                                Kind="EyeOutline"
+                                                                Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                </Button>
+                                <Button Classes="ideIcon"
                                         Command="{Binding RunCommand}"
                                         ToolTip.Tip="{Binding [Desktop.Toolbar.Run], Source={x:Static loc:Locale.Current}}">
                                     <materialIcons:MaterialIcon Width="22"
