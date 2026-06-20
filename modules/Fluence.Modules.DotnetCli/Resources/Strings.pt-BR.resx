@@ -58,6 +58,8 @@
   <data name="DotnetCli.Template.RazorPages.Description" xml:space="preserve"><value>Aplicação web focada em páginas</value></data>
   <data name="DotnetCli.Template.BlazorWebApp" xml:space="preserve"><value>Blazor Web App</value></data>
   <data name="DotnetCli.Template.BlazorWebApp.Description" xml:space="preserve"><value>Interface web interativa</value></data>
+  <data name="DotnetCli.Template.WpfApp" xml:space="preserve"><value>Aplicativo WPF</value></data>
+  <data name="DotnetCli.Template.WpfApp.Description" xml:space="preserve"><value>App desktop Windows (XAML + code-behind)</value></data>
   <data name="DotnetCli.Template.XUnit" xml:space="preserve"><value>Projeto de teste xUnit</value></data>
   <data name="DotnetCli.Template.XUnit.Description" xml:space="preserve"><value>Projeto de teste xUnit</value></data>
   <data name="DotnetCli.Template.NUnit" xml:space="preserve"><value>Projeto de teste NUnit</value></data>
