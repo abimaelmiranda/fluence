@@ -47,6 +47,7 @@ using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Services.Languages;
 using Fluence.Infrastructure.Languages;
+using Fluence.Infrastructure.Languages.Routers;
 using SettingsEntrypoint = Fluence.Modules.Settings.Entrypoint;
 using FileExplorerEntrypoint = Fluence.Modules.FileExplorer.Entrypoint;
 using SolutionViewEntrypoint = Fluence.Modules.SolutionView.Entrypoint;
@@ -115,10 +116,24 @@ internal static class Bootstrapper
         services.AddSingleton<ILaunchSettingsService, LaunchSettingsService>();
         services.AddSingleton<ILaunchSettingsCoordinator, LaunchSettingsCoordinator>();
         services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
-        services.AddSingleton<IDebuggerProvisioningService, DebuggerProvisioningService>();
+        // Concretos sem alias de interface não-keyed
         services.AddSingleton<OmniSharpProvisioningService>();
-        services.AddSingleton<IDotnetLspProvisioningService>(sp => sp.GetRequiredService<OmniSharpProvisioningService>());
-        services.AddSingleton<ILspProvisioningService>(sp => sp.GetRequiredService<OmniSharpProvisioningService>());
+        services.AddSingleton<DebuggerProvisioningService>();
+
+        // IDotnetLspProvisioningService mantido — usado por OmniSharpArgumentsBuilder via cast
+        services.AddSingleton<IDotnetLspProvisioningService>(
+            sp => sp.GetRequiredService<OmniSharpProvisioningService>());
+
+        // Keyed por linguagem — C# LSP e debugger (ILspArgumentsBuilder keyed registrado no LanguageServer.Entrypoint)
+        services.AddKeyedSingleton<ILspProvisioningService>("csharp",
+            (sp, _) => (ILspProvisioningService)sp.GetRequiredService<OmniSharpProvisioningService>());
+        services.AddKeyedSingleton<IDebuggerProvisioningService>("csharp",
+            (sp, _) => (IDebuggerProvisioningService)sp.GetRequiredService<DebuggerProvisioningService>());
+
+        // Routers como singletons não-keyed — consumers injetam as mesmas interfaces de sempre
+        services.AddSingleton<ILspProvisioningService, LspProvisioningRouter>();
+        services.AddSingleton<ILspArgumentsBuilder, LspArgumentsBuilderRouter>();
+        services.AddSingleton<IDebuggerProvisioningService, DebuggerProvisioningRouter>();
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new PortaMacOsPtyHost()

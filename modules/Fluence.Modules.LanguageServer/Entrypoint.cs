@@ -62,7 +62,9 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant, IC
     {
         services.AddSingleton<LspClientHolder>();
         services.AddSingleton<IDiagnosticsService, DiagnosticsService>();
-        services.AddSingleton<ILspArgumentsBuilder, OmniSharpArgumentsBuilder>();
+        services.AddSingleton<OmniSharpArgumentsBuilder>();
+        services.AddKeyedSingleton<ILspArgumentsBuilder>("csharp",
+            (sp, _) => (ILspArgumentsBuilder)sp.GetRequiredService<OmniSharpArgumentsBuilder>());
         services.AddSingleton<ILanguageServerService>(provider =>
             new LanguageServerService(
                 provider.GetRequiredService<ILspProvisioningService>(),
