@@ -22,6 +22,7 @@ public partial class EditorView
     {
         var hasLsp = _completionService is not null && _viewModel?.ActiveDocumentPath is not null;
         MenuItemIntelliSense.IsEnabled = hasLsp;
+        MenuItemDuplicateLine.IsEnabled = Editor.Document is not null;
         MenuItemGoToDefinition.IsEnabled = hasLsp;
         MenuItemGoToImplementation.IsEnabled = hasLsp;
         MenuItemGoToTypeDefinition.IsEnabled = hasLsp;
@@ -29,6 +30,12 @@ public partial class EditorView
 
     private void OnMenuIntelliSense(object? sender, RoutedEventArgs e) =>
         _ = TriggerCompletionAsync(immediate: true);
+
+    private void OnMenuDuplicateLine(object? sender, RoutedEventArgs e)
+    {
+        if (TryDuplicateSelectionOrLine())
+            e.Handled = true;
+    }
 
     private void OnMenuGoToDefinition(object? sender, RoutedEventArgs e)
     {

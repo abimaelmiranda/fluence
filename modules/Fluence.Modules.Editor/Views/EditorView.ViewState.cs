@@ -59,6 +59,8 @@ public partial class EditorView
 
         _editorSettingsSubscription?.Dispose();
         _editorSettingsSubscription = null;
+        _keybindingsSubscription?.Dispose();
+        _keybindingsSubscription = null;
         _themeSubscription?.Dispose();
         _themeSubscription = null;
         _completionService = null;

@@ -49,6 +49,12 @@ public partial class EditorView
 
     private void TriggerQuickFix()
     {
+        if (CodeActionPopup.IsOpen)
+        {
+            CodeActionPopup.IsOpen = false;
+            return;
+        }
+
         if (_codeActionService is null) return;
         var viewModel = _viewModel;
         var filePath = viewModel?.ActiveDocumentPath;

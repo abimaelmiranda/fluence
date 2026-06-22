@@ -11,6 +11,7 @@ using Fluence.Core.Services;
 using Fluence.Modules.Editor.ViewModels;
 using Fluence.Core.Events.Document;
 using Fluence.Core.Events.Lsp;
+using Fluence.Core.Models.Keybindings;
 
 namespace Fluence.Modules.Editor.Views;
 
@@ -179,6 +180,8 @@ public partial class EditorView
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _editorSettingsSubscription?.Dispose();
             _editorSettingsSubscription = null;
+            _keybindingsSubscription?.Dispose();
+            _keybindingsSubscription = null;
             _themeSubscription?.Dispose();
             _themeSubscription = null;
         }
@@ -191,6 +194,8 @@ public partial class EditorView
             _editorSettingsSubscription = _viewModel.Settings
                 .Watch<EditorSettings>()
                 .Subscribe(new ActionObserver<EditorSettings>(ApplyEditorSettings));
+            _keybindingsSubscription = _viewModel.Keybindings.Watch()
+                .Subscribe(new ActionObserver<IReadOnlyList<KeybindingDefinition>>(_ => Dispatcher.UIThread.Post(UpdateMenuGestures)));
             if (_viewModel.ThemeLoader is not null)
             {
                 _themeSubscription = _viewModel.ThemeLoader
@@ -199,6 +204,7 @@ public partial class EditorView
                 ApplyTheme(_viewModel.ThemeLoader.CurrentTheme);
             }
             ApplyEditorSettings(_viewModel.Settings.Get<EditorSettings>());
+            UpdateMenuGestures();
             SetEditorText(_viewModel.ActiveText);
             ApplyGrammarForPath(_viewModel.ActiveDocumentPath);
             RestoreViewStateForActiveDocument();

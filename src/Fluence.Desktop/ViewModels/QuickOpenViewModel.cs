@@ -36,6 +36,12 @@ public sealed partial class QuickOpenViewModel : ViewModelBase
         IsVisible = true;
     }
 
+    public void Toggle()
+    {
+        if (IsVisible) Close();
+        else Open();
+    }
+
     public void Close()
     {
         IsVisible = false;

@@ -5,6 +5,7 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="Editor.Menu.IntelliSense" xml:space="preserve"><value>IntelliSense</value></data>
+  <data name="Editor.Menu.DuplicateLine" xml:space="preserve"><value>Duplicate Line</value></data>
   <data name="Editor.Menu.GoToDefinition" xml:space="preserve"><value>Go to Definition</value></data>
   <data name="Editor.Menu.GoToImplementation" xml:space="preserve"><value>Go to Implementation</value></data>
   <data name="Editor.Menu.GoToTypeDefinition" xml:space="preserve"><value>Go to Type Definition</value></data>
@@ -18,6 +19,7 @@
   <data name="Editor.Format.Feedback.Formatted" xml:space="preserve"><value>Formatted</value></data>
   <data name="Editor.Command.TriggerCompletion" xml:space="preserve"><value>Trigger Completion</value></data>
   <data name="Editor.Command.QuickFix" xml:space="preserve"><value>Quick Fix</value></data>
+  <data name="Editor.Command.DuplicateLine" xml:space="preserve"><value>Duplicate Line</value></data>
   <data name="Editor.Command.GoToDefinition" xml:space="preserve"><value>Go to Definition</value></data>
   <data name="Editor.Command.GoToImplementation" xml:space="preserve"><value>Go to Implementation</value></data>
   <data name="Editor.Command.GoToTypeDefinition" xml:space="preserve"><value>Go to Type Definition</value></data>

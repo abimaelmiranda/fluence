@@ -92,6 +92,7 @@ public partial class EditorView : UserControl
     private EditorViewModel?         _viewModel;
     private EditorSettings           _editorSettings = new();
     private IDisposable?             _editorSettingsSubscription;
+    private IDisposable?             _keybindingsSubscription;
     private IDisposable?             _themeSubscription;
     private ICompletionService?      _completionService;
     private IHoverService?           _hoverService;
@@ -279,13 +280,16 @@ public partial class EditorView : UserControl
             Editor.TextArea.TextView.Redraw();
             Editor.TextArea.TextView.InvalidateMeasure();
             Editor.InvalidateVisual();
-            MenuItemIntelliSense.InputGesture = parseGesture("editor.triggerCompletion");
-            MenuItemGoToDefinition.InputGesture = parseGesture("editor.goToDefinition");
-            MenuItemGoToImplementation.InputGesture = parseGesture("editor.goToImplementation");
-            MenuItemGoToTypeDefinition.InputGesture = parseGesture("editor.goToTypeDefinition");
+            UpdateMenuGestures();
         });
+    }
 
-        static KeyGesture? tryParse(string? gesture)
+    private void UpdateMenuGestures()
+    {
+        if (_viewModel is null)
+            return;
+
+        static KeyGesture? TryParse(string? gesture)
         {
             if (string.IsNullOrWhiteSpace(gesture))
                 return null;
@@ -300,7 +304,13 @@ public partial class EditorView : UserControl
             }
         }
 
-        KeyGesture? parseGesture(string commandId) => tryParse(_viewModel?.Keybindings.GetGesture(commandId));
+        KeyGesture? ParseGesture(string commandId) => TryParse(_viewModel.Keybindings.GetGesture(commandId));
+
+        MenuItemIntelliSense.InputGesture = ParseGesture(CommandIds.EditorTriggerCompletion);
+        MenuItemDuplicateLine.InputGesture = ParseGesture(CommandIds.EditorDuplicateLine);
+        MenuItemGoToDefinition.InputGesture = ParseGesture(CommandIds.EditorGoToDefinition);
+        MenuItemGoToImplementation.InputGesture = ParseGesture(CommandIds.EditorGoToImplementation);
+        MenuItemGoToTypeDefinition.InputGesture = ParseGesture(CommandIds.EditorGoToTypeDefinition);
     }
 
     private void ApplyTheme(IdeTheme theme)

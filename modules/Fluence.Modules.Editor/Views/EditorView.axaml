@@ -23,6 +23,10 @@
                               InputGesture="Ctrl+Space"
                               Click="OnMenuIntelliSense" />
                     <Separator />
+                    <MenuItem x:Name="MenuItemDuplicateLine"
+                              Header="{Binding [Editor.Menu.DuplicateLine], Source={x:Static loc:Locale.Current}}"
+                              Click="OnMenuDuplicateLine" />
+                    <Separator />
                     <MenuItem x:Name="MenuItemGoToDefinition"
                               Header="{Binding [Editor.Menu.GoToDefinition], Source={x:Static loc:Locale.Current}}"
                               InputGesture="F12"

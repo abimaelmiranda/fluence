@@ -535,7 +535,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             $"{primary}+P",
             ct =>
             {
-                QuickOpen.Open();
+                QuickOpen.Toggle();
                 return Task.CompletedTask;
             }));
     }

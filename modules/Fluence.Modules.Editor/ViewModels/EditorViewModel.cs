@@ -201,6 +201,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
             KeybindingScope.Editor,
             OperatingSystem.IsMacOS() ? "Meta+." : "Ctrl+."));
         _commands.Register(new IdeCommandDefinition(
+            CommandIds.EditorDuplicateLine,
+            _loc.Get("Editor.Command.DuplicateLine"),
+            KeybindingScope.Editor,
+            OperatingSystem.IsMacOS() ? "Meta+D" : "Ctrl+D"));
+        _commands.Register(new IdeCommandDefinition(
             CommandIds.EditorGoToDefinition,
             _loc.Get("Editor.Command.GoToDefinition"),
             KeybindingScope.Editor,

@@ -196,6 +196,13 @@ public partial class EditorView
             return;
         }
 
+        if (MatchesEditorCommand(CommandIds.EditorDuplicateLine, gesture))
+        {
+            if (TryDuplicateSelectionOrLine())
+                e.Handled = true;
+            return;
+        }
+
         var caret     = Editor.TextArea.Caret;
         var line      = caret.Line - 1;
         var character = caret.Column - 1;
@@ -398,6 +405,56 @@ public partial class EditorView
         SetCaretOffset(deleteStart);
     }
 
+    private bool TryDuplicateSelectionOrLine()
+    {
+        var document = Editor.Document;
+        if (document is null)
+            return false;
+
+        var textArea = Editor.TextArea;
+        var selection = textArea.Selection;
+        var caretOffset = textArea.Caret.Offset;
+        var handled = false;
+        var newCaretOffset = caretOffset;
+
+        document.BeginUpdate();
+        try
+        {
+            if (!selection.IsEmpty)
+            {
+                var segment = selection.SurroundingSegment;
+                var selectedText = document.GetText(segment.Offset, segment.Length);
+                document.Insert(segment.Offset + segment.Length, selectedText);
+                newCaretOffset = segment.Offset + segment.Length * 2;
+                handled = true;
+            }
+            else
+            {
+                var caretLine = textArea.Caret.Line;
+                if (caretLine <= 0 || caretLine > document.LineCount)
+                    return false;
+
+                var line = document.GetLineByNumber(caretLine);
+                var lineText = document.GetText(line.Offset, line.Length);
+                var lineDelimiter = GetLineDelimiter(document, line.EndOffset);
+                var columnOffset = Math.Clamp(caretOffset - line.Offset, 0, line.Length);
+
+                document.Insert(line.EndOffset, lineDelimiter + lineText);
+                newCaretOffset = line.EndOffset + lineDelimiter.Length + columnOffset;
+                handled = true;
+            }
+        }
+        finally
+        {
+            document.EndUpdate();
+        }
+
+        if (handled)
+            SetCaretOffset(newCaretOffset);
+
+        return handled;
+    }
+
     private void MoveCaretToLineBoundary(bool toStart)
     {
         var document = Editor.Document;
@@ -417,6 +474,26 @@ public partial class EditorView
         SetCaretOffset(toStart
             ? FindPreviousWordStart(document, caretOffset)
             : FindNextWordEnd(document, caretOffset));
+    }
+
+    private static string GetLineDelimiter(TextDocument document, int lineEndOffset)
+    {
+        if (lineEndOffset >= document.TextLength)
+            return Environment.NewLine;
+
+        var current = document.GetCharAt(lineEndOffset);
+        if (current == '\r')
+        {
+            if (lineEndOffset + 1 < document.TextLength && document.GetCharAt(lineEndOffset + 1) == '\n')
+                return "\r\n";
+
+            return "\r";
+        }
+
+        if (current == '\n')
+            return "\n";
+
+        return Environment.NewLine;
     }
 
     private void SetCaretOffset(int offset)
