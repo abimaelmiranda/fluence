@@ -140,6 +140,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public ILocalizationService Localization => _loc;
     public IShellEventBus EventBus => _events;
     public ITaskScheduler TaskScheduler => _scheduler;
+    public IUiDispatcher Dispatcher => _dispatcher;
     public ISettingsService Settings => _settings;
     public IKeybindingService Keybindings => _keybindings;
 

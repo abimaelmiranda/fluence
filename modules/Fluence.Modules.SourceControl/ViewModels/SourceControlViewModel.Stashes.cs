@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Fluence.Modules.SourceControl.Models;
 
 namespace Fluence.Modules.SourceControl.ViewModels;
@@ -13,7 +14,9 @@ public sealed partial class SourceControlViewModel
         OnPropertyChanged(nameof(HasStashes));
     }
 
-    private async void PopStash(GitStash stash)
+    private void PopStash(GitStash stash) => FireAndForget(() => PopStashCoreAsync(stash));
+
+    private async Task PopStashCoreAsync(GitStash stash)
     {
         var repoRoot = _repoRoot;
         if (repoRoot is null) return;
@@ -30,7 +33,9 @@ public sealed partial class SourceControlViewModel
         }
     }
 
-    private async void DropStash(GitStash stash)
+    private void DropStash(GitStash stash) => FireAndForget(() => DropStashCoreAsync(stash));
+
+    private async Task DropStashCoreAsync(GitStash stash)
     {
         var repoRoot = _repoRoot;
         if (repoRoot is null) return;

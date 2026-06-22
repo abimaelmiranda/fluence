@@ -8,7 +8,9 @@ namespace Fluence.Modules.SourceControl.ViewModels;
 
 public sealed partial class SourceControlViewModel
 {
-    private async void CheckoutBranch(GitBranch branch)
+    private void CheckoutBranch(GitBranch branch) => FireAndForget(() => CheckoutBranchCoreAsync(branch));
+
+    private async Task CheckoutBranchCoreAsync(GitBranch branch)
     {
         var repoRoot = _repoRoot;
         if (repoRoot is null) return;
@@ -88,7 +90,9 @@ public sealed partial class SourceControlViewModel
         _pendingCheckoutBranchData = null;
     }
 
-    private async void DeleteBranch(GitBranch branch)
+    private void DeleteBranch(GitBranch branch) => FireAndForget(() => DeleteBranchCoreAsync(branch));
+
+    private async Task DeleteBranchCoreAsync(GitBranch branch)
     {
         var repoRoot = _repoRoot;
         if (repoRoot is null) return;

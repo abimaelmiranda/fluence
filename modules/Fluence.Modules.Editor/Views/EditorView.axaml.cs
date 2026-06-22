@@ -134,7 +134,7 @@ public partial class EditorView : UserControl
     private Timer? _viewStateSaveTimer;
 
     // ── Semantic redraw throttle ────────────────────────────────────────────
-    private bool              _semanticRedrawPending;
+    private int               _semanticRedrawPending;
     private SemanticToken[]?  _pendingSemanticTokens;
     private string?           _pendingSemanticTokensPath;
     private int               _pendingSemanticTokensVersion;

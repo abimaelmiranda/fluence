@@ -92,7 +92,7 @@ public partial class EditorView
         _pendingSemanticTokens = null;
         _pendingSemanticTokensPath = null;
         _pendingSemanticTokensVersion = 0;
-        _semanticRedrawPending = false;
+        _semanticRedrawPending = 0;
         _pendingCodeActionDiag = null;
         _semanticTokensByPath.Clear();
         _pendingViewStateSavePath = null;

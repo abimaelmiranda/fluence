@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Threading;
+using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Output;
@@ -133,4 +134,19 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
 
     private void WriteOutput(string text, OutputChannelEntryKind kind = OutputChannelEntryKind.Information) =>
         _ = _output.WriteAsync(OutputChannelIds.Output, text, kind);
+
+    private void FireAndForget(Func<Task> operation) => _ = RunFireAndForgetAsync(operation);
+
+    private async Task RunFireAndForgetAsync(Func<Task> operation)
+    {
+        try
+        {
+            await operation().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            WriteOutput($"[SourceControl] Operation failed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
+        }
+    }
 }

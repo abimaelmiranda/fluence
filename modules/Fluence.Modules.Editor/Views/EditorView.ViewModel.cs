@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -21,21 +22,30 @@ public partial class EditorView
     {
         _semanticTokensByPath[e.FilePath] = new CachedSemanticTokens(e.Version, e.Tokens);
 
+        // During a document switch, only update the cache — TryApplyCachedSemanticTokens
+        // at the end of SwitchEditorDocument will apply the correct tokens for the new document.
+        if (_isSwitchingDocumentViewState)
+            return;
+
         var activeVersion = _viewModel?.ActiveDocumentVersion ?? 0;
         if (!IsActiveSemanticTokenEvent(e, activeVersion))
             return;
 
         // Always store latest tokens so the pending redraw uses up-to-date data.
-        // If a redraw is already queued, skip posting another one — it will pick up _pendingSemanticTokens.
+        // Atomic gate: only one Post in flight at a time — the queued Post reads the latest pending tokens.
         _pendingSemanticTokens = e.Tokens;
         _pendingSemanticTokensPath = e.FilePath;
         _pendingSemanticTokensVersion = e.Version;
-        if (_semanticRedrawPending) return;
-        _semanticRedrawPending = true;
+        if (Interlocked.CompareExchange(ref _semanticRedrawPending, 1, 0) != 0)
+            return;
 
-        Dispatcher.UIThread.Post(() =>
+        var viewModel = _viewModel;
+        if (viewModel is null) return;
+
+        viewModel.Dispatcher.Post(() =>
         {
-            _semanticRedrawPending = false;
+            Interlocked.Exchange(ref _semanticRedrawPending, 0);
+            if (_isSwitchingDocumentViewState) return;
             var tokens = _pendingSemanticTokens;
             var path = _pendingSemanticTokensPath;
             var version = _pendingSemanticTokensVersion;
@@ -47,7 +57,7 @@ public partial class EditorView
                 _pendingSemanticTokensVersion = 0;
                 Editor.TextArea.TextView.Redraw();
             }
-        }, DispatcherPriority.Background);
+        });
     }
 
     private void OnDocumentClosed(DocumentClosedEvent e)
