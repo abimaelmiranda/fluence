@@ -41,8 +41,14 @@
   <data name="DebuggerSetup.Log.SetupFailed" xml:space="preserve">
     <value>[Fluence] Setup failed: {0}</value>
   </data>
+  <data name="DebuggerSetup.Log.DebuggerStillUnavailable" xml:space="preserve">
+    <value>[Fluence] lldb-dap is still unavailable. Install it and retry.</value>
+  </data>
   <!-- User-facing error message -->
   <data name="DebuggerSetup.Error.SetupCancelled" xml:space="preserve">
     <value>Setup was cancelled.</value>
+  </data>
+  <data name="DebuggerSetup.Error.DebuggerStillUnavailable" xml:space="preserve">
+    <value>lldb-dap is still not available on PATH.</value>
   </data>
 </root>

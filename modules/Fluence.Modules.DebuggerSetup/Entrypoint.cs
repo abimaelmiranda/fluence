@@ -27,7 +27,7 @@ public sealed class Entrypoint : IModule, IConditionalModule
     public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
     {
         var languageId = profiles.DetectWorkspaceLanguage(workspace);
-        return languageId is null or "csharp";
+        return languageId is null or "csharp" or "c" or "cpp";
     }
 
     public string DisplayName => "Debugger Setup";
