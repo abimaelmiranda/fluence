@@ -7,6 +7,8 @@ using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Jobs;
 using Fluence.Core.Abstractions.Localization;
+using Fluence.Core.Abstractions.Languages;
+using Fluence.Core.Abstractions.Projects;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Tasks;
@@ -38,11 +40,17 @@ using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.DotnetCli;
 
-public sealed class Entrypoint : IModule
+public sealed class Entrypoint : IModule, IConditionalModule
 {
     private readonly List<IDisposable> _subscriptions = [];
 
     public string Id => "DotnetCli";
+
+    public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
+    {
+        var languageId = profiles.DetectWorkspaceLanguage(workspace);
+        return languageId is null or "csharp";
+    }
 
     public string DisplayName => ".NET CLI";
 
@@ -52,6 +60,8 @@ public sealed class Entrypoint : IModule
     {
         services.AddSingleton<IProjectExecutionTargetResolver, DotnetProjectExecutionTargetResolver>();
         services.AddSingleton<RunTargetResolver>();
+        services.AddSingleton<DotnetRunService>();
+        services.AddSingleton<IProjectTemplateProvider, DotnetProjectTemplateProvider>();
         services.AddSingleton<NewProjectWizardViewModel>();
         services.AddSingleton<PublishWizardViewModel>();
         services.AddSingleton<DotnetSdkSetupViewModel>();

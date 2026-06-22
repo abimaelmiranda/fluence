@@ -309,7 +309,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnShellRegionExpanded(object? sender, ShellRegionExpandedEventArgs e)
     {
         if (e.Region == ShellRegion.BottomBar)
+        {
             IsBottomBarExpanded = true;
+            return;
+        }
+
+        if (e.Region == ShellRegion.Sidebar)
+        {
+            _isSidebarExpanded = true;
+            OnPropertyChanged(nameof(IsSidebarVisible));
+        }
     }
 
     private void OnShellRegionsChanged(object? sender, EventArgs e)

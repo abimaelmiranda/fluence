@@ -45,6 +45,24 @@
     "csharp": {
       "iconPath": "./../icons/csharp.svg"
     },
+    "c": {
+      "iconPath": "./../icons/c.svg"
+    },
+    "cpp": {
+      "iconPath": "./../icons/cpp.svg"
+    },
+    "h": {
+      "iconPath": "./../icons/h.svg"
+    },
+    "hpp": {
+      "iconPath": "./../icons/hpp.svg"
+    },
+    "cmake": {
+      "iconPath": "./../icons/cmake.svg"
+    },
+    "makefile": {
+      "iconPath": "./../icons/makefile.svg"
+    },
     "console": {
       "iconPath": "./../icons/console.svg"
     },
@@ -139,13 +157,37 @@
       "iconPath": "./../icons/shellcheck.svg"
     },
     "file": {
-      "iconPath": "./../icons/file.svg"
+      "iconPath": "./../icons/document.svg"
     },
     "folder-src": {
       "iconPath": "./../icons/folder-src.svg"
     },
     "folder-src-open": {
       "iconPath": "./../icons/folder-src-open.svg"
+    },
+    "folder-interface": {
+      "iconPath": "./../icons/folder-interface.svg"
+    },
+    "folder-core": {
+      "iconPath": "./../icons/folder-core.svg"
+    },
+    "folder-event": {
+      "iconPath": "./../icons/folder-event.svg"
+    },
+    "folder-controller": {
+      "iconPath": "./../icons/folder-controller.svg"
+    },
+    "folder-repository": {
+      "iconPath": "./../icons/folder-repository.svg"
+    },
+    "folder-database": {
+      "iconPath": "./../icons/folder-database.svg"
+    },
+    "folder-project": {
+      "iconPath": "./../icons/folder-project.svg"
+    },
+    "folder-shared": {
+      "iconPath": "./../icons/folder-shared.svg"
     },
     "folder-dist": {
       "iconPath": "./../icons/folder-dist.svg"
@@ -574,13 +616,36 @@
       "iconPath": "./../icons/folder-trash-open.svg"
     },
     "folder": {
-      "iconPath": "./../icons/folder.svg"
+      "iconPath": "./../icons/folder-other.svg"
     },
     "folder-open": {
-      "iconPath": "./../icons/folder-open.svg"
+      "iconPath": "./../icons/folder-project.svg"
     }
   },
   "folderNames": {
+    "abstractions": "folder-interface",
+    "abstraction": "folder-interface",
+    "entities": "folder-core",
+    "entity": "folder-core",
+    "entidades": "folder-core",
+    "events": "folder-event",
+    "event": "folder-event",
+    "providers": "folder-controller",
+    "provider": "folder-controller",
+    "services": "folder-controller",
+    "service": "folder-controller",
+    "shared": "folder-shared",
+    "shareds": "folder-shared",
+    "project": "folder-project",
+    "projects": "folder-project",
+    "proj": "folder-project",
+    "projs": "folder-project",
+    "repositories": "folder-repository",
+    "repository": "folder-repository",
+    "repo": "folder-repository",
+    "repos": "folder-repository",
+    "storages": "folder-database",
+    "storage": "folder-database",
     "src": "folder-src",
     ".src": "folder-src",
     "_src": "folder-src",
@@ -5033,6 +5098,15 @@
     "cs": "csharp",
     "csx": "csharp",
     "csharp": "csharp",
+    "c": "c",
+    "cpp": "cpp",
+    "cc": "cpp",
+    "cxx": "cpp",
+    "h": "h",
+    "hh": "hpp",
+    "hpp": "hpp",
+    "hxx": "hpp",
+    "cmake": "cmake",
     "zip": "zip",
     "z": "zip",
     "tar": "zip",
@@ -5277,6 +5351,7 @@
     ".clang-tidy": "settings",
     ".conf": "settings",
     "compile_flags.txt": "settings",
+    "compile_commands.json": "settings",
     ".vsconfig": "visualstudio",
     "commit-msg": "console",
     "pre-commit": "console",
@@ -5340,6 +5415,9 @@
     "dockerfile.web": "docker",
     "dockerfile.windows": "docker",
     "dockerfile.worker": "docker",
+    "cmakelists.txt": "cmake",
+    "makefile": "makefile",
+    "gnumakefile": "makefile",
     "docker-compose.yml": "docker",
     "docker-compose.override.yml": "docker",
     "docker-compose.prod.yml": "docker",

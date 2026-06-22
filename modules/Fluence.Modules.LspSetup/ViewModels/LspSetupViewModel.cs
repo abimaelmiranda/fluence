@@ -1,8 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
@@ -13,27 +11,14 @@ using Fluence.Core.Events.Provisioning;
 
 namespace Fluence.Modules.LspSetup.ViewModels;
 
-public sealed partial class LspSetupViewModel : ViewModelBase
+public sealed partial class LspSetupViewModel : ProvisioningSetupViewModelBase
 {
     private const string ToolTabId = "tool://fluence/lsp-setup";
 
     private readonly ILspProvisioningService _provisioning;
     private readonly IWorkspaceContext _workspace;
     private readonly IShellEventBus _eventBus;
-    private readonly IUiDispatcher _dispatcher;
     private readonly ILocalizationService _loc;
-    private CancellationTokenSource? _cts;
-
-    [ObservableProperty]
-    private string _output = string.Empty;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
-    private bool _isRunning;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
-    private string? _errorMessage;
 
     public LspSetupViewModel(
         ILspProvisioningService provisioning,
@@ -41,74 +26,27 @@ public sealed partial class LspSetupViewModel : ViewModelBase
         IShellEventBus eventBus,
         IUiDispatcher dispatcher,
         ILocalizationService loc)
+        : base(dispatcher)
     {
         _provisioning = provisioning;
         _workspace = workspace;
         _eventBus = eventBus;
-        _dispatcher = dispatcher;
         _loc = loc;
     }
 
-    public async Task StartProvisioningAsync(CancellationToken cancellationToken = default)
+    protected override Task ProvisionAsync(Action<string> onOutput, CancellationToken cancellationToken)
+        => _provisioning.ProvisionAsync(onOutput, cancellationToken);
+
+    protected override async Task OnProvisioningCompletedAsync()
     {
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        await _dispatcher.InvokeAsync(() =>
-        {
-            IsRunning = true;
-            ErrorMessage = null;
-            Output = string.Empty;
-        });
-
-        try
-        {
-            await _provisioning.ProvisionAsync(AppendOutput, _cts.Token).ConfigureAwait(false);
-
-            AppendOutput(_loc.Get("LspSetup.Log.SetupComplete"));
-            await _dispatcher.InvokeAsync(() =>
-            {
-                _eventBus.Publish(new LspProvisioningCompletedEvent());
-                _workspace.CloseDocument(ToolTabId);
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            AppendOutput(_loc.Get("LspSetup.Log.SetupCancelled"));
-            await SetErrorAsync(_loc.Get("LspSetup.Error.SetupCancelled")).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            AppendOutput(string.Format(_loc.Get("LspSetup.Log.SetupFailed"), ex.Message));
-            await SetErrorAsync(_loc.Get("LspSetup.Error.SetupFailed")).ConfigureAwait(false);
-        }
-        finally
-        {
-            await _dispatcher.InvokeAsync(() => IsRunning = false);
-            _cts?.Dispose();
-            _cts = null;
-        }
+        await PublishOutputAsync(_loc.Get("LspSetup.Log.SetupComplete")).ConfigureAwait(false);
+        _workspace.CloseDocument(ToolTabId);
+        _eventBus.Publish(new LspProvisioningCompletedEvent());
     }
 
-    [RelayCommand]
-    private void Cancel()
-    {
-        _cts?.Cancel();
-    }
+    protected override Task OnProvisioningCancelledAsync() =>
+        PublishOutputAsync(_loc.Get("LspSetup.Log.SetupCancelled"));
 
-    [RelayCommand(CanExecute = nameof(CanRetry))]
-    private async Task Retry()
-    {
-        await StartProvisioningAsync().ConfigureAwait(false);
-    }
-
-    private bool CanRetry() => !IsRunning && ErrorMessage is not null;
-
-    private void AppendOutput(string line)
-    {
-        _dispatcher.Post(() => Output += line + "\n");
-    }
-
-    private async Task SetErrorAsync(string message)
-    {
-        await _dispatcher.InvokeAsync(() => ErrorMessage = message);
-    }
+    protected override Task OnProvisioningFailedAsync(Exception exception) =>
+        PublishOutputAsync(string.Format(_loc.Get("LspSetup.Log.SetupFailed"), exception.Message));
 }

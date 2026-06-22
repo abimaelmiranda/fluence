@@ -16,11 +16,8 @@ public sealed class SolutionTreeItemTextIconConverter : IValueConverter
         if (value is not SolutionTreeItem item)
             return string.Empty;
 
-        if (item.Kind == SolutionTreeNodeKind.Solution)
-            return SolutionTreeIconCatalog.SolutionTextIcon;
-
-        if (item.Kind == SolutionTreeNodeKind.Project)
-            return SolutionTreeIconCatalog.ProjectTextIcon;
+        if (item.Kind is SolutionTreeNodeKind.Solution or SolutionTreeNodeKind.Project)
+            return string.Empty;
 
         if (item.Kind != SolutionTreeNodeKind.File)
             return string.Empty;

@@ -4,8 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Languages;
+using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Requests.Lsp;
 using Fluence.Core.Abstractions.Output;
@@ -20,6 +21,7 @@ using Fluence.Core.Models.Problems;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.LanguageServer.Json;
 using Fluence.Modules.LanguageServer.Services;
+using Fluence.Infrastructure.Protocols.Lsp;
 using Fluence.Core.Events.Document;
 using Fluence.Core.Events.Lsp;
 using Fluence.Core.Events.Provisioning;
@@ -27,8 +29,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.LanguageServer;
 
-public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
+public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant, IConditionalModule
 {
+    public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
+    {
+        var languageId = profiles.DetectWorkspaceLanguage(workspace);
+        return languageId is null or "csharp" or "c" or "cpp";
+    }
+
     private static readonly TimeSpan DidChangeDebounceDelay = TimeSpan.FromMilliseconds(750);
     private static readonly TimeSpan SemanticTokensDebounceDelay = TimeSpan.FromMilliseconds(800);
 
@@ -37,8 +45,10 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
     private bool _provisioningPending;
     private int _diagnosticsPublishedOpenFileCount;
     private string? _lastStartedRootPath;
+    private string? _lastStartedLanguageId;
     private ILanguageServerService? _languageServer;
     private SemanticTokensService? _semanticTokensService;
+    private ILanguageProfileRegistry? _profiles;
     private IShellEventBus? _eventBus;
     private ITaskScheduler? _scheduler;
     private IWorkspaceContext? _workspace;
@@ -55,9 +65,18 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
     {
         services.AddSingleton<LspClientHolder>();
         services.AddSingleton<IDiagnosticsService, DiagnosticsService>();
+        services.AddSingleton<OmniSharpArgumentsBuilder>();
+        services.AddSingleton<ClangdArgumentsBuilder>();
+        services.AddKeyedSingleton<ILspArgumentsBuilder>("csharp",
+            (sp, _) => (ILspArgumentsBuilder)sp.GetRequiredService<OmniSharpArgumentsBuilder>());
+        services.AddKeyedSingleton<ILspArgumentsBuilder>("c",
+            (sp, _) => (ILspArgumentsBuilder)sp.GetRequiredService<ClangdArgumentsBuilder>());
+        services.AddKeyedSingleton<ILspArgumentsBuilder>("cpp",
+            (sp, _) => (ILspArgumentsBuilder)sp.GetRequiredService<ClangdArgumentsBuilder>());
         services.AddSingleton<ILanguageServerService>(provider =>
             new LanguageServerService(
                 provider.GetRequiredService<ILspProvisioningService>(),
+                provider.GetRequiredService<ILspArgumentsBuilder>(),
                 provider.GetRequiredService<IProcessSpawner>(),
                 provider.GetRequiredService<IDiagnosticsService>(),
                 provider.GetRequiredService<IShellEventBus>(),
@@ -152,6 +171,7 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
         var output = host.Services.GetRequiredService<IOutputChannelService>();
         _languageServer = lsp;
         _semanticTokensService = host.Services.GetRequiredService<SemanticTokensService>();
+        _profiles = host.Services.GetRequiredService<ILanguageProfileRegistry>();
         _eventBus = host.Events;
         _scheduler = host.Services.GetRequiredService<ITaskScheduler>();
         _workspace = host.Workspace;
@@ -202,7 +222,7 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
                     correlationId: path);
         }));
 
-        // Diagnostics signal OmniSharp finished analyzing — safe moment to fetch semantic tokens
+        // Diagnostics signal the language server finished analyzing — safe moment to fetch semantic tokens
         _subscriptions.Add(host.Events.SubscribeSync<DiagnosticsUpdatedEvent>(e =>
         {
             var diagnostics = e.Diagnostics;
@@ -287,7 +307,8 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
         int version,
         bool flushImmediately)
     {
-        RegisterDocument(filePath, content, "csharp", version);
+        var languageId = ResolveLanguageId(filePath);
+        RegisterDocument(filePath, content, languageId, version);
         if (!lsp.IsRunning) return;
 
         if (IsOpenInServer(filePath))
@@ -329,11 +350,14 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
             if (_lastStartedRootPath is not null)
             {
                 _lastStartedRootPath = null;
+                _lastStartedLanguageId = null;
                 ResetServerDocumentState();
                 _ = lsp.StopAsync();
             }
             return;
         }
+
+        var languageId = _profiles?.DetectWorkspaceLanguage(host.Workspace);
 
         if (!provisioning.IsProvisioned())
         {
@@ -342,7 +366,7 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
             if (!_provisioningPending)
             {
                 _provisioningPending = true;
-                _ = output.WriteAsync(OutputChannelIds.Output, "[LanguageServer] OmniSharp provisioning required\r\n");
+                _ = output.WriteAsync(OutputChannelIds.Output, "[LanguageServer] Language server provisioning required\r\n");
                 host.Events.Publish(new LspProvisioningRequiredEvent());
             }
             return;
@@ -353,10 +377,13 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
         // Avoid restarting when workspace changes are caused by things unrelated to the root
         // (e.g. tab switches, content updates). Only (re)start when root path actually changes
         // or when provisioning just completed.
-        if (!fromProvisioning && string.Equals(rootPath, _lastStartedRootPath, StringComparison.OrdinalIgnoreCase))
+        if (!fromProvisioning &&
+            string.Equals(rootPath, _lastStartedRootPath, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(languageId, _lastStartedLanguageId, StringComparison.OrdinalIgnoreCase))
             return;
 
         _lastStartedRootPath = rootPath;
+        _lastStartedLanguageId = languageId;
         ResetServerDocumentState();
         _scheduler!.Schedule(
             "lsp.start",
@@ -367,7 +394,7 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
 
     private void RegisterDocument(string filePath, string content, string languageId, int version)
     {
-        if (!IsCSharpDocument(filePath, languageId))
+        if (!IsManagedDocument(languageId))
             return;
 
         lock (_documentGate)
@@ -519,9 +546,26 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
         QueueSemanticTokens(filePath);
     }
 
-    private static bool IsCSharpDocument(string filePath, string languageId) =>
+    private string ResolveLanguageId(string filePath)
+    {
+        lock (_documentGate)
+        {
+            if (_documents.TryGetValue(filePath, out var state) &&
+                !string.IsNullOrWhiteSpace(state.LanguageId))
+            {
+                return state.LanguageId;
+            }
+        }
+
+        return _profiles is not null && _workspace is not null
+            ? _profiles.DetectLanguageForFile(_workspace, filePath) ?? string.Empty
+            : _profiles?.DetectLanguageForFile(filePath) ?? string.Empty;
+    }
+
+    private static bool IsManagedDocument(string languageId) =>
         string.Equals(languageId, "csharp", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(Path.GetExtension(filePath), ".cs", StringComparison.OrdinalIgnoreCase);
+        string.Equals(languageId, "c", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(languageId, "cpp", StringComparison.OrdinalIgnoreCase);
 
     private static string? ResolveRootPath(IWorkspaceContext workspace)
     {
@@ -530,6 +574,8 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
             return Path.GetDirectoryName(current.CurrentSolutionPath);
         if (current.NavigationMode == WorkspaceMode.Folder && !string.IsNullOrWhiteSpace(current.CurrentFolderPath))
             return current.CurrentFolderPath;
+        if (current.NavigationMode == WorkspaceMode.FileOnly && !string.IsNullOrWhiteSpace(current.CurrentFilePath))
+            return Path.GetDirectoryName(current.CurrentFilePath);
         return null;
     }
 

@@ -19,10 +19,10 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
 
   <data name="LspSetup.Header.Title" xml:space="preserve">
-    <value>Setting up C# Language Server</value>
+    <value>Setting up Language Server</value>
   </data>
   <data name="LspSetup.Header.Subtitle" xml:space="preserve">
-    <value>Please wait while Fluence installs OmniSharp. This may take a few minutes.</value>
+    <value>Please wait while Fluence installs the language server. This may take a few minutes.</value>
   </data>
   <data name="LspSetup.Status.Installing" xml:space="preserve">
     <value>Installing...</value>

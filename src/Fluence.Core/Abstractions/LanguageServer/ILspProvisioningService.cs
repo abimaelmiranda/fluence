@@ -11,12 +11,9 @@ public interface ILspProvisioningService
 
     string GetExecutablePath();
 
-    string? GetDotnetHostPath();
-
-    string? GetSelectedSdkPath(string? rootPath = null);
-
     /// <summary>
-    /// Returns environment variables required to run the language server (e.g. DOTNET_ROOT, DOTNET_HOST_PATH).
+    /// Returns environment variables required to run the language server process.
+    /// May return an empty dictionary for language servers that need no special environment.
     /// </summary>
     IReadOnlyDictionary<string, string> GetLaunchEnvironment();
 

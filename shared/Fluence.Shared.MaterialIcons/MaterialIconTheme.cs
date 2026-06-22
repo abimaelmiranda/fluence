@@ -5,6 +5,8 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using Avalonia.Media.Imaging;
+using SkiaSharp;
+using Svg.Skia;
 
 namespace Fluence.Shared.MaterialIcons;
 
@@ -84,12 +86,13 @@ internal sealed class MaterialIconTheme
     {
         try
         {
-            var fullPath = Path.GetFullPath(Path.Combine(_rootDirectory, relativeIconPath.Replace('/', Path.DirectorySeparatorChar)));
-            if (!fullPath.StartsWith(_rootDirectory, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+            var candidate = ResolveAbsolutePath(relativeIconPath);
+            if (candidate is null || !File.Exists(candidate))
                 return null;
 
-            using var stream = File.OpenRead(fullPath);
-            return new Bitmap(stream);
+            return Path.GetExtension(candidate).Equals(".svg", StringComparison.OrdinalIgnoreCase)
+                ? LoadSvgBitmap(candidate)
+                : null;
         }
         catch
         {
@@ -101,6 +104,44 @@ internal sealed class MaterialIconTheme
         => _iconPathById.TryGetValue(iconId, out var iconPath)
             ? NormalizeIconPath(iconPath)
             : null;
+
+    private string? ResolveAbsolutePath(string relativeIconPath)
+    {
+        var normalized = NormalizeIconPath(relativeIconPath);
+        if (string.IsNullOrWhiteSpace(normalized))
+            return null;
+
+        var svgPath = Path.GetFullPath(Path.Combine(_rootDirectory, normalized.Replace('/', Path.DirectorySeparatorChar)));
+        return svgPath.StartsWith(_rootDirectory, StringComparison.OrdinalIgnoreCase) ? svgPath : null;
+    }
+
+    private static Bitmap? LoadSvgBitmap(string svgPath)
+    {
+        using var svg = SKSvg.CreateFromFile(svgPath);
+        var picture = svg.Picture;
+        if (picture is null)
+            return null;
+
+        var bounds = picture.CullRect;
+        var width = Math.Max(1, (int)Math.Ceiling(bounds.Width));
+        var height = Math.Max(1, (int)Math.Ceiling(bounds.Height));
+
+        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using var bitmap = new SKBitmap(info);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.Transparent);
+        canvas.Translate(-bounds.Left, -bounds.Top);
+        canvas.DrawPicture(picture);
+        canvas.Flush();
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+        if (encoded is null)
+            return null;
+
+        using var stream = encoded.AsStream();
+        return new Bitmap(stream);
+    }
 
     private void LoadManifest()
     {
@@ -129,7 +170,7 @@ internal sealed class MaterialIconTheme
         foreach (var definition in definitions.EnumerateObject())
         {
             if (definition.Value.TryGetProperty("iconPath", out var iconPath) && iconPath.ValueKind == JsonValueKind.String)
-                _iconPathById[definition.Name] = ToPngIconPath(iconPath.GetString());
+                _iconPathById[definition.Name] = NormalizeIconPath(iconPath.GetString()) ?? string.Empty;
         }
     }
 
@@ -160,7 +201,7 @@ internal sealed class MaterialIconTheme
             return null;
         }
 
-        return ToPngIconPath(iconPath.GetString());
+        return ResolveIconPath(iconPath.GetString());
     }
 
     private static string? NormalizeIconPath(string? iconPath)
@@ -177,12 +218,4 @@ internal sealed class MaterialIconTheme
         return normalized;
     }
 
-    private static string ToPngIconPath(string? iconPath)
-    {
-        var normalized = NormalizeIconPath(iconPath);
-        if (string.IsNullOrWhiteSpace(normalized))
-            return string.Empty;
-
-        return Path.ChangeExtension(normalized.Replace("icons/", "png/", StringComparison.OrdinalIgnoreCase), ".png");
-    }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -77,7 +78,11 @@ public sealed class DebugService(
             return;
         }
 
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException) { return; }
         try
         {
             if (_adapter is not null)
@@ -124,7 +129,11 @@ public sealed class DebugService(
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException) { return; }
         try
         {
             await StopCoreAsync(cancellationToken).ConfigureAwait(false);
@@ -137,7 +146,11 @@ public sealed class DebugService(
 
     public async Task RestartAsync(CancellationToken cancellationToken = default)
     {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException) { return; }
         try
         {
             var currentSession = sessions.CurrentSession;
@@ -301,9 +314,11 @@ public sealed class DebugService(
             return false;
         }
 
+        var configuration = await CreateDebugConfigurationAsync(target, cancellationToken).ConfigureAwait(false);
         sessions.Start(target, mode);
-        debugState.StartSession();
+        debugState.StartSession(configuration.Architecture);
         var exceptionBreakMode = settings.Get<DebugSettings>().ExceptionBreakMode;
+        SelectSidebar();
         SelectBottomBar(BottomBarTabIds.Debug);
 
         Interlocked.Increment(ref _sessionGeneration);
@@ -313,7 +328,6 @@ public sealed class DebugService(
         _adapter.Continued += OnAdapterContinued;
         _adapter.OutputReceived += OnAdapterOutputReceived;
 
-        var configuration = await CreateDebugConfigurationAsync(target, cancellationToken).ConfigureAwait(false);
         var workingDirectory = ResolveWorkingDirectory(target.ProjectPath, workspaceRoot, configuration.WorkingDirectory);
         await output.WriteAsync(
             OutputChannelIds.Debug,
@@ -325,6 +339,7 @@ public sealed class DebugService(
             ProgramPath: programPath,
             WorkingDirectory: workingDirectory,
             Configuration: configuration,
+            LaunchArguments: CreateLaunchArguments(programPath, workingDirectory, configuration),
             Breakpoints: debugState.Snapshot.Breakpoints,
             WorkspaceRoot: workspaceRoot);
         await _adapter.StartAsync(request, cancellationToken).ConfigureAwait(false);
@@ -578,6 +593,17 @@ public sealed class DebugService(
         }
 
         dispatcher.Post(() => shellRegions.Expand(ShellRegion.BottomBar));
+    }
+
+    private void SelectSidebar()
+    {
+        if (dispatcher.CheckAccess())
+        {
+            shellRegions.Expand(ShellRegion.Sidebar);
+            return;
+        }
+
+        dispatcher.Post(() => shellRegions.Expand(ShellRegion.Sidebar));
     }
 
     private void ScheduleRunOutput(
@@ -842,6 +868,46 @@ public sealed class DebugService(
             args.Add(current.ToString());
             current.Clear();
         }
+    }
+
+    private static JsonObject CreateLaunchArguments(
+        string programPath,
+        string workingDirectory,
+        LaunchConfiguration configuration)
+    {
+        return new JsonObject
+        {
+            ["type"] = "coreclr",
+            ["program"] = programPath,
+            ["cwd"] = workingDirectory,
+            ["args"] = new JsonArray(configuration.Args.Select(arg => JsonValue.Create(arg)).ToArray()),
+            ["env"] = CreateEnvironmentObject(configuration.Env),
+            ["stopAtEntry"] = false,
+            ["console"] = "internalConsole",
+        };
+    }
+
+    private static JsonObject CreateEnvironmentObject(IReadOnlyDictionary<string, string> values)
+    {
+        var obj = new JsonObject();
+        foreach (var pair in values)
+            obj[pair.Key] = pair.Value;
+
+        if (!obj.ContainsKey("PATH"))
+        {
+            var path = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrWhiteSpace(path))
+                obj["PATH"] = path;
+        }
+
+        if (!obj.ContainsKey("DOTNET_ROOT"))
+        {
+            var dotnetRoot = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+            if (!string.IsNullOrWhiteSpace(dotnetRoot))
+                obj["DOTNET_ROOT"] = dotnetRoot;
+        }
+
+        return obj;
     }
 
     public async ValueTask DisposeAsync()

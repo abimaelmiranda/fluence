@@ -54,8 +54,17 @@ internal sealed class CompletionService(ILanguageServerService lsp, LspClientHol
             if (item is not JsonObject node)
                 continue;
 
-            var label = node["label"]?.GetValue<string>() ?? string.Empty;
-            var insertText = node["insertText"]?.GetValue<string>() ?? label;
+            var label        = node["label"]?.GetValue<string>() ?? string.Empty;
+            var textEditText = node["textEdit"]?["newText"]?.GetValue<string>();
+            var insertText   = node["insertText"]?.GetValue<string>() ?? textEditText ?? label;
+
+            // TODO: investigar por que alguns servidores omitem o campo label (não-compliant com LSP spec);
+            // revisar com reprodução confiável para identificar se é bug do clangd/roslyn ou do parser.
+            if (string.IsNullOrEmpty(label))
+                label = insertText;
+            if (string.IsNullOrEmpty(label))
+                continue;
+
             var detail = node["detail"]?.GetValue<string>();
             var documentation = node["documentation"] is JsonObject docObj
                 ? docObj["value"]?.GetValue<string>()

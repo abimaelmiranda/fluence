@@ -5,9 +5,6 @@ namespace Fluence.Modules.SolutionView.Views.Converters;
 
 internal static class SolutionTreeIconCatalog
 {
-    public const string SolutionTextIcon = "SLN";
-    public const string ProjectTextIcon = "C#";
-
     public static readonly StreamGeometry SolutionIcon = StreamGeometry.Parse("M2 4 L8 1.5 L14 4 L14 12 L8 14.5 L2 12 Z M5 5.2 L11 5.2 L11 10.8 L5 10.8 Z");
     public static readonly StreamGeometry FolderIcon = StreamGeometry.Parse("M1 4 L6.2 4 L7.4 5.2 L15 5.2 L15 13 L1 13 Z");
     public static readonly StreamGeometry ProjectIcon = StreamGeometry.Parse("M2 4 L8 1.5 L14 4 L14 12 L8 14.5 L2 12 Z M5 5.3 L11 5.3 L11 6.5 L5 6.5 Z M5 7.5 L11 7.5 L11 8.7 L5 8.7 Z M5 9.7 L9 9.7 L9 10.9 L5 10.9 Z");
@@ -23,19 +20,30 @@ internal static class SolutionTreeIconCatalog
     public static readonly IBrush ReferenceBrush = Brush("#7BCB8F");
     public static readonly IBrush PackageBrush = Brush("#B896FF");
     public static readonly IBrush CSharpBrush = Brush("#A877FF");
+    public static readonly IBrush CBrush = Brush("#57C7A6");
+    public static readonly IBrush CppBrush = Brush("#4FA3FF");
+    public static readonly IBrush HeaderBrush = Brush("#7BCB8F");
     public static readonly IBrush MarkupBrush = Brush("#F28B54");
     public static readonly IBrush JsonBrush = Brush("#E2C044");
     public static readonly IBrush MarkdownBrush = Brush("#86A8FF");
+    public static readonly IBrush BuildBrush = Brush("#9AB1C7");
     public static readonly IBrush FileBrush = Brush("#AAB4BF");
 
     public static string GetTextIcon(string path)
     {
+        var fileName = Path.GetFileName(path);
+        if (fileName.Equals("CMakeLists.txt", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("Makefile", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("gnumakefile", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("compile_commands.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
         return Path.GetExtension(path).ToLowerInvariant() switch
         {
             ".cs" => "C#",
-            ".csproj" => "C#",
             ".props" or ".targets" or ".axaml" or ".xaml" or ".xml" => "<>",
-            ".sln" or ".slnx" => "SLN",
             ".json" => "{}",
             ".md" => "MD",
             _ => string.Empty,
@@ -44,9 +52,21 @@ internal static class SolutionTreeIconCatalog
 
     public static IBrush GetFileBrush(string path)
     {
+        var fileName = Path.GetFileName(path);
+        if (fileName.Equals("CMakeLists.txt", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("Makefile", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("gnumakefile", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("compile_commands.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return BuildBrush;
+        }
+
         return Path.GetExtension(path).ToLowerInvariant() switch
         {
             ".cs" => CSharpBrush,
+            ".c" => CBrush,
+            ".cc" or ".cpp" or ".cxx" => CppBrush,
+            ".h" or ".hh" or ".hpp" or ".hxx" => HeaderBrush,
             ".csproj" or ".props" or ".targets" => ProjectBrush,
             ".sln" or ".slnx" => SolutionBrush,
             ".axaml" or ".xaml" or ".xml" => MarkupBrush,

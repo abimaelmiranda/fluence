@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.4" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
+    <PackageReference Include="Svg.Skia" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,9 +21,9 @@
              TargetPath="MaterialIcons\dist\material-icons.json"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="..\..\third_party\material-icon-theme\png\**\*.png"
-             Link="MaterialIcons\png\%(RecursiveDir)%(Filename)%(Extension)"
-             TargetPath="MaterialIcons\png\%(RecursiveDir)%(Filename)%(Extension)"
+    <Content Include="..\..\third_party\material-icon-theme\icons\**\*.svg"
+             Link="MaterialIcons\icons\%(RecursiveDir)%(Filename)%(Extension)"
+             TargetPath="MaterialIcons\icons\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

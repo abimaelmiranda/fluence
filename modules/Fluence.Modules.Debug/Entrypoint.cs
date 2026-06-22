@@ -13,6 +13,7 @@ using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Services.Debugging;
+using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -30,12 +31,18 @@ using Fluence.Core.Events.Debug;
 
 namespace Fluence.Modules.Debug;
 
-public sealed class Entrypoint : IModule, IModuleShutdownParticipant
+public sealed class Entrypoint : IModule, IModuleShutdownParticipant, IConditionalModule
 {
     private readonly List<IDisposable> _subscriptions = [];
     private IDebugService? _debugService;
 
     public string Id => "Debug";
+
+    public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
+    {
+        var languageId = profiles.DetectWorkspaceLanguage(workspace);
+        return languageId is null or "csharp" or "c" or "cpp";
+    }
 
     public string DisplayName => "Debug";
 
@@ -45,7 +52,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
     {
         services.AddSingleton<DebugSidebarViewModel>();
         services.AddSingleton<IDebugStateService, DebugStateService>();
-        services.AddSingleton<IDebugService, DebugService>();
+        services.AddSingleton<DebugService>();
         services.AddSingleton<IDebugSessionManager, DebugSessionManager>();
         services.AddSingleton<ICommandHandler<DebugProjectCommand>, DebugProjectCommandHandler>();
     }
@@ -62,7 +69,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
                     services => services.GetRequiredService<DebugSidebarViewModel>(),
                     PanelVisibilityRule.Custom((_, activeTabId, services) =>
                         activeTabId == "Debug" &&
-                        services.GetRequiredService<IDebugSessionManager>().CurrentSession is { IsActive: true })),
+                        services.GetRequiredService<IDebugStateService>().Snapshot.IsActive)),
             ],
         };
 

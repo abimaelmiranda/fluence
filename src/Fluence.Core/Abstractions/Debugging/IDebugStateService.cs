@@ -13,7 +13,7 @@ public interface IDebugStateService
 
     void SetBreakpointVerification(string filePath, IReadOnlyDictionary<int, DebugBreakpoint> breakpointsByLine);
 
-    void StartSession();
+    void StartSession(string architecture = "x64");
 
     void SetStopped(
         string? reason,

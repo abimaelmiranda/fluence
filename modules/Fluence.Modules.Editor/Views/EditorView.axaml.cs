@@ -42,6 +42,14 @@ public partial class EditorView : UserControl
     private static readonly Dictionary<string, string> LanguageScopeByExtension = new(StringComparer.OrdinalIgnoreCase)
     {
         [".cs"]      = "source.cs",
+        [".c"]       = "source.c",
+        [".cc"]      = "source.cpp",
+        [".cpp"]     = "source.cpp",
+        [".cxx"]     = "source.cpp",
+        [".h"]       = "source.cpp",
+        [".hh"]      = "source.cpp",
+        [".hpp"]     = "source.cpp",
+        [".hxx"]     = "source.cpp",
         [".csproj"]  = "text.xml",
         [".props"]   = "text.xml",
         [".targets"] = "text.xml",

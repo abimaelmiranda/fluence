@@ -28,6 +28,7 @@ public sealed class DapDebugAdapterClientFactory(
 
         var executable = provisioning.GetExecutablePath();
         var logPath = storage.GetProjectPath(workspaceRoot, $"logs/dap-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.log");
-        return Task.FromResult<IDebugAdapterClient>(new DapClient(executable, logPath, spawner));
+        var adapterId = Path.GetFileNameWithoutExtension(executable);
+        return Task.FromResult<IDebugAdapterClient>(new DapClient(executable, adapterId, logPath, spawner));
     }
 }

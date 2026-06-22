@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Runtime.InteropServices;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -26,7 +27,7 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     private string _sessionTitle;
 
     [ObservableProperty]
-    private string _architecture = "x64";
+    private string _architecture = GetDefaultArchitecture();
 
     [ObservableProperty]
     private string _status;
@@ -66,7 +67,7 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     public void Clear()
     {
         SessionTitle = _loc.Get("Debug.Session.NoSession");
-        Architecture = "x64";
+        Architecture = GetDefaultArchitecture();
         RefreshState();
     }
 
@@ -102,6 +103,9 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     private void RefreshState()
     {
         var snapshot = _debugState.Snapshot;
+        if (snapshot.IsActive && !string.IsNullOrWhiteSpace(snapshot.Architecture))
+            Architecture = snapshot.Architecture;
+
         SessionTitle = snapshot.IsActive
             ? snapshot.IsStopped
                 ? string.Format(_loc.Get("Debug.Session.Stopped"), snapshot.Reason ?? _loc.Get("Debug.Session.Breakpoint"))
@@ -152,6 +156,15 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         foreach (var value in values)
             collection.Add(value);
     }
+
+    private static string GetDefaultArchitecture() =>
+        RuntimeInformation.ProcessArchitecture switch
+        {
+            System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
+            System.Runtime.InteropServices.Architecture.X64 => "x64",
+            System.Runtime.InteropServices.Architecture.X86 => "x86",
+            _ => "x64",
+        };
 
     public void Dispose()
     {

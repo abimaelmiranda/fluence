@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Keybindings;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.LanguageServer;
@@ -50,6 +51,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private readonly ITaskScheduler _scheduler;
     private readonly IUiDispatcher _dispatcher;
     private readonly ISettingsService _settings;
+    private readonly ILanguageProfileRegistry _languageProfiles;
     private readonly EditorViewStateStore _viewStateStore;
     private readonly IKeybindingService _keybindings;
     private readonly ICommandRegistry _commands;
@@ -91,6 +93,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         ITaskScheduler scheduler,
         IUiDispatcher dispatcher,
         ISettingsService settings,
+        ILanguageProfileRegistry languageProfiles,
         EditorViewStateStore viewStateStore,
         IKeybindingService keybindings,
         ICommandRegistry commands,
@@ -111,6 +114,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _scheduler = scheduler;
         _dispatcher = dispatcher;
         _settings = settings;
+        _languageProfiles = languageProfiles;
         _viewStateStore = viewStateStore;
         _keybindings = keybindings;
         _commands = commands;
@@ -188,6 +192,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     }
 
     public bool IsDebuggerStopped => _debugState.Snapshot.IsStopped;
+
+    public string? ActiveDocumentLanguageId =>
+        ActiveDocumentPath is null
+            ? null
+            : _languageProfiles.DetectLanguageForFile(_workspace, ActiveDocumentPath);
 
     private void RegisterEditorCommands()
     {
@@ -326,7 +335,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public void PublishLiveDocumentChanged(string content, bool flushImmediately)
     {
         var path = ActiveDocumentPath;
-        if (path is null || !IsTextDocument(path))
+        if (path is null || !IsTrackedTextDocument(path))
             return;
 
         _lastLiveSyncedPath = path;
@@ -368,7 +377,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         ScheduleAutoSave(path);
         _workspace.UpdateActiveDocumentContent(value);
 
-        if (path is not null && IsTextDocument(path))
+        if (path is not null && IsTrackedTextDocument(path))
         {
             if (string.Equals(path, _lastLiveSyncedPath, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(value, _lastLiveSyncedText, StringComparison.Ordinal))
@@ -438,7 +447,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     private void SyncOpenTextDocuments()
     {
         var openDocuments = _workspace.Current.TabSession.Documents
-            .Where(document => document.Kind == OpenDocumentKind.TextDocument && IsTextDocument(document.Path))
+            .Where(document => document.Kind == OpenDocumentKind.TextDocument && IsTrackedTextDocument(document.Path))
             .ToArray();
         var currentPaths = openDocuments
             .Select(document => document.Path)
@@ -457,9 +466,13 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
             if (_openTextDocumentPaths.Contains(document.Path))
                 continue;
 
+            var languageId = ResolveDocumentLanguageId(document.Path);
+            if (languageId is null)
+                continue;
+
             _openTextDocumentPaths.Add(document.Path);
             var version = EnsureDocumentVersion(document.Path);
-            _events.Publish(new DocumentOpenedEvent(document.Path, document.Content, "csharp", version));
+            _events.Publish(new DocumentOpenedEvent(document.Path, document.Content, languageId, version));
         }
     }
 
@@ -472,12 +485,16 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     {
         foreach (var document in _workspace.Current.TabSession.Documents)
         {
-            if (document.Kind != OpenDocumentKind.TextDocument || !IsTextDocument(document.Path))
+            if (document.Kind != OpenDocumentKind.TextDocument || !IsTrackedTextDocument(document.Path))
+                continue;
+
+            var languageId = ResolveDocumentLanguageId(document.Path);
+            if (languageId is null)
                 continue;
 
             _openTextDocumentPaths.Add(document.Path);
             var version = EnsureDocumentVersion(document.Path);
-            _events.Publish(new DocumentOpenedEvent(document.Path, document.Content, "csharp", version));
+            _events.Publish(new DocumentOpenedEvent(document.Path, document.Content, languageId, version));
         }
     }
 
@@ -509,8 +526,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         _scheduler.CancelAndForget($"editor.view-state.save.{path}");
     }
 
-    private static bool IsTextDocument(string path) =>
-        System.IO.Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase);
+    private bool IsTrackedTextDocument(string path) =>
+        ResolveDocumentLanguageId(path) is not null;
+
+    private string? ResolveDocumentLanguageId(string path) =>
+        _languageProfiles.DetectLanguageForFile(_workspace, path);
 
     private void ScheduleAutoSave(string? documentPath)
     {
@@ -575,7 +595,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
         var activeDocument = _workspace.Current.TabSession.ActiveDocument;
         if (activeDocument is not { Kind: OpenDocumentKind.TextDocument } ||
-            !IsTextDocument(activeDocument.Path) ||
+            !IsTrackedTextDocument(activeDocument.Path) ||
             !_settings.Get<EditorSettings>().FormatOnSave)
         {
             return null;
