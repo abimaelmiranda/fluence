@@ -224,7 +224,6 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
                     token);
             }
 
-            NotifySolutionChanged();
             await LoadInstalledPackagesAsync(token);
             await LoadUpdatesAsync(token);
             UpdateAlreadyInstalledFlags();
@@ -249,7 +248,6 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
                 package.Id,
                 token);
 
-            NotifySolutionChanged();
             await LoadInstalledPackagesAsync(token);
             await LoadUpdatesAsync(token);
             StatusMessage = string.Format(_loc.Get("NuGetExplorer.Status.Removed"), package.Id);
@@ -265,22 +263,22 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             return;
         }
 
+        var update = SelectedUpdate;
         await RunBusyAsync(async token =>
         {
-            foreach (var package in SelectedUpdate.InstalledPackages)
+            foreach (var package in update.InstalledPackages)
             {
                 token.ThrowIfCancellationRequested();
                 await _projectService.InstallPackageAsync(
                     package.ProjectPath,
                     package.Id,
-                    SelectedUpdate.LatestVersion,
+                    update.LatestVersion,
                     token);
             }
 
-            NotifySolutionChanged();
             await LoadInstalledPackagesAsync(token);
             await LoadUpdatesAsync(token);
-            StatusMessage = string.Format(_loc.Get("NuGetExplorer.Status.Updated"), SelectedUpdate.Id, SelectedUpdate.LatestVersion);
+            StatusMessage = string.Format(_loc.Get("NuGetExplorer.Status.Updated"), update.Id, update.LatestVersion);
         }, cancellationToken);
     }
 

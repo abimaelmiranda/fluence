@@ -29,8 +29,6 @@ public sealed class RunProjectCommandHandler(
 {
     public async Task HandleAsync(RunProjectCommand command, CancellationToken cancellationToken = default)
     {
-        output.Clear(OutputChannelIds.Run);
-
         if (workspace.Current.Mode is WorkspaceMode.Folder or WorkspaceMode.Solution &&
             await launchSettings.EnsureAsync(ExecutionMode.Release, cancellationToken) is null)
         {
@@ -50,6 +48,7 @@ public sealed class RunProjectCommandHandler(
         }
 
         events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
+        output.Clear(OutputChannelIds.Run);
         await output.WriteAsync(
             OutputChannelIds.Run,
             $"> {DotnetCommandLine.Format(target.Executable, target.Arguments)}{Environment.NewLine}",

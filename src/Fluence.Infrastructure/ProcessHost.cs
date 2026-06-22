@@ -133,6 +133,10 @@ public sealed class ProcessHost(IProcessSpawner spawner) : IProcessHost
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
+        // Guard: process may have already exited during spawner.StartAsync (async I/O gap)
+        if (process.HasExited)
+            tcs.TrySetResult(process.ExitCode);
+
         try
         {
             var exitCode = await tcs.Task.ConfigureAwait(false);

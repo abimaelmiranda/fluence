@@ -35,6 +35,11 @@ public abstract class DotnetCommandHandlerBase(
 
         if (string.IsNullOrEmpty(workingDirectory))
         {
+            await output.WriteAsync(
+                OutputChannelIds.Run,
+                $"No workspace folder or solution is open.{System.Environment.NewLine}",
+                OutputChannelEntryKind.Error,
+                cancellationToken);
             return;
         }
 

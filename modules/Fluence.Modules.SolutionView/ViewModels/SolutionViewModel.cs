@@ -53,6 +53,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
     private readonly IShellEventBus _eventBus;
     private readonly SolutionProjectAssociationService _projectAssociations;
     private CancellationTokenSource? _loadCts;
+    private readonly object _loadLock = new();
     private readonly Dictionary<string, CancellationTokenSource> _projectLoadCtsByPath = new(StringComparer.OrdinalIgnoreCase);
     private string? _loadedSolutionPath;
     private SolutionWorkspaceSnapshot? _loadedSnapshot;
@@ -136,9 +137,13 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
     private async Task LoadAsync(string solutionPath)
     {
-        _loadCts?.Cancel();
-        _loadCts = new CancellationTokenSource();
-        var cancellationToken = _loadCts.Token;
+        CancellationToken cancellationToken;
+        lock (_loadLock)
+        {
+            _loadCts?.Cancel();
+            _loadCts = new CancellationTokenSource();
+            cancellationToken = _loadCts.Token;
+        }
 
         IsLoading = true;
         ErrorMessage = null;
@@ -154,6 +159,9 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
             _loadedSnapshot = snapshot;
             _projectAssociations.UpdateStructural(snapshot);
+
+            if (cancellationToken.IsCancellationRequested)
+                return;
 
             RootItems.Clear();
             RootItems.Add(CreateTreeItem(snapshot.Root, deferProjectChildren: true));

@@ -246,22 +246,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
         if (resolved.Edit is not null)
         {
-            var filePath = ActiveDocumentPath;
-            if (filePath is null) return;
-
-            var uriKey = new Uri(filePath).AbsoluteUri;
-            if (!resolved.Edit.Changes.TryGetValue(uriKey, out var edits)) return;
-
-            var sorted = edits.OrderByDescending(e => (e.StartLine, e.StartCharacter)).ToArray();
-            var text = ActiveText;
-            foreach (var edit in sorted)
+            foreach (var (uri, edits) in resolved.Edit.Changes)
             {
-                var start = GetTextOffset(text, edit.StartLine, edit.StartCharacter);
-                var end   = GetTextOffset(text, edit.EndLine, edit.EndCharacter);
-                if (start < 0 || end < start || end > text.Length) continue;
-                text = string.Concat(text.AsSpan(0, start), edit.NewText, text.AsSpan(end));
+                var filePath = new Uri(uri).LocalPath;
+                _events.Publish(new WorkspaceEditRequestedEvent(filePath, edits));
             }
-            ActiveText = text;
         }
         else if (resolved.CommandIdentifier is not null)
         {

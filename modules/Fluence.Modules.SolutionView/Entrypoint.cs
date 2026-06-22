@@ -82,11 +82,13 @@ public sealed class Entrypoint : IModule
                 ct => OpenSolutionAsync(host, e.Path, ct),
                 correlationId: e.Path)));
         _subscriptions.Add(host.Events.SubscribeSync<RefreshSolutionViewRequestedEvent>(_ =>
-            scheduler.Schedule("solution.refresh", TaskPriority.Maintenance,
+            scheduler.ScheduleLatest("solution.refresh", TaskPriority.Maintenance,
+                TimeSpan.FromMilliseconds(150),
                 ct => RefreshSolutionViewAsync(host, ct),
                 correlationId: "solution.refresh")));
         _subscriptions.Add(host.Events.SubscribeSync<GitCheckoutCompletedEvent>(_ =>
-            scheduler.Schedule("solution.refresh", TaskPriority.Maintenance,
+            scheduler.ScheduleLatest("solution.refresh", TaskPriority.Maintenance,
+                TimeSpan.FromMilliseconds(150),
                 ct => RefreshSolutionViewAsync(host, ct),
                 correlationId: "solution.refresh")));
         host.SetModuleState(Id, ModuleState.Active);
