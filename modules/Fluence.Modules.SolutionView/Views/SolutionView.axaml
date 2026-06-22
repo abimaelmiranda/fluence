@@ -123,12 +123,26 @@
                           ColumnSpacing="4"
                           Margin="-8,0,0,0"
                           VerticalAlignment="Center">
-                        <Image Grid.Column="0"
-                               Width="16"
-                               Height="16"
-                               Source="{Binding ., Converter={x:Static conv:SolutionTreeItemIconConverter.Instance}}"
-                               Stretch="Uniform"
-                               VerticalAlignment="Center"/>
+                        <Grid Grid.Column="0"
+                              Width="16"
+                              Height="16"
+                              VerticalAlignment="Center">
+                            <Image Width="16"
+                                   Height="16"
+                                   Source="{Binding ., Converter={x:Static conv:SolutionTreeItemIconConverter.Instance}}"
+                                   Stretch="Uniform"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding ., Converter={x:Static conv:SolutionTreeItemVectorIconVisibilityConverter.Instance}}"/>
+                            <TextBlock Text="{Binding ., Converter={x:Static conv:SolutionTreeItemTextIconConverter.Instance}}"
+                                       IsVisible="{Binding ., Converter={x:Static conv:SolutionTreeItemTextIconVisibilityConverter.Instance}}"
+                                       FontFamily="{StaticResource FluenceFontFamily}"
+                                       FontSize="8"
+                                       FontWeight="SemiBold"
+                                       Foreground="{Binding ., Converter={x:Static conv:SolutionTreeItemIconBrushConverter.Instance}}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Center"/>
+                        </Grid>
                         <TextBlock Grid.Column="1"
                                    Text="{Binding DisplayName}"
                                    FontFamily="{StaticResource FluenceFontFamily}"

@@ -10,21 +10,32 @@ internal static class FileTreeIconCatalog
 
     public static readonly IBrush FolderBrush = Brush("#D6A83D");
     public static readonly IBrush CSharpBrush = Brush("#A877FF");
+    public static readonly IBrush CBrush = Brush("#57C7A6");
+    public static readonly IBrush CppBrush = Brush("#4FA3FF");
+    public static readonly IBrush HeaderBrush = Brush("#7BCB8F");
     public static readonly IBrush ProjectBrush = Brush("#4FA3FF");
     public static readonly IBrush SolutionBrush = Brush("#6FC3FF");
     public static readonly IBrush MarkupBrush = Brush("#F28B54");
     public static readonly IBrush JsonBrush = Brush("#E2C044");
     public static readonly IBrush MarkdownBrush = Brush("#86A8FF");
+    public static readonly IBrush BuildBrush = Brush("#9AB1C7");
     public static readonly IBrush FileBrush = Brush("#AAB4BF");
 
     public static string GetTextIcon(string path)
     {
+        var fileName = Path.GetFileName(path);
+        if (fileName.Equals("CMakeLists.txt", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("Makefile", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("gnumakefile", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("compile_commands.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
         return Path.GetExtension(path).ToLowerInvariant() switch
         {
             ".cs" => "C#",
-            ".csproj" => "C#",
             ".props" or ".targets" or ".axaml" or ".xaml" or ".xml" => "<>",
-            ".sln" or ".slnx" => "SLN",
             ".json" => "{}",
             ".md" => "MD",
             _ => string.Empty,
@@ -33,9 +44,21 @@ internal static class FileTreeIconCatalog
 
     public static IBrush GetFileBrush(string path)
     {
+        var fileName = Path.GetFileName(path);
+        if (fileName.Equals("CMakeLists.txt", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("Makefile", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("gnumakefile", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("compile_commands.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return BuildBrush;
+        }
+
         return Path.GetExtension(path).ToLowerInvariant() switch
         {
             ".cs" => CSharpBrush,
+            ".c" => CBrush,
+            ".cc" or ".cpp" or ".cxx" => CppBrush,
+            ".h" or ".hh" or ".hpp" or ".hxx" => HeaderBrush,
             ".csproj" or ".props" or ".targets" => ProjectBrush,
             ".sln" or ".slnx" => SolutionBrush,
             ".axaml" or ".xaml" or ".xml" => MarkupBrush,
