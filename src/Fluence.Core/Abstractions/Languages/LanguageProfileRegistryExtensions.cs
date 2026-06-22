@@ -36,7 +36,7 @@ public static class LanguageProfileRegistryExtensions
             return null;
 
         if (string.Equals(Path.GetExtension(filePath), ".h", System.StringComparison.OrdinalIgnoreCase))
-            return profiles.DetectActiveLanguage(workspace);
+            return DetectLanguageForAmbiguousHeader(profiles, workspace, filePath);
 
         return profiles.DetectLanguageForFile(filePath);
     }
@@ -69,6 +69,28 @@ public static class LanguageProfileRegistryExtensions
         };
 
         return rootPath is null ? null : profiles.Detect(rootPath)?.LanguageId;
+    }
+
+    private static string? DetectLanguageForAmbiguousHeader(
+        ILanguageProfileRegistry profiles,
+        IWorkspaceContext workspace,
+        string filePath)
+    {
+        var current = workspace.Current;
+        var rootPath = current.Mode switch
+        {
+            WorkspaceMode.Solution when current.CurrentSolutionPath is not null
+                => Path.GetDirectoryName(current.CurrentSolutionPath),
+            WorkspaceMode.Folder => current.CurrentFolderPath,
+            WorkspaceMode.FileOnly => Path.GetDirectoryName(filePath),
+            _ => null,
+        };
+
+        var workspaceLanguage = rootPath is null ? null : profiles.Detect(rootPath)?.LanguageId;
+        if (workspaceLanguage is not null)
+            return workspaceLanguage;
+
+        return profiles.GetById("cpp")?.LanguageId ?? profiles.GetById("c")?.LanguageId;
     }
 
     /// <summary>
