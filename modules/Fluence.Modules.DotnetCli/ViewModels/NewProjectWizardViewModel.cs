@@ -8,87 +8,85 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Dialogs;
-using Fluence.Core.Abstractions.Dotnet;
-using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Localization;
+using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Abstractions.Projects;
+using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Output;
-using Fluence.Core.Models.Workspace;
-using Fluence.Core.Models.Workbench;
-using Fluence.Core.ViewModels;
-using Fluence.Modules.DotnetCli.Services;
 using Fluence.Core.Events.Build;
 using Fluence.Core.Events.Ui;
 using Fluence.Core.Events.Workspace;
+using Fluence.Core.ViewModels;
+using Fluence.Core.Models.Workbench;
 
 namespace Fluence.Modules.DotnetCli.ViewModels;
 
 public sealed partial class NewProjectWizardViewModel : ViewModelBase
 {
+    private readonly IWorkspaceContext _workspace;
     private readonly IWorkspaceDialogService _dialogs;
-    private readonly IOutputChannelService _output;
-    private readonly IProcessHost _processHost;
     private readonly IShellEventBus _events;
-    private readonly IDotnetSdkProvisioningService _sdk;
     private readonly IUserNotificationService _notifications;
     private readonly ILocalizationService _loc;
+    private readonly ILanguageProfileRegistry _languageProfiles;
+    private readonly IOutputChannelService _output;
     private bool _isInitializing;
     private bool _syncSolutionNameWithProjectName = true;
 
     public NewProjectWizardViewModel(
+        IWorkspaceContext workspace,
         IWorkspaceDialogService dialogs,
-        IOutputChannelService output,
-        IProcessHost processHost,
         IShellEventBus events,
-        IDotnetSdkProvisioningService sdk,
         IUserNotificationService notifications,
-        ILocalizationService loc)
+        ILocalizationService loc,
+        ILanguageProfileRegistry languageProfiles,
+        IOutputChannelService output,
+        IEnumerable<IProjectTemplateProvider> providers)
     {
+        _workspace = workspace;
         _dialogs = dialogs;
-        _output = output;
-        _processHost = processHost;
         _events = events;
-        _sdk = sdk;
         _notifications = notifications;
         _loc = loc;
+        _languageProfiles = languageProfiles;
+        _output = output;
+
         _isInitializing = true;
+        Providers = new ObservableCollection<IProjectTemplateProvider>(
+            providers
+                .OrderBy(provider => provider.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToArray());
 
-        Templates =
-        [
-            new(_loc.Get("DotnetCli.Template.ConsoleApp"), "console", _loc.Get("DotnetCli.Template.ConsoleApp.Description")),
-            new(_loc.Get("DotnetCli.Template.ClassLibrary"), "classlib", _loc.Get("DotnetCli.Template.ClassLibrary.Description")),
-            new(_loc.Get("DotnetCli.Template.WorkerService"), "worker", _loc.Get("DotnetCli.Template.WorkerService.Description")),
-            new(_loc.Get("DotnetCli.Template.WebApi"), "webapi", _loc.Get("DotnetCli.Template.WebApi.Description")),
-            new(_loc.Get("DotnetCli.Template.Mvc"), "mvc", _loc.Get("DotnetCli.Template.Mvc.Description")),
-            new(_loc.Get("DotnetCli.Template.RazorPages"), "webapp", _loc.Get("DotnetCli.Template.RazorPages.Description")),
-            new(_loc.Get("DotnetCli.Template.BlazorWebApp"), "blazor", _loc.Get("DotnetCli.Template.BlazorWebApp.Description")),
-            new(_loc.Get("DotnetCli.Template.WpfApp"), "wpf", _loc.Get("DotnetCli.Template.WpfApp.Description"), SupportsFramework: false),
-            new(_loc.Get("DotnetCli.Template.XUnit"), "xunit", _loc.Get("DotnetCli.Template.XUnit.Description")),
-            new(_loc.Get("DotnetCli.Template.NUnit"), "nunit", _loc.Get("DotnetCli.Template.NUnit.Description")),
-            new(_loc.Get("DotnetCli.Template.MSTest"), "mstest", _loc.Get("DotnetCli.Template.MSTest.Description")),
-        ];
-
+        Templates = [];
         Frameworks = ["net10.0", "net9.0", "net8.0"];
-        SelectedTemplate = Templates[0];
-        SelectedFramework = Frameworks[0];
         ProjectName = "MyProject";
         SolutionName = "MyProject";
         Location = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             "source",
             "repos");
-        _isInitializing = false;
+
+        SelectedProvider = ResolveInitialProvider();
+        SelectedFramework = Frameworks[0];
+        OpenAfterCreate = true;
         Status = _loc.Get("DotnetCli.Status.ChooseTemplateAndLocation");
+        _isInitializing = false;
     }
 
-    public ObservableCollection<DotnetTemplateOption> Templates { get; }
+    public ObservableCollection<IProjectTemplateProvider> Providers { get; }
+
+    public ObservableCollection<ProjectTemplateDefinition> Templates { get; }
 
     public ObservableCollection<string> Frameworks { get; }
 
     [ObservableProperty]
-    private DotnetTemplateOption? _selectedTemplate;
+    private IProjectTemplateProvider? _selectedProvider;
+
+    [ObservableProperty]
+    private ProjectTemplateDefinition? _selectedTemplate;
 
     [ObservableProperty]
     private string _projectName = string.Empty;
@@ -117,6 +115,36 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
     [ObservableProperty]
     private string _status = string.Empty;
 
+    public bool CanOpenProviderSetup => SelectedProvider?.ProviderId == "csharp";
+
+    public bool CanCreateSolution => SelectedProvider?.SupportsSolutionCreation == true;
+
+    public bool CanSelectFramework => SelectedTemplate?.SupportsFramework == true;
+
+    partial void OnSelectedProviderChanged(IProjectTemplateProvider? value)
+    {
+        if (value is null)
+            return;
+
+        Templates.Clear();
+        foreach (var template in value.Templates)
+            Templates.Add(template);
+
+        SelectedTemplate = Templates.FirstOrDefault();
+        CreateSolution = value.SupportsSolutionCreation;
+        if (!value.SupportsSolutionCreation)
+        {
+            SolutionName = string.Empty;
+            PlaceSolutionInProjectFolder = false;
+        }
+
+        OnPropertyChanged(nameof(CanOpenProviderSetup));
+        OnPropertyChanged(nameof(CanCreateSolution));
+    }
+
+    partial void OnSelectedTemplateChanged(ProjectTemplateDefinition? value) =>
+        OnPropertyChanged(nameof(CanSelectFramework));
+
     partial void OnProjectNameChanged(string value)
     {
         if (_isInitializing || !_syncSolutionNameWithProjectName)
@@ -142,9 +170,10 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OpenSdkSetup()
+    private void OpenProviderSetup()
     {
-        _events.Publish(new DotnetSdkSetupRequestedEvent());
+        if (SelectedProvider?.ProviderId == "csharp")
+            _events.Publish(new DotnetSdkSetupRequestedEvent());
     }
 
     [RelayCommand]
@@ -153,63 +182,43 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         if (!Validate(out var projectRoot))
             return;
 
+        if (SelectedProvider is null || SelectedTemplate is null)
+        {
+            Status = _loc.Get("DotnetCli.Validation.SelectTemplate");
+            return;
+        }
+
         IsRunning = true;
-        Status = _loc.Get("DotnetCli.Status.Checking");
-        _output.Clear(OutputChannelIds.Run);
+        Status = _loc.Get("DotnetCli.Status.CreatingProject");
 
         try
         {
-            var sdkStatus = await _sdk.GetStatusAsync(cancellationToken);
-            if (!sdkStatus.IsDotnetAvailable || sdkStatus.InstalledSdks.Count == 0)
+            var request = new ProjectCreationRequest(
+                ProjectName.Trim(),
+                Location.Trim(),
+                SelectedTemplate,
+                SelectedTemplate.SupportsFramework && !string.IsNullOrWhiteSpace(SelectedFramework) ? SelectedFramework : null,
+                string.IsNullOrWhiteSpace(SolutionName) ? ProjectName.Trim() : SolutionName.Trim(),
+                CreateSolution && SelectedProvider.SupportsSolutionCreation,
+                PlaceSolutionInProjectFolder,
+                OpenAfterCreate,
+                Options: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+
+            _output.Clear(OutputChannelIds.Run);
+            _events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
+            var result = await SelectedProvider.CreateAsync(request, AppendOutput, cancellationToken).ConfigureAwait(false);
+            Status = _loc.Get("DotnetCli.Status.ProjectCreated");
+
+            if (!OpenAfterCreate)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(result.SolutionPath) && File.Exists(result.SolutionPath))
             {
-                _events.Publish(new DotnetSdkSetupRequestedEvent());
-                Status = _loc.Get("DotnetCli.Status.SdkRequiredCreate");
+                _events.Publish(new OpenSolutionRequestedEvent(result.SolutionPath));
                 return;
             }
 
-            Status = _loc.Get("DotnetCli.Status.CreatingProject");
-            Directory.CreateDirectory(Location);
-            var template = SelectedTemplate!;
-            var newProjectArguments = new List<string> { "new", template.ShortName, "-n", ProjectName, "-o", projectRoot };
-            if (template.SupportsFramework && !string.IsNullOrWhiteSpace(SelectedFramework))
-            {
-                newProjectArguments.Add("-f");
-                newProjectArguments.Add(SelectedFramework);
-            }
-
-            _events.Publish(new SelectBottomBarTabEvent(BottomBarTabIds.Run));
-            await RunDotnetAsync(
-                newProjectArguments,
-                Location,
-                cancellationToken);
-
-            string? solutionPath = null;
-            if (CreateSolution)
-            {
-                var solutionName = string.IsNullOrWhiteSpace(SolutionName) ? ProjectName : SolutionName.Trim();
-                var solutionLocation = PlaceSolutionInProjectFolder ? projectRoot : Location;
-                await RunDotnetAsync(
-                    ["new", "sln", "-n", solutionName, "-o", solutionLocation],
-                    solutionLocation,
-                    cancellationToken);
-                solutionPath = ResolveSolutionFile(solutionLocation, solutionName);
-                if (solutionPath is null)
-                    throw new FileNotFoundException(string.Format(_loc.Get("DotnetCli.Error.SolutionFileNotCreated"), solutionLocation));
-                await RunDotnetAsync(
-                    ["sln", solutionPath, "add", FindProjectFile(projectRoot) ?? projectRoot],
-                    solutionLocation,
-                    cancellationToken);
-            }
-
-            Status = _loc.Get("DotnetCli.Status.ProjectCreated");
-
-            if (OpenAfterCreate)
-            {
-                if (solutionPath is not null && File.Exists(solutionPath))
-                    _events.Publish(new OpenSolutionRequestedEvent(solutionPath));
-                else
-                    _events.Publish(new OpenFolderRequestedEvent(projectRoot));
-            }
+            _events.Publish(new OpenFolderRequestedEvent(result.ProjectRoot));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -244,7 +253,7 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
             return false;
         }
 
-        projectRoot = Path.Combine(Location, ProjectName.Trim());
+        projectRoot = Path.Combine(Location.Trim(), ProjectName.Trim());
         if (Directory.Exists(projectRoot) && Directory.EnumerateFileSystemEntries(projectRoot).Any())
         {
             Status = _loc.Get("DotnetCli.Validation.TargetFolderNotEmpty");
@@ -254,35 +263,17 @@ public sealed partial class NewProjectWizardViewModel : ViewModelBase
         return true;
     }
 
-    private static string? FindProjectFile(string projectRoot)
+    private IProjectTemplateProvider ResolveInitialProvider()
     {
-        return Directory.Exists(projectRoot)
-            ? Directory.EnumerateFiles(projectRoot, "*.csproj", SearchOption.TopDirectoryOnly).FirstOrDefault()
-            : null;
+        var workspaceLanguage = _languageProfiles.DetectWorkspaceLanguage(_workspace);
+        return Providers.FirstOrDefault(provider => provider.CanHandleWorkspace(workspaceLanguage))
+            ?? Providers.FirstOrDefault(provider => provider.ProviderId == "csharp")
+            ?? Providers.FirstOrDefault()
+            ?? throw new InvalidOperationException("No project template providers were registered.");
     }
 
-    private static string? ResolveSolutionFile(string location, string solutionName)
+    private void AppendOutput(string line)
     {
-        var candidates = new[]
-        {
-            Path.Combine(location, $"{solutionName}.slnx"),
-            Path.Combine(location, $"{solutionName}.sln"),
-        };
-
-        return candidates.FirstOrDefault(File.Exists);
-    }
-
-    private async Task RunDotnetAsync(IReadOnlyList<string> arguments, string workingDirectory, CancellationToken cancellationToken)
-    {
-        var dotnet = await _sdk.ResolveDotnetExecutableAsync(cancellationToken);
-        await _output.WriteAsync(OutputChannelIds.Run, $"> {DotnetCommandLine.Format(dotnet, arguments)}{Environment.NewLine}", cancellationToken: cancellationToken);
-
-        await _processHost.RunAsync(
-            dotnet,
-            arguments,
-            workingDirectory,
-            line => _ = _output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = _output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
-            cancellationToken);
+        _ = _output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine);
     }
 }

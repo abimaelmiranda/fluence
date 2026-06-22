@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="using:Fluence.Core.Services.Localization"
+             xmlns:proj="using:Fluence.Core.Abstractions.Projects"
              xmlns:vm="using:Fluence.Modules.DotnetCli.ViewModels"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Fluence.Modules.DotnetCli.Views.NewProjectWizardView"
@@ -32,16 +33,33 @@
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="18" RowSpacing="12">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,180,Auto" ColumnSpacing="8">
             <TextBlock Text="{Binding [DotnetCli.Title.NewProject], Source={x:Static loc:Locale.Current}}"
                        FontFamily="{StaticResource FluenceFontFamily}"
                        FontSize="{StaticResource FluenceFontSizeTitle}"
                        FontWeight="SemiBold"
                        Foreground="{StaticResource FluenceBrushTextPrimary}"
                        VerticalAlignment="Center"/>
-            <Button Grid.Column="1"
+            <TextBlock Grid.Column="1"
+                       Text="Language"
+                       Classes="ideLabel"
+                       VerticalAlignment="Center"/>
+            <ComboBox Grid.Column="2"
+                      Classes="wizardField"
+                      ItemsSource="{Binding Providers}"
+                      SelectedItem="{Binding SelectedProvider}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}"
+                                   Classes="ideValue"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Column="3"
                     Classes="ideIcon"
-                    Command="{Binding OpenSdkSetupCommand}"
+                    Command="{Binding OpenProviderSetupCommand}"
+                    IsVisible="{Binding CanOpenProviderSetup}"
                     ToolTip.Tip="{Binding [DotnetCli.ToolTip.Sdk], Source={x:Static loc:Locale.Current}}">
                 <materialIcons:MaterialIcon Width="20"
                                             Height="20"
@@ -66,7 +84,7 @@
                              ItemsSource="{Binding Templates}"
                              SelectedItem="{Binding SelectedTemplate}">
                         <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:DotnetTemplateOption">
+                            <DataTemplate x:DataType="proj:ProjectTemplateDefinition">
                                 <Grid RowDefinitions="Auto,Auto"
                                       Height="58"
                                       Margin="8,4"
@@ -77,8 +95,8 @@
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Grid.Row="1"
                                                Text="{Binding Description}"
-                                               Classes="ideLabel"
-                                               TextTrimming="CharacterEllipsis"/>
+                                       Classes="ideLabel"
+                                       TextTrimming="CharacterEllipsis"/>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -116,7 +134,8 @@
                     </Button>
                 </Grid>
 
-                <Grid Grid.Row="2" ColumnDefinitions="150,180,*" ColumnSpacing="12">
+                <Grid Grid.Row="2" ColumnDefinitions="150,180,*" ColumnSpacing="12"
+                      IsVisible="{Binding CanSelectFramework}">
                     <TextBlock Text="{Binding [DotnetCli.Label.Framework], Source={x:Static loc:Locale.Current}}"
                                Classes="ideLabel"
                                VerticalAlignment="Center"/>
@@ -126,7 +145,8 @@
                               SelectedItem="{Binding SelectedFramework}"/>
                 </Grid>
 
-                <Grid Grid.Row="3" ColumnDefinitions="150,*" ColumnSpacing="12">
+                <Grid Grid.Row="3" ColumnDefinitions="150,*" ColumnSpacing="12"
+                      IsVisible="{Binding CanCreateSolution}">
                     <TextBlock Text="{Binding [DotnetCli.Label.Solution], Source={x:Static loc:Locale.Current}}"
                                Classes="ideLabel"
                                VerticalAlignment="Center"/>
@@ -137,7 +157,8 @@
                               VerticalAlignment="Center"/>
                 </Grid>
 
-                <Grid Grid.Row="4" ColumnDefinitions="150,*" ColumnSpacing="12">
+                <Grid Grid.Row="4" ColumnDefinitions="150,*" ColumnSpacing="12"
+                      IsVisible="{Binding CanCreateSolution}">
                     <TextBlock Text="{Binding [DotnetCli.Label.SolutionName], Source={x:Static loc:Locale.Current}}"
                                Classes="ideLabel"
                                VerticalAlignment="Center"/>
@@ -146,7 +167,8 @@
                              Text="{Binding SolutionName}"/>
                 </Grid>
 
-                <Grid Grid.Row="5" ColumnDefinitions="150,*" ColumnSpacing="12">
+                <Grid Grid.Row="5" ColumnDefinitions="150,*" ColumnSpacing="12"
+                      IsVisible="{Binding CanCreateSolution}">
                     <TextBlock Text="{Binding [DotnetCli.Label.SolutionLocation], Source={x:Static loc:Locale.Current}}"
                                Classes="ideLabel"
                                VerticalAlignment="Top"

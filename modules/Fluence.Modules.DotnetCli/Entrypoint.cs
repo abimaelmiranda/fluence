@@ -8,6 +8,7 @@ using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Jobs;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Languages;
+using Fluence.Core.Abstractions.Projects;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Tasks;
@@ -59,6 +60,8 @@ public sealed class Entrypoint : IModule, IConditionalModule
     {
         services.AddSingleton<IProjectExecutionTargetResolver, DotnetProjectExecutionTargetResolver>();
         services.AddSingleton<RunTargetResolver>();
+        services.AddSingleton<DotnetRunService>();
+        services.AddSingleton<IProjectTemplateProvider, DotnetProjectTemplateProvider>();
         services.AddSingleton<NewProjectWizardViewModel>();
         services.AddSingleton<PublishWizardViewModel>();
         services.AddSingleton<DotnetSdkSetupViewModel>();
