@@ -12,6 +12,7 @@ using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Storage;
 using Fluence.Infrastructure;
+using Fluence.Infrastructure.Languages;
 
 namespace Fluence.Infrastructure.Protocols.Dap;
 
@@ -478,7 +479,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
 
     internal string ResolveGlobalInstallDir() => storage.GetUserPath("debuggers/csharp");
 
-    private static string ResolveExecutableName() => PlatformTooling.Current.NetcoredbgExecutableName;
+    private static string ResolveExecutableName() => DotnetPlatformConstants.NetcoredbgExecutableName;
 
     private static string ResolveRuntimeId() => PlatformTooling.Current.RuntimeId;
 }

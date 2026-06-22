@@ -14,17 +14,9 @@ internal abstract class PlatformTooling
                 ? new MacOsPlatformTooling()
                 : new LinuxPlatformTooling();
 
-    public abstract string DotnetExecutableName { get; }
-
-    public abstract string NetcoredbgExecutableName { get; }
-
-    public abstract string OmniSharpExecutableName { get; }
-
     public abstract string RuntimeId { get; }
 
     public abstract IReadOnlyList<string> PathExtensions { get; }
-
-    public abstract string DefaultDotnetRoot { get; }
 
     public abstract void MakeExecutable(string executable);
 

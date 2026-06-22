@@ -10,6 +10,7 @@ using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Models.Dotnet;
+using Fluence.Infrastructure.Languages;
 
 namespace Fluence.Infrastructure;
 
@@ -191,7 +192,7 @@ public sealed class DotnetSdkProvisioningService(
 
     private string GetManagedDotnetPath()
     {
-        return Path.Combine(GetManagedInstallPath(), PlatformTooling.Current.DotnetExecutableName);
+        return Path.Combine(GetManagedInstallPath(), DotnetPlatformConstants.DotnetExecutableName);
     }
 
     private static IReadOnlyList<DotnetSdkInfo> ParseSdks(IEnumerable<string> lines)

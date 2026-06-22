@@ -9,13 +9,13 @@ using Fluence.Core.Abstractions.Storage;
 
 namespace Fluence.Infrastructure.Protocols.Lsp;
 
-public sealed partial class OmniSharpProvisioningService(IFluenceStorageService storage) : ILspProvisioningService
+public sealed partial class OmniSharpProvisioningService(IFluenceStorageService storage) : IDotnetLspProvisioningService
 {
     private const string OmniSharpApiUrl = "https://api.github.com/repos/OmniSharp/omnisharp-roslyn/releases/latest";
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(10) };
 
-    private string InstallDir => storage.GetUserPath("LanguageServer");
+    private string InstallDir => storage.GetUserPath("languageServers/csharp");
 
     static OmniSharpProvisioningService()
     {

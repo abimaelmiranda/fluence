@@ -3,12 +3,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Fluence.Infrastructure;
+using Fluence.Infrastructure.Languages;
 
 namespace Fluence.Infrastructure.Protocols.Lsp;
 
 public sealed partial class OmniSharpProvisioningService
 {
-    private static string ResolveExecutableName() => PlatformTooling.Current.OmniSharpExecutableName;
+    private static string ResolveExecutableName() => DotnetPlatformConstants.OmniSharpExecutableName;
 
     private static string ResolveDotnetDir()
     {
@@ -16,7 +17,7 @@ public sealed partial class OmniSharpProvisioningService
         if (dotnet is not null)
             return Path.GetDirectoryName(dotnet)!;
 
-        return PlatformTooling.Current.DefaultDotnetRoot;
+        return DotnetPlatformConstants.DefaultDotnetRoot;
     }
 
     private static string? ResolveDotnetExecutable()
