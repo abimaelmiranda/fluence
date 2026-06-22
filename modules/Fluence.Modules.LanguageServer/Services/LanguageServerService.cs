@@ -18,6 +18,7 @@ namespace Fluence.Modules.LanguageServer.Services;
 internal sealed partial class LanguageServerService : ILanguageServerService, IAsyncDisposable
 {
     private readonly ILspProvisioningService _provisioning;
+    private readonly ILspArgumentsBuilder _argumentsBuilder;
     private readonly IProcessSpawner _processSpawner;
     private readonly IDiagnosticsService _diagnostics;
     private readonly IShellEventBus _events;
@@ -34,6 +35,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
 
     public LanguageServerService(
         ILspProvisioningService provisioning,
+        ILspArgumentsBuilder argumentsBuilder,
         IProcessSpawner processSpawner,
         IDiagnosticsService diagnostics,
         IShellEventBus events,
@@ -42,6 +44,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         LspClientHolder holder)
     {
         _provisioning = provisioning;
+        _argumentsBuilder = argumentsBuilder;
         _processSpawner = processSpawner;
         _diagnostics = diagnostics;
         _events = events;
@@ -100,10 +103,9 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         try
         {
             var executable = _provisioning.GetExecutablePath();
-            var sdkPath = _provisioning.GetSelectedSdkPath(rootPath);
-            var arguments = BuildOmniSharpArguments(rootPath, sdkPath, settings);
+            var arguments = _argumentsBuilder.Build(rootPath, _provisioning, _settings);
             var env = _provisioning.GetLaunchEnvironment();
-            WriteStartupOutput(executable, rootPath, env, sdkPath);
+            WriteStartupOutput(executable, rootPath, env);
 
             _client = new LspClient(_processSpawner);
             _holder.Client = _client;
@@ -167,58 +169,20 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
     private void WriteStartupOutput(
         string executable,
         string rootPath,
-        IReadOnlyDictionary<string, string> environment,
-        string? sdkPath)
+        IReadOnlyDictionary<string, string> environment)
     {
-        WriteOutput($"[LanguageServer] Starting OmniSharp for {rootPath}\r\n");
-        WriteOutput($"[LanguageServer] OmniSharp: {executable}\r\n");
+        WriteOutput($"[LanguageServer] Starting for {rootPath}\r\n");
+        WriteOutput($"[LanguageServer] Executable: {executable}\r\n");
 
         var version = TryGetExecutableVersion(executable);
         if (!string.IsNullOrWhiteSpace(version))
-            WriteOutput($"[LanguageServer] OmniSharp version: {version}\r\n");
+            WriteOutput($"[LanguageServer] Version: {version}\r\n");
 
-        if (environment.TryGetValue("DOTNET_ROOT", out var dotnetRoot))
-            WriteOutput($"[LanguageServer] DOTNET_ROOT: {dotnetRoot}\r\n");
+        foreach (var (key, value) in environment)
+            WriteOutput($"[LanguageServer] {key}: {value}\r\n");
 
-        if (environment.TryGetValue("DOTNET_HOST_PATH", out var dotnetHostPath))
-            WriteOutput($"[LanguageServer] DOTNET_HOST_PATH: {dotnetHostPath}\r\n");
-
-        WriteOutput($"[LanguageServer] SDK: {sdkPath ?? "(not detected)"}\r\n");
-        WriteOutput($"[LanguageServer] Solution root: {rootPath}\r\n");
+        WriteOutput($"[LanguageServer] Root: {rootPath}\r\n");
     }
-
-    private static string BuildOmniSharpArguments(
-        string rootPath,
-        string? sdkPath,
-        LanguageServerRuntimeSettings settings)
-    {
-        var arguments = new List<string>
-        {
-            "--languageserver",
-            "-z",
-            "-s",
-            QuoteArgument(rootPath),
-            $"--msbuild:enabled={Bool(settings.EnableMsBuild)}",
-            $"--msbuild:loadProjectsOnDemand={Bool(settings.LoadProjectsOnDemand)}",
-            $"--msbuild:EnablePackageAutoRestore={Bool(settings.EnablePackageAutoRestore)}",
-            $"--RoslynExtensionsOptions:enableAnalyzersSupport={Bool(settings.EnableAnalyzersSupport)}",
-            $"--RoslynExtensionsOptions:enableDecompilationSupport={Bool(settings.EnableDecompilationSupport)}",
-            $"--RoslynExtensionsOptions:enableImportCompletion={Bool(settings.EnableImportCompletion)}",
-            $"--RoslynExtensionsOptions:diagnosticWorkersThreadCount={settings.DiagnosticWorkersThreadCount}",
-            $"--FormattingOptions:enableEditorConfigSupport={Bool(settings.EnableEditorConfigSupport)}",
-            $"--sdk:includePrereleases={Bool(settings.IncludePrereleases)}",
-        };
-
-        if (!string.IsNullOrWhiteSpace(sdkPath))
-            arguments.Add($"--sdk:path={QuoteArgument(sdkPath)}");
-
-        return string.Join(' ', arguments);
-    }
-
-    private static string Bool(bool value) => value ? "true" : "false";
-
-    private static string QuoteArgument(string value) =>
-        '"' + value.Replace("\"", "\\\"", StringComparison.Ordinal) + '"';
 
     private static string? TryGetExecutableVersion(string executable)
     {

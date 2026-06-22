@@ -4,8 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Infrastructure;
+using Fluence.Core.Abstractions.Languages;
+using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Requests.Lsp;
 using Fluence.Core.Abstractions.Output;
@@ -27,8 +28,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.LanguageServer;
 
-public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
+public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant, IConditionalModule
 {
+    public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
+    {
+        var languageId = profiles.DetectWorkspaceLanguage(workspace);
+        return languageId is null or "csharp";
+    }
+
     private static readonly TimeSpan DidChangeDebounceDelay = TimeSpan.FromMilliseconds(750);
     private static readonly TimeSpan SemanticTokensDebounceDelay = TimeSpan.FromMilliseconds(800);
 
@@ -55,9 +62,11 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant
     {
         services.AddSingleton<LspClientHolder>();
         services.AddSingleton<IDiagnosticsService, DiagnosticsService>();
+        services.AddSingleton<ILspArgumentsBuilder, OmniSharpArgumentsBuilder>();
         services.AddSingleton<ILanguageServerService>(provider =>
             new LanguageServerService(
                 provider.GetRequiredService<ILspProvisioningService>(),
+                provider.GetRequiredService<ILspArgumentsBuilder>(),
                 provider.GetRequiredService<IProcessSpawner>(),
                 provider.GetRequiredService<IDiagnosticsService>(),
                 provider.GetRequiredService<IShellEventBus>(),
