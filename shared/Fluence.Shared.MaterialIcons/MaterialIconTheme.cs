@@ -86,16 +86,13 @@ internal sealed class MaterialIconTheme
     {
         try
         {
-            foreach (var candidate in EnumerateCandidatePaths(relativeIconPath))
-            {
-                if (!File.Exists(candidate))
-                    continue;
+            var candidate = ResolveAbsolutePath(relativeIconPath);
+            if (candidate is null || !File.Exists(candidate))
+                return null;
 
-                if (Path.GetExtension(candidate).Equals(".svg", StringComparison.OrdinalIgnoreCase))
-                    return LoadSvgBitmap(candidate);
-            }
-
-            return null;
+            return Path.GetExtension(candidate).Equals(".svg", StringComparison.OrdinalIgnoreCase)
+                ? LoadSvgBitmap(candidate)
+                : null;
         }
         catch
         {
@@ -108,21 +105,20 @@ internal sealed class MaterialIconTheme
             ? NormalizeIconPath(iconPath)
             : null;
 
-    private IEnumerable<string> EnumerateCandidatePaths(string relativeIconPath)
+    private string? ResolveAbsolutePath(string relativeIconPath)
     {
         var normalized = NormalizeIconPath(relativeIconPath);
         if (string.IsNullOrWhiteSpace(normalized))
-            yield break;
+            return null;
 
         var svgPath = Path.GetFullPath(Path.Combine(_rootDirectory, normalized.Replace('/', Path.DirectorySeparatorChar)));
-        if (svgPath.StartsWith(_rootDirectory, StringComparison.OrdinalIgnoreCase))
-            yield return svgPath;
+        return svgPath.StartsWith(_rootDirectory, StringComparison.OrdinalIgnoreCase) ? svgPath : null;
     }
 
     private static Bitmap? LoadSvgBitmap(string svgPath)
     {
         using var svg = SKSvg.CreateFromFile(svgPath);
-        var picture = svg.Picture ?? svg.Load(svgPath);
+        var picture = svg.Picture;
         if (picture is null)
             return null;
 
