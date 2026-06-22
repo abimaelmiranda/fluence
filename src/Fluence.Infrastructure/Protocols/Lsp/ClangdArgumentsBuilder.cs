@@ -31,10 +31,25 @@ public sealed class ClangdArgumentsBuilder : ILspArgumentsBuilder
 
     private static string? FindCompileCommandsDirectory(string rootPath)
     {
-        if (File.Exists(Path.Combine(rootPath, "compile_commands.json")))
-            return rootPath;
+        foreach (var candidate in GetCandidateDirectories(rootPath))
+        {
+            if (File.Exists(Path.Combine(candidate, "compile_commands.json")))
+                return candidate;
+        }
 
         return null;
+    }
+
+    private static IEnumerable<string> GetCandidateDirectories(string rootPath)
+    {
+        yield return rootPath;
+        yield return Path.Combine(rootPath, "build");
+        yield return Path.Combine(rootPath, "out");
+        yield return Path.Combine(rootPath, "out", "build");
+        yield return Path.Combine(rootPath, "build", "debug");
+        yield return Path.Combine(rootPath, "build", "release");
+        yield return Path.Combine(rootPath, "bin", "Debug");
+        yield return Path.Combine(rootPath, "bin", "Release");
     }
 
     private static string QuoteArgument(string value) =>

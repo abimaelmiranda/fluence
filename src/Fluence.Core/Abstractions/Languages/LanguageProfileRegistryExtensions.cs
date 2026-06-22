@@ -76,6 +76,10 @@ public static class LanguageProfileRegistryExtensions
         IWorkspaceContext workspace,
         string filePath)
     {
+        var siblingLanguage = DetectLanguageFromSiblingSources(workspace, filePath);
+        if (siblingLanguage is not null)
+            return siblingLanguage;
+
         var current = workspace.Current;
         var rootPath = current.Mode switch
         {
@@ -91,6 +95,47 @@ public static class LanguageProfileRegistryExtensions
             return workspaceLanguage;
 
         return profiles.GetById("cpp")?.LanguageId ?? profiles.GetById("c")?.LanguageId;
+    }
+
+    private static string? DetectLanguageFromSiblingSources(
+        IWorkspaceContext workspace,
+        string filePath)
+    {
+        var directory = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(directory))
+            return null;
+
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+        if (string.IsNullOrWhiteSpace(fileNameWithoutExtension))
+            return null;
+
+        var siblings = workspace.Current.TabSession.Documents
+            .Where(document =>
+                document.Kind == OpenDocumentKind.TextDocument &&
+                string.Equals(Path.GetDirectoryName(document.Path), directory, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(Path.GetFileNameWithoutExtension(document.Path), fileNameWithoutExtension, StringComparison.OrdinalIgnoreCase))
+            .Select(document => Path.GetExtension(document.Path))
+            .ToArray();
+
+        if (siblings.Any(extension => string.Equals(extension, ".c", StringComparison.OrdinalIgnoreCase)))
+            return "c";
+
+        if (siblings.Any(extension =>
+                string.Equals(extension, ".cpp", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".cc", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".cxx", StringComparison.OrdinalIgnoreCase)))
+            return "cpp";
+
+        var candidateBasePath = Path.Combine(directory, fileNameWithoutExtension);
+        if (File.Exists(candidateBasePath + ".c"))
+            return "c";
+
+        if (File.Exists(candidateBasePath + ".cpp") ||
+            File.Exists(candidateBasePath + ".cc") ||
+            File.Exists(candidateBasePath + ".cxx"))
+            return "cpp";
+
+        return null;
     }
 
     /// <summary>
