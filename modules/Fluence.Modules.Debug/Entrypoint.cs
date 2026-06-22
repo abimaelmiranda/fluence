@@ -13,6 +13,7 @@ using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Services.Debugging;
+using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -30,12 +31,18 @@ using Fluence.Core.Events.Debug;
 
 namespace Fluence.Modules.Debug;
 
-public sealed class Entrypoint : IModule, IModuleShutdownParticipant
+public sealed class Entrypoint : IModule, IModuleShutdownParticipant, IConditionalModule
 {
     private readonly List<IDisposable> _subscriptions = [];
     private IDebugService? _debugService;
 
     public string Id => "Debug";
+
+    public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
+    {
+        var languageId = profiles.DetectWorkspaceLanguage(workspace);
+        return languageId is null or "csharp";
+    }
 
     public string DisplayName => "Debug";
 

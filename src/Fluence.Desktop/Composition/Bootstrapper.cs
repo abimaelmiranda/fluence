@@ -43,7 +43,10 @@ using Fluence.Infrastructure.Tasks;
 using Fluence.Infrastructure.Pty;
 using Fluence.Infrastructure.Protocols.Dap;
 using Fluence.Infrastructure.Protocols.Lsp;
+using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.LanguageServer;
+using Fluence.Core.Services.Languages;
+using Fluence.Infrastructure.Languages;
 using SettingsEntrypoint = Fluence.Modules.Settings.Entrypoint;
 using FileExplorerEntrypoint = Fluence.Modules.FileExplorer.Entrypoint;
 using SolutionViewEntrypoint = Fluence.Modules.SolutionView.Entrypoint;
@@ -84,6 +87,12 @@ internal static class Bootstrapper
         services.AddSingleton<ShellRegionHost>();
         services.AddSingleton<IShellRegionHost>(provider => provider.GetRequiredService<ShellRegionHost>());
         services.AddSingleton<IWorkspaceContext>(provider => new WorkspaceContext(provider.GetRequiredService<IUiDispatcher>()));
+        services.AddSingleton<ILanguageProfileRegistry>(provider =>
+        {
+            var registry = new LanguageProfileRegistry();
+            registry.Register(new CSharpLanguageProfile());
+            return registry;
+        });
         services.AddSingleton<IModuleHost, ModuleHost>();
         services.AddSingleton<IShutdownCoordinator, ShutdownCoordinator>();
         services.AddSingleton<AvaloniaApplicationLifecycleService>();
@@ -107,7 +116,9 @@ internal static class Bootstrapper
         services.AddSingleton<ILaunchSettingsCoordinator, LaunchSettingsCoordinator>();
         services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
         services.AddSingleton<IDebuggerProvisioningService, DebuggerProvisioningService>();
-        services.AddSingleton<ILspProvisioningService, OmniSharpProvisioningService>();
+        services.AddSingleton<OmniSharpProvisioningService>();
+        services.AddSingleton<IDotnetLspProvisioningService>(sp => sp.GetRequiredService<OmniSharpProvisioningService>());
+        services.AddSingleton<ILspProvisioningService>(sp => sp.GetRequiredService<OmniSharpProvisioningService>());
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new PortaMacOsPtyHost()

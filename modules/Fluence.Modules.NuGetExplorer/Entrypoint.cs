@@ -3,6 +3,7 @@ using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Localization;
+using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
@@ -18,11 +19,17 @@ using Fluence.Core.Events.Workspace;
 
 namespace Fluence.Modules.NuGetExplorer;
 
-public sealed class Entrypoint : IModule
+public sealed class Entrypoint : IModule, IConditionalModule
 {
     private IDisposable? _managePackagesSubscription;
 
     public string Id => "NuGetExplorer";
+
+    public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
+    {
+        var languageId = profiles.DetectWorkspaceLanguage(workspace);
+        return languageId is null or "csharp";
+    }
 
     public string DisplayName => "NuGet Explorer";
 

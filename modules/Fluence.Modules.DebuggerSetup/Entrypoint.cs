@@ -3,6 +3,7 @@ using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Localization;
+using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
@@ -17,11 +18,17 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.DebuggerSetup;
 
-public sealed class Entrypoint : IModule
+public sealed class Entrypoint : IModule, IConditionalModule
 {
     private IDisposable? _provisioningSubscription;
 
     public string Id => "DebuggerSetup";
+
+    public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
+    {
+        var languageId = profiles.DetectWorkspaceLanguage(workspace);
+        return languageId is null or "csharp";
+    }
 
     public string DisplayName => "Debugger Setup";
 
