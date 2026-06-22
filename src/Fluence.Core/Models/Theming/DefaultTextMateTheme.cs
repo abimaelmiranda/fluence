@@ -29,14 +29,14 @@ public static class DefaultTextMateTheme
         },
         {
           "name": "Keyword",
-          "scope": "keyword, keyword.control, storage, storage.type, storage.modifier",
+          "scope": "keyword, keyword.control, storage, storage.type, storage.modifier, keyword.operator.expression, keyword.other",
           "settings": {
             "foreground": "#569CD6"
           }
         },
         {
           "name": "Control Flow / Special Keywords",
-          "scope": "keyword.control, keyword.other.using, keyword.other.operator, entity.name.operator",
+          "scope": "keyword.control, keyword.other.using, keyword.other.operator, entity.name.operator, keyword.operator.expression.await",
           "settings": {
             "foreground": "#C586C0"
           }
