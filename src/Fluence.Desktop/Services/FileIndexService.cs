@@ -18,9 +18,13 @@ public sealed class FileIndexService : IDisposable
     };
 
     private readonly IWorkspaceContext _workspace;
+    private readonly object _indexLock = new();
     private IReadOnlyList<string> _indexedFiles = [];
     private string? _indexedRoot;
     private CancellationTokenSource _cts = new();
+    private FileSystemWatcher? _watcher;
+    private Timer? _debounceTimer;
+    private bool _disposed;
 
     public FileIndexService(IWorkspaceContext workspace)
     {
@@ -50,18 +54,69 @@ public sealed class FileIndexService : IDisposable
 
     private void OnWorkspaceChanged(object? sender, EventArgs e) => TriggerIndex();
 
-    private void TriggerIndex()
+    private void OnFileSystemChanged(object? sender, FileSystemEventArgs e)
     {
-        var root = GetRoot();
-        if (root is null || string.Equals(root, _indexedRoot, StringComparison.OrdinalIgnoreCase))
-            return;
+        var newTimer = new Timer(_ => TriggerIndex(force: true), null, 500, Timeout.Infinite);
+        Interlocked.Exchange(ref _debounceTimer, newTimer)?.Dispose();
+    }
 
-        _cts.Cancel();
-        _cts.Dispose();
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
+    private void TriggerIndex(bool force = false)
+    {
+        lock (_indexLock)
+        {
+            if (_disposed) return;
 
-        Task.Run(() => IndexAsync(root, token), token);
+            var root = GetRoot();
+            if (root is null) return;
+
+            var rootChanged = !string.Equals(root, _indexedRoot, StringComparison.OrdinalIgnoreCase);
+            if (!force && !rootChanged) return;
+
+            _cts.Cancel();
+            _cts.Dispose();
+            _cts = new CancellationTokenSource();
+            var token = _cts.Token;
+
+            if (rootChanged)
+            {
+                StopWatcherUnsafe();
+                StartWatcherUnsafe(root);
+            }
+
+            Task.Run(() => IndexAsync(root, token), token);
+        }
+    }
+
+    private void StartWatcherUnsafe(string root)
+    {
+        try
+        {
+            _watcher = new FileSystemWatcher(root)
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
+                IncludeSubdirectories = true,
+                EnableRaisingEvents = true,
+            };
+            _watcher.Created += OnFileSystemChanged;
+            _watcher.Deleted += OnFileSystemChanged;
+            _watcher.Renamed += OnFileSystemChanged;
+        }
+        catch
+        {
+            _watcher?.Dispose();
+            _watcher = null;
+        }
+    }
+
+    private void StopWatcherUnsafe()
+    {
+        if (_watcher is null) return;
+        _watcher.EnableRaisingEvents = false;
+        _watcher.Created -= OnFileSystemChanged;
+        _watcher.Deleted -= OnFileSystemChanged;
+        _watcher.Renamed -= OnFileSystemChanged;
+        _watcher.Dispose();
+        _watcher = null;
     }
 
     private string? GetRoot()
@@ -82,10 +137,13 @@ public sealed class FileIndexService : IDisposable
         {
             var files = new List<string>(512);
             EnumerateFiles(root, files, cancellationToken);
-            if (!cancellationToken.IsCancellationRequested)
+            lock (_indexLock)
             {
-                _indexedFiles = files;
-                _indexedRoot = root;
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    _indexedFiles = files;
+                    _indexedRoot = root;
+                }
             }
         }
         catch (OperationCanceledException) { }
@@ -173,7 +231,13 @@ public sealed class FileIndexService : IDisposable
     public void Dispose()
     {
         _workspace.Changed -= OnWorkspaceChanged;
-        _cts.Cancel();
-        _cts.Dispose();
+        lock (_indexLock)
+        {
+            _disposed = true;
+            StopWatcherUnsafe();
+            _cts.Cancel();
+            _cts.Dispose();
+        }
+        Interlocked.Exchange(ref _debounceTimer, null)?.Dispose();
     }
 }

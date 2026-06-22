@@ -45,6 +45,8 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
     private readonly ILocalizationService _loc;
     private string? _solutionPath;
     private CancellationTokenSource? _loadCts;
+    private CancellationTokenSource? _updatesCts;
+    private int _versionsGeneration;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -177,9 +179,11 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             return;
         }
 
-        _loadCts?.Cancel();
-        _loadCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var token = _loadCts.Token;
+        var newCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var oldCts = Interlocked.Exchange(ref _loadCts, newCts);
+        oldCts?.Cancel();
+        oldCts?.Dispose();
+        var token = newCts.Token;
 
         await RunBusyAsync(async innerToken =>
         {
@@ -314,12 +318,14 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
 
     private async Task RefreshUpdatesAsync()
     {
-        if (string.IsNullOrWhiteSpace(_solutionPath))
-        {
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(_solutionPath)) return;
 
-        await RunBusyAsync(LoadUpdatesAsync, CancellationToken.None);
+        var newCts = new CancellationTokenSource();
+        var oldCts = Interlocked.Exchange(ref _updatesCts, newCts);
+        oldCts?.Cancel();
+        oldCts?.Dispose();
+
+        await RunBusyAsync(LoadUpdatesAsync, newCts.Token);
     }
 
     private async Task LoadUpdatesAsync(CancellationToken cancellationToken)
@@ -354,6 +360,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
 
     private async Task LoadVersionsForSelectedPackageAsync()
     {
+        var generation = Interlocked.Increment(ref _versionsGeneration);
         AvailableVersions.Clear();
         SelectedVersion = null;
         if (SelectedBrowsePackage is null)
@@ -366,6 +373,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         await RunBusyAsync(async token =>
         {
             var versions = await _packageSource.GetVersionsAsync(SelectedBrowsePackage.Id, IncludePrerelease, token);
+            if (Volatile.Read(ref _versionsGeneration) != generation) return;
             foreach (var version in versions)
             {
                 AvailableVersions.Add(version);

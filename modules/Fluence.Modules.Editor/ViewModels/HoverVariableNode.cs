@@ -16,6 +16,7 @@ public partial class HoverVariableNode : ObservableObject
     private readonly Func<int, CancellationToken, Task<IReadOnlyList<DebugVariable>>> _loadChildren;
     private readonly IUiDispatcher _dispatcher;
     private bool _loaded;
+    private int _loadGeneration;
 
     public HoverVariableNode(DebugVariable variable, Func<int, CancellationToken, Task<IReadOnlyList<DebugVariable>>> loadChildren, IUiDispatcher dispatcher)
     {
@@ -53,9 +54,12 @@ public partial class HoverVariableNode : ObservableObject
     private async Task LoadChildrenAsync()
     {
         _loaded = true;
+        var generation = Interlocked.Increment(ref _loadGeneration);
         var vars = await _loadChildren(VariablesReference, CancellationToken.None).ConfigureAwait(false);
+        if (Volatile.Read(ref _loadGeneration) != generation) return;
         await _dispatcher.InvokeAsync(() =>
         {
+            if (Volatile.Read(ref _loadGeneration) != generation) return;
             Children.Clear();
             foreach (var v in vars)
                 Children.Add(new HoverVariableNode(v, _loadChildren, _dispatcher));

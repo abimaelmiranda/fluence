@@ -16,6 +16,7 @@ public partial class DebugVariableNode : ObservableObject
     private readonly Func<int, CancellationToken, Task<IReadOnlyList<DebugVariable>>> _loadChildren;
     private readonly ILocalizationService _loc;
     private bool _loaded;
+    private int _loadGeneration;
 
     public DebugVariableNode(
         DebugVariable variable,
@@ -57,9 +58,12 @@ public partial class DebugVariableNode : ObservableObject
     private async Task LoadChildrenAsync()
     {
         _loaded = true;
+        var generation = Interlocked.Increment(ref _loadGeneration);
         var vars = await _loadChildren(VariablesReference, CancellationToken.None).ConfigureAwait(false);
+        if (Volatile.Read(ref _loadGeneration) != generation) return;
         await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
+            if (Volatile.Read(ref _loadGeneration) != generation) return;
             Children.Clear();
             foreach (var v in vars)
                 Children.Add(new DebugVariableNode(v, _loadChildren, _loc));
