@@ -9,9 +9,10 @@ internal sealed partial class LanguageServerService
 {
     public async Task SendDidOpenAsync(string filePath, string languageId, string content, CancellationToken cancellationToken = default)
     {
-        if (_client is null) return;
+        var client = _client;
+        if (client is null) return;
 
-        await _client.SendNotificationAsync("textDocument/didOpen", new JsonObject
+        await client.SendNotificationAsync("textDocument/didOpen", new JsonObject
         {
             ["textDocument"] = new JsonObject
             {
@@ -25,9 +26,10 @@ internal sealed partial class LanguageServerService
 
     public async Task SendDidChangeAsync(string filePath, int version, string content, CancellationToken cancellationToken = default)
     {
-        if (_client is null) return;
+        var client = _client;
+        if (client is null) return;
 
-        await _client.SendNotificationAsync("textDocument/didChange", new JsonObject
+        await client.SendNotificationAsync("textDocument/didChange", new JsonObject
         {
             ["textDocument"] = new JsonObject
             {
@@ -43,9 +45,10 @@ internal sealed partial class LanguageServerService
 
     public async Task SendDidCloseAsync(string filePath, CancellationToken cancellationToken = default)
     {
-        if (_client is null) return;
+        var client = _client;
+        if (client is null) return;
 
-        await _client.SendNotificationAsync("textDocument/didClose", new JsonObject
+        await client.SendNotificationAsync("textDocument/didClose", new JsonObject
         {
             ["textDocument"] = new JsonObject { ["uri"] = FilePathToUri(filePath) },
         }, cancellationToken).ConfigureAwait(false);
