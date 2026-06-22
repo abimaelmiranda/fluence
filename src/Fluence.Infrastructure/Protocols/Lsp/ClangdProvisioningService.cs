@@ -9,11 +9,13 @@ namespace Fluence.Infrastructure.Protocols.Lsp;
 
 public sealed class ClangdProvisioningService : ILspProvisioningService
 {
-    public bool IsProvisioned() => PlatformTooling.Current.FindOnPath("clangd") is not null;
+    private string? _resolvedPath;
 
-    public string GetExecutablePath() =>
-        PlatformTooling.Current.FindOnPath("clangd")
-        ?? "clangd";
+    private string? ResolvedPath => _resolvedPath ??= PlatformTooling.Current.FindOnPath("clangd");
+
+    public bool IsProvisioned() => ResolvedPath is not null;
+
+    public string GetExecutablePath() => ResolvedPath ?? "clangd";
 
     public IReadOnlyDictionary<string, string> GetLaunchEnvironment() => new Dictionary<string, string>();
 
@@ -21,7 +23,7 @@ public sealed class ClangdProvisioningService : ILspProvisioningService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var executable = PlatformTooling.Current.FindOnPath("clangd");
+        var executable = ResolvedPath;
         if (executable is null)
             throw new InvalidOperationException("clangd was not found on PATH. Install clangd and retry.");
 

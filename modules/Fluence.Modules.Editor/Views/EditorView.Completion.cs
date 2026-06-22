@@ -114,7 +114,7 @@ public partial class EditorView
 
                 CloseCompletionPopup();
                 _activeCompletions = completions
-                    .Where(item => item?.Label is not null)
+                    .Where(item => !string.IsNullOrEmpty(item?.Label))
                     .OrderBy(item => item.SortText is null ? 1 : 0)
                     .ThenBy(item => item.SortText, StringComparer.Ordinal)
                     .ThenBy(item => item.IsPreselected ? 0 : 1)

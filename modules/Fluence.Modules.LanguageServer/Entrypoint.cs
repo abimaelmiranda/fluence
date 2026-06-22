@@ -394,7 +394,7 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant, IC
 
     private void RegisterDocument(string filePath, string content, string languageId, int version)
     {
-        if (!IsManagedDocument(filePath, languageId))
+        if (!IsManagedDocument(languageId))
             return;
 
         lock (_documentGate)
@@ -562,11 +562,10 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant, IC
             : _profiles?.DetectLanguageForFile(filePath) ?? string.Empty;
     }
 
-    private bool IsManagedDocument(string filePath, string languageId) =>
+    private static bool IsManagedDocument(string languageId) =>
         string.Equals(languageId, "csharp", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(languageId, "c", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(languageId, "cpp", StringComparison.OrdinalIgnoreCase) ||
-        _profiles?.DetectLanguageForFile(filePath) is not null;
+        string.Equals(languageId, "cpp", StringComparison.OrdinalIgnoreCase);
 
     private static string? ResolveRootPath(IWorkspaceContext workspace)
     {
