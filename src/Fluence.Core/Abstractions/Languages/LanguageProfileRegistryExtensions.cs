@@ -127,12 +127,12 @@ public static class LanguageProfileRegistryExtensions
             return "cpp";
 
         var candidateBasePath = Path.Combine(directory, fileNameWithoutExtension);
-        if (File.Exists(candidateBasePath + ".c"))
+        if (System.IO.File.Exists(candidateBasePath + ".c"))
             return "c";
 
-        if (File.Exists(candidateBasePath + ".cpp") ||
-            File.Exists(candidateBasePath + ".cc") ||
-            File.Exists(candidateBasePath + ".cxx"))
+        if (System.IO.File.Exists(candidateBasePath + ".cpp") ||
+            System.IO.File.Exists(candidateBasePath + ".cc") ||
+            System.IO.File.Exists(candidateBasePath + ".cxx"))
             return "cpp";
 
         return null;

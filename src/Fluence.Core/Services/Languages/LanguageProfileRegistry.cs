@@ -7,32 +7,27 @@ namespace Fluence.Core.Services.Languages;
 public sealed class LanguageProfileRegistry : ILanguageProfileRegistry
 {
     private readonly List<ILanguageProfile> _profiles = [];
+    private readonly Dictionary<string, ILanguageProfile> _byId = [];
     private readonly Lock _lock = new();
 
     public IReadOnlyList<ILanguageProfile> All
     {
-        get
-        {
-            lock (_lock)
-                return [.. _profiles];
-        }
+        get { lock (_lock) return _profiles; }
     }
 
     public void Register(ILanguageProfile profile)
     {
         lock (_lock)
+        {
             _profiles.Add(profile);
+            _byId[profile.LanguageId] = profile;
+        }
     }
 
     public ILanguageProfile? GetById(string languageId)
     {
         lock (_lock)
-        {
-            foreach (var profile in _profiles)
-                if (profile.LanguageId == languageId)
-                    return profile;
-            return null;
-        }
+            return _byId.GetValueOrDefault(languageId);
     }
 
     public ILanguageProfile? Detect(string workspacePath)

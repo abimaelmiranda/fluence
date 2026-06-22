@@ -16,17 +16,8 @@ public sealed class CLanguageProfile : ILanguageProfile
 
     public IReadOnlyList<string> FileExtensions { get; } = [".c"];
 
-    public bool MatchesWorkspace(string folderPath)
-    {
-        foreach (var pattern in WorkspaceFilePatterns)
-        {
-            if (Directory.EnumerateFiles(folderPath, pattern, SearchOption.AllDirectories)
-                         .GetEnumerator().MoveNext())
-                return true;
-        }
-
-        return false;
-    }
+    public bool MatchesWorkspace(string folderPath) =>
+        WorkspaceDetectionHelper.HasAnyFile(folderPath, WorkspaceFilePatterns);
 
     public bool CanHandleFile(string filePath, string languageId) =>
         string.Equals(languageId, LanguageId, StringComparison.OrdinalIgnoreCase) ||
