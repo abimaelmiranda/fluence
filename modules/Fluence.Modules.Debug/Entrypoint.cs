@@ -41,7 +41,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
     public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
     {
         var languageId = profiles.DetectWorkspaceLanguage(workspace);
-        return languageId is null or "csharp";
+        return languageId is null or "csharp" or "c" or "cpp";
     }
 
     public string DisplayName => "Debug";
@@ -52,7 +52,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
     {
         services.AddSingleton<DebugSidebarViewModel>();
         services.AddSingleton<IDebugStateService, DebugStateService>();
-        services.AddSingleton<IDebugService, DebugService>();
+        services.AddSingleton<DebugService>();
         services.AddSingleton<IDebugSessionManager, DebugSessionManager>();
         services.AddSingleton<ICommandHandler<DebugProjectCommand>, DebugProjectCommandHandler>();
     }
@@ -69,7 +69,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
                     services => services.GetRequiredService<DebugSidebarViewModel>(),
                     PanelVisibilityRule.Custom((_, activeTabId, services) =>
                         activeTabId == "Debug" &&
-                        services.GetRequiredService<IDebugSessionManager>().CurrentSession is { IsActive: true })),
+                        services.GetRequiredService<IDebugStateService>().Snapshot.IsActive)),
             ],
         };
 

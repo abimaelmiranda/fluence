@@ -10,6 +10,7 @@ using Fluence.Modules.Debug.ViewModels;
 using Fluence.Modules.Debug.Abstractions.Session;
 using Fluence.Modules.Debug.Models;
 using Fluence.Core.Events.Ui;
+using System.Runtime.InteropServices;
 
 namespace Fluence.Modules.Debug.Services;
 
@@ -35,7 +36,15 @@ public sealed class DebugSessionManager(
         CurrentSession = new DebugSession(
             IsActive: true,
             ActiveMode: mode,
-            TargetArchitecture: string.IsNullOrWhiteSpace(architecture) ? "x64" : architecture,
+            TargetArchitecture: string.IsNullOrWhiteSpace(architecture)
+                ? RuntimeInformation.ProcessArchitecture switch
+                {
+                    Architecture.Arm64 => "arm64",
+                    Architecture.X64 => "x64",
+                    Architecture.X86 => "x86",
+                    _ => "x64",
+                }
+                : architecture,
             ProcessId: null,
             Target: target);
 
