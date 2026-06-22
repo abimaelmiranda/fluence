@@ -13,7 +13,7 @@ public interface ILspProvisioningService
 
     string? GetDotnetHostPath();
 
-    string? GetSelectedSdkPath();
+    string? GetSelectedSdkPath(string? rootPath = null);
 
     /// <summary>
     /// Returns environment variables required to run the language server (e.g. DOTNET_ROOT, DOTNET_HOST_PATH).

@@ -28,7 +28,8 @@ public sealed partial class OmniSharpProvisioningService(IFluenceStorageService 
 
     public string? GetDotnetHostPath() => ResolveDotnetExecutable();
 
-    public string? GetSelectedSdkPath() => ResolveSelectedSdkPath();
+    public string? GetSelectedSdkPath(string? rootPath = null) =>
+        rootPath is not null ? ResolveSelectedSdkPathForRoot(rootPath) : ResolveSelectedSdkPath();
 
     public IReadOnlyDictionary<string, string> GetLaunchEnvironment()
     {

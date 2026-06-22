@@ -100,7 +100,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         try
         {
             var executable = _provisioning.GetExecutablePath();
-            var sdkPath = _provisioning.GetSelectedSdkPath();
+            var sdkPath = _provisioning.GetSelectedSdkPath(rootPath);
             var arguments = BuildOmniSharpArguments(rootPath, sdkPath, settings);
             var env = _provisioning.GetLaunchEnvironment();
             WriteStartupOutput(executable, rootPath, env, sdkPath);
@@ -109,6 +109,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
             _holder.Client = _client;
             _client.NotificationReceived += OnNotificationReceived;
             _client.Disconnected += OnClientDisconnected;
+            _client.StderrLineReceived += OnStderrLine;
 
             await _client.StartAsync(executable, arguments, null, env, cancellationToken).ConfigureAwait(false);
 
@@ -144,6 +145,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         _holder.Client = null;
         client.NotificationReceived -= OnNotificationReceived;
         client.Disconnected -= OnClientDisconnected;
+        client.StderrLineReceived -= OnStderrLine;
 
         try
         {
@@ -155,6 +157,9 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         await client.DisposeAsync().ConfigureAwait(false);
         WriteOutput("[LanguageServer] OmniSharp stopped\r\n");
     }
+
+    private void OnStderrLine(string line) =>
+        WriteOutput($"[OmniSharp] {line}\r\n");
 
     private void WriteOutput(string text, OutputChannelEntryKind kind = OutputChannelEntryKind.Information) =>
         _ = _output.WriteAsync(OutputChannelIds.Output, text, kind);

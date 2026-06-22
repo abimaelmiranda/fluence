@@ -28,6 +28,7 @@ public sealed class LspClient : IAsyncDisposable
 
     public event Action<string, JsonNode?, int?>? NotificationReceived;
     public event Action? Disconnected;
+    public event Action<string>? StderrLineReceived;
 
     public LspClient(IProcessSpawner spawner)
     {
@@ -71,8 +72,16 @@ public sealed class LspClient : IAsyncDisposable
         _stdin = _process.StandardInput;
         _stdout = _process.StandardOutput.BaseStream;
 
-        // Drain stderr to prevent the process from blocking when its stderr buffer fills.
-        _ = _process.StandardError.ReadToEndAsync();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                string? line;
+                while ((line = await _process.StandardError.ReadLineAsync(_disposeCts.Token).ConfigureAwait(false)) is not null)
+                    StderrLineReceived?.Invoke(line);
+            }
+            catch { }
+        });
 
         _ = Task.Run(async () =>
         {

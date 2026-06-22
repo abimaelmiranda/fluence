@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Fluence.Infrastructure;
@@ -71,6 +72,47 @@ public sealed partial class OmniSharpProvisioningService
     private static string? FindOnPath(string executable)
     {
         return PlatformTooling.Current.FindOnPath(executable);
+    }
+
+    private static string? ResolveSelectedSdkPathForRoot(string rootPath)
+    {
+        try
+        {
+            var dotnet = FindOnPath("dotnet");
+            if (dotnet is null)
+                return ResolveSelectedSdkPath();
+
+            var psi = new ProcessStartInfo(dotnet, "--version")
+            {
+                WorkingDirectory = rootPath,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            using var proc = Process.Start(psi);
+            if (proc is null)
+                return ResolveSelectedSdkPath();
+
+            var version = proc.StandardOutput.ReadToEnd().Trim();
+            proc.WaitForExit(3000);
+
+            if (string.IsNullOrWhiteSpace(version))
+                return ResolveSelectedSdkPath();
+
+            var sdkRoot = Path.Combine(ResolveDotnetDir(), "sdk");
+            if (!Directory.Exists(sdkRoot))
+                return null;
+
+            var match = Directory.EnumerateDirectories(sdkRoot)
+                .FirstOrDefault(d => Path.GetFileName(d).StartsWith(version, StringComparison.OrdinalIgnoreCase));
+
+            return match ?? ResolveSelectedSdkPath();
+        }
+        catch
+        {
+            return ResolveSelectedSdkPath();
+        }
     }
 
     private static string ResolveRuntimeId() => PlatformTooling.Current.RuntimeId;

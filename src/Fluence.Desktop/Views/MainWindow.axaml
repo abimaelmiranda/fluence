@@ -444,7 +444,7 @@
                                               VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled"
                                               Background="{StaticResource FluenceBrushBottomBarContentBackground}">
-                                    <TextBlock Text="{Binding BottomBar.Output.Text, Mode=OneWay}"
+                                    <SelectableTextBlock Text="{Binding BottomBar.Output.Text, Mode=OneWay}"
                                                TextWrapping="NoWrap"
                                                FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
                                                FontSize="13"
@@ -477,7 +477,7 @@
                                               VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled"
                                               Background="{StaticResource FluenceBrushBottomBarContentBackground}">
-                                    <TextBlock Text="{Binding BottomBar.Debug.Text, Mode=OneWay}"
+                                    <SelectableTextBlock Text="{Binding BottomBar.Debug.Text, Mode=OneWay}"
                                                TextWrapping="NoWrap"
                                                FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
                                                FontSize="13"
@@ -513,7 +513,7 @@
                                               VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled"
                                               Background="{StaticResource FluenceBrushBottomBarContentBackground}">
-                                    <TextBlock Text="{Binding BottomBar.Run.Text, Mode=OneWay}"
+                                    <SelectableTextBlock Text="{Binding BottomBar.Run.Text, Mode=OneWay}"
                                                TextWrapping="NoWrap"
                                                FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
                                                FontSize="13"
