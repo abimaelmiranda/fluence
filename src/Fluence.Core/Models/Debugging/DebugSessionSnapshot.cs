@@ -6,6 +6,7 @@ public sealed record DebugSessionSnapshot(
     bool IsActive,
     bool IsStopped,
     DebugSessionStatus Status,
+    string Architecture,
     string? Reason,
     int? ActiveThreadId,
     DebugExecutionLine? CurrentLine,

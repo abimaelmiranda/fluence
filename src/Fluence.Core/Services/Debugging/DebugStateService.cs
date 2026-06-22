@@ -14,6 +14,7 @@ public sealed class DebugStateService : IDebugStateService
         IsActive: false,
         IsStopped: false,
         Status: DebugSessionStatus.Inactive,
+        Architecture: "x64",
         Reason: null,
         ActiveThreadId: null,
         CurrentLine: null,
@@ -89,7 +90,7 @@ public sealed class DebugStateService : IDebugStateService
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public void StartSession()
+    public void StartSession(string architecture = "x64")
     {
         lock (_gate)
         {
@@ -98,6 +99,7 @@ public sealed class DebugStateService : IDebugStateService
                 IsActive = true,
                 IsStopped = false,
                 Status = DebugSessionStatus.Starting,
+                Architecture = string.IsNullOrWhiteSpace(architecture) ? "x64" : architecture,
                 Reason = null,
                 ActiveThreadId = null,
                 CurrentLine = null,
@@ -166,6 +168,7 @@ public sealed class DebugStateService : IDebugStateService
                 IsActive = false,
                 IsStopped = false,
                 Status = DebugSessionStatus.Inactive,
+                Architecture = "x64",
                 Reason = null,
                 ActiveThreadId = null,
                 CurrentLine = null,

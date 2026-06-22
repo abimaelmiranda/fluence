@@ -19,7 +19,8 @@ namespace Fluence.Infrastructure.Protocols.Dap;
 
 internal sealed class DapClient : IDebugAdapterClient
 {
-    private readonly string _netcoredbgPath;
+    private readonly string _adapterPath;
+    private readonly string _adapterId;
     private readonly IProcessSpawner _spawner;
     private readonly string _logPath;
     private readonly CancellationTokenSource _disposeCts = new();
@@ -36,9 +37,10 @@ internal sealed class DapClient : IDebugAdapterClient
     private int _threadId;
     private static readonly TimeSpan DisposeTimeout = TimeSpan.FromSeconds(2);
 
-    public DapClient(string netcoredbgPath, string logPath, IProcessSpawner spawner)
+    public DapClient(string adapterPath, string adapterId, string logPath, IProcessSpawner spawner)
     {
-        _netcoredbgPath = netcoredbgPath;
+        _adapterPath = adapterPath;
+        _adapterId = adapterId;
         _logPath = logPath;
         _spawner = spawner;
     }
@@ -57,7 +59,7 @@ internal sealed class DapClient : IDebugAdapterClient
 
         var startInfo = new ProcessStartInfo
             {
-                FileName = _netcoredbgPath,
+                FileName = _adapterPath,
                 ArgumentList = { "--interpreter=vscode" },
                 WorkingDirectory = request.WorkingDirectory,
                 RedirectStandardInput = true,
@@ -71,13 +73,13 @@ internal sealed class DapClient : IDebugAdapterClient
         _process.Exited += (_, _) =>
         {
             var code = _process?.ExitCode;
-            _ = LogAsync($"[netcoredbg] Process exited, code={code}", CancellationToken.None);
+            _ = LogAsync($"[{_adapterId}] Process exited, code={code}", CancellationToken.None);
             if (code is not 0)
-                OutputReceived?.Invoke(this, new DebugAdapterOutputEvent($"[netcoredbg] Process exited with code {code}{Environment.NewLine}", true));
+                OutputReceived?.Invoke(this, new DebugAdapterOutputEvent($"[{_adapterId}] Process exited with code {code}{Environment.NewLine}", true));
             Terminated?.Invoke(this, new DebugAdapterTerminatedEvent());
         };
 
-        OutputReceived?.Invoke(this, new DebugAdapterOutputEvent($"[debug] netcoredbg: {_netcoredbgPath}{Environment.NewLine}", false));
+        OutputReceived?.Invoke(this, new DebugAdapterOutputEvent($"[debug] {_adapterId}: {_adapterPath}{Environment.NewLine}", false));
 
         _stdin = _process.StandardInput;
         _stdout = _process.StandardOutput.BaseStream;
@@ -100,7 +102,7 @@ internal sealed class DapClient : IDebugAdapterClient
 
         var initializeResponse = await SendRequestAsync("initialize", new JsonObject
         {
-            ["adapterID"] = "netcoredbg",
+            ["adapterID"] = _adapterId,
             ["clientID"] = "fluence",
             ["clientName"] = "Fluence IDE",
             ["linesStartAt1"] = true,
@@ -109,21 +111,11 @@ internal sealed class DapClient : IDebugAdapterClient
         }, cancellationToken).ConfigureAwait(false);
         _exceptionBreakpointFilters = ParseExceptionBreakpointFilters(initializeResponse);
 
-        await SendRequestAsync("launch", new JsonObject
-        {
-            ["type"] = "coreclr",
-            ["program"] = request.ProgramPath,
-            ["cwd"] = request.WorkingDirectory,
-            ["args"] = new JsonArray(request.Configuration.Args.Select(arg => JsonValue.Create(arg)).ToArray()),
-            ["env"] = CreateEnvironmentObject(request.Configuration.Env),
-            ["stopAtEntry"] = false,
-            ["console"] = "internalConsole",
-        }, cancellationToken).ConfigureAwait(false);
+        await SendRequestAsync("launch", request.LaunchArguments, cancellationToken).ConfigureAwait(false);
 
         // Wait for the adapter's "initialized" event before returning.
-        // This signals netcoredbg is ready to receive setBreakpoints and configurationDone.
         // Sending configuration before this event arrives violates the DAP contract and
-        // causes netcoredbg to terminate the session prematurely.
+        // can cause the adapter to terminate the session prematurely.
         using var initTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         initTimeout.CancelAfter(TimeSpan.FromSeconds(10));
         await _initializedTcs.Task.WaitAsync(initTimeout.Token).ConfigureAwait(false);
@@ -534,7 +526,7 @@ internal sealed class DapClient : IDebugAdapterClient
             && (line = await streamReader.ReadLineAsync(cancellationToken)) is not null)
         {
             await LogAsync("[stderr] " + line, CancellationToken.None).ConfigureAwait(false);
-            OutputReceived?.Invoke(this, new DebugAdapterOutputEvent("[netcoredbg] " + line + Environment.NewLine, true));
+            OutputReceived?.Invoke(this, new DebugAdapterOutputEvent($"[{_adapterId}] " + line + Environment.NewLine, true));
         }
     }
 
@@ -552,9 +544,7 @@ internal sealed class DapClient : IDebugAdapterClient
         foreach (var pair in values)
             obj[pair.Key] = pair.Value;
 
-        // The debuggee is launched by netcoredbg, which inherits this environment.
-        // In a macOS .app the inherited PATH is minimal and omits the dotnet muxer,
-        // so framework-dependent debuggees fail with 0x80070002 (E_FILE_NOT_FOUND).
+        // The debuggee inherits the adapter environment.
         // Inject an augmented PATH and DOTNET_ROOT unless the user overrode them.
         if (!obj.ContainsKey("PATH"))
         {
