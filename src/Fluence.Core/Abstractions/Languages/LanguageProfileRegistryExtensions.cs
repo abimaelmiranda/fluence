@@ -24,6 +24,24 @@ public static class LanguageProfileRegistryExtensions
     }
 
     /// <summary>
+    /// Detects the most likely language profile for a specific file path using workspace context
+    /// when the extension alone is ambiguous.
+    /// </summary>
+    public static string? DetectLanguageForFile(
+        this ILanguageProfileRegistry profiles,
+        IWorkspaceContext workspace,
+        string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return null;
+
+        if (string.Equals(Path.GetExtension(filePath), ".h", System.StringComparison.OrdinalIgnoreCase))
+            return profiles.DetectActiveLanguage(workspace);
+
+        return profiles.DetectLanguageForFile(filePath);
+    }
+
+    /// <summary>
     /// Detects the active language profile ID for the current workspace.
     /// Returns null if the workspace is empty or the language is unrecognized.
     /// </summary>
@@ -37,7 +55,7 @@ public static class LanguageProfileRegistryExtensions
             ? current.TabSession.ActiveDocument.Path
             : current.CurrentFilePath;
 
-        var fileLanguage = profiles.DetectLanguageForFile(activeFilePath);
+        var fileLanguage = profiles.DetectLanguageForFile(workspace, activeFilePath);
         if (fileLanguage is not null)
             return fileLanguage;
 

@@ -77,6 +77,16 @@ public partial class EditorView
         if (string.IsNullOrEmpty(extension))
             return null;
 
+        if (string.Equals(extension, ".h", StringComparison.OrdinalIgnoreCase))
+        {
+            return _viewModel?.ActiveDocumentLanguageId switch
+            {
+                "c" => "source.c",
+                "cpp" => "source.cpp",
+                _ => "source.cpp",
+            };
+        }
+
         if (LanguageScopeByExtension.TryGetValue(extension, out var explicitScope))
             return explicitScope;
 

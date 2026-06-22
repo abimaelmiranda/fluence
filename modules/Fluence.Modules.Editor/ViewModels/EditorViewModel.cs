@@ -193,6 +193,11 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
 
     public bool IsDebuggerStopped => _debugState.Snapshot.IsStopped;
 
+    public string? ActiveDocumentLanguageId =>
+        ActiveDocumentPath is null
+            ? null
+            : _languageProfiles.DetectLanguageForFile(_workspace, ActiveDocumentPath);
+
     private void RegisterEditorCommands()
     {
         _commands.Register(new IdeCommandDefinition(
@@ -525,7 +530,7 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
         ResolveDocumentLanguageId(path) is not null;
 
     private string? ResolveDocumentLanguageId(string path) =>
-        _languageProfiles.DetectLanguageForFile(path);
+        _languageProfiles.DetectLanguageForFile(_workspace, path);
 
     private void ScheduleAutoSave(string? documentPath)
     {

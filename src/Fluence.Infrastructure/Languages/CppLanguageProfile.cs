@@ -25,7 +25,7 @@ public sealed class CppLanguageProfile : ILanguageProfile
         "CMakeLists.txt",
     ];
 
-    public IReadOnlyList<string> FileExtensions { get; } = [".cpp", ".cc", ".cxx", ".h", ".hh", ".hpp", ".hxx"];
+    public IReadOnlyList<string> FileExtensions { get; } = [".cpp", ".cc", ".cxx", ".hh", ".hpp", ".hxx"];
 
     public bool MatchesWorkspace(string folderPath)
     {

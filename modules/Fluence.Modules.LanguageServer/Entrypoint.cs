@@ -557,7 +557,9 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant, IC
             }
         }
 
-        return _profiles?.DetectLanguageForFile(filePath) ?? string.Empty;
+        return _profiles is not null && _workspace is not null
+            ? _profiles.DetectLanguageForFile(_workspace, filePath) ?? string.Empty
+            : _profiles?.DetectLanguageForFile(filePath) ?? string.Empty;
     }
 
     private bool IsManagedDocument(string filePath, string languageId) =>
