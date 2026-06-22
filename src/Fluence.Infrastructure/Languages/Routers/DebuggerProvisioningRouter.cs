@@ -9,14 +9,14 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Fluence.Infrastructure.Languages.Routers;
 
 public sealed class DebuggerProvisioningRouter(
-    IKeyedServiceProvider keyedProvider,
+    IServiceProvider serviceProvider,
     IWorkspaceContext workspace,
     ILanguageProfileRegistry profiles) : IDebuggerProvisioningService
 {
     private string ActiveKey => profiles.DetectWorkspaceLanguage(workspace) ?? "csharp";
 
     private IDebuggerProvisioningService Active =>
-        keyedProvider.GetRequiredKeyedService<IDebuggerProvisioningService>(ActiveKey);
+        serviceProvider.GetRequiredKeyedService<IDebuggerProvisioningService>(ActiveKey);
 
     public bool IsProvisioned() => Active.IsProvisioned();
     public string GetExecutablePath() => Active.GetExecutablePath();

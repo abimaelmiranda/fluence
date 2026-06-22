@@ -10,14 +10,14 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Fluence.Infrastructure.Languages.Routers;
 
 public sealed class LspProvisioningRouter(
-    IKeyedServiceProvider keyedProvider,
+    IServiceProvider serviceProvider,
     IWorkspaceContext workspace,
     ILanguageProfileRegistry profiles) : ILspProvisioningService
 {
     private string ActiveKey => profiles.DetectWorkspaceLanguage(workspace) ?? "csharp";
 
     private ILspProvisioningService Active =>
-        keyedProvider.GetRequiredKeyedService<ILspProvisioningService>(ActiveKey);
+        serviceProvider.GetRequiredKeyedService<ILspProvisioningService>(ActiveKey);
 
     public bool IsProvisioned() => Active.IsProvisioned();
     public string GetExecutablePath() => Active.GetExecutablePath();

@@ -33,7 +33,7 @@ internal sealed partial class LanguageServerService
 
     private void OnClientDisconnected()
     {
-        WriteOutput("[LanguageServer] OmniSharp disconnected\r\n", OutputChannelEntryKind.Warning);
+        WriteOutput($"[LanguageServer] {_serverDisplayName} disconnected\r\n", OutputChannelEntryKind.Warning);
         var client = _client;
         _client = null;
         _holder.Client = null;
@@ -63,7 +63,7 @@ internal sealed partial class LanguageServerService
             }
 
             // LSP spec allows both "changes" (dict) and "documentChanges" (array) formats.
-            // OmniSharp typically uses documentChanges.
+            // Roslyn-style servers typically use documentChanges.
             if (editObj["changes"] is JsonObject changesObj)
             {
                 foreach (var (uri, editsNode) in changesObj)

@@ -7,14 +7,14 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Fluence.Infrastructure.Languages.Routers;
 
 public sealed class LspArgumentsBuilderRouter(
-    IKeyedServiceProvider keyedProvider,
+    IServiceProvider serviceProvider,
     IWorkspaceContext workspace,
     ILanguageProfileRegistry profiles) : ILspArgumentsBuilder
 {
     private string ActiveKey => profiles.DetectWorkspaceLanguage(workspace) ?? "csharp";
 
     private ILspArgumentsBuilder Active =>
-        keyedProvider.GetRequiredKeyedService<ILspArgumentsBuilder>(ActiveKey);
+        serviceProvider.GetRequiredKeyedService<ILspArgumentsBuilder>(ActiveKey);
 
     public string Build(string rootPath, ILspProvisioningService provisioning, ISettingsService settings) =>
         Active.Build(rootPath, provisioning, settings);

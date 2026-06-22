@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.LanguageServer;
@@ -27,6 +28,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
     private readonly ISettingsService _settings;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private LspClient? _client;
+    private string _serverDisplayName = "LanguageServer";
 
     public bool IsRunning => _client is not null;
 
@@ -103,6 +105,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         try
         {
             var executable = _provisioning.GetExecutablePath();
+            _serverDisplayName = GetServerDisplayName(executable);
             var arguments = _argumentsBuilder.Build(rootPath, _provisioning, _settings);
             var env = _provisioning.GetLaunchEnvironment();
             WriteStartupOutput(executable, rootPath, env);
@@ -126,7 +129,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
             await _client.SendNotificationAsync("workspace/didChangeConfiguration", BuildConfigurationParams(settings), cancellationToken)
                 .ConfigureAwait(false);
 
-            WriteOutput("[LanguageServer] OmniSharp ready\r\n");
+            WriteOutput($"[LanguageServer] {_serverDisplayName} ready\r\n");
             _events.Publish(new LspServerReadyEvent());
         }
         catch
@@ -141,7 +144,7 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         if (_client is null)
             return;
 
-        WriteOutput("[LanguageServer] Stopping OmniSharp\r\n");
+        WriteOutput($"[LanguageServer] Stopping {_serverDisplayName}\r\n");
         var client = _client;
         _client = null;
         _holder.Client = null;
@@ -157,11 +160,11 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         catch (Exception ex) { Debug.WriteLine($"[LS] exit notification failed: {ex.Message}"); }
 
         await client.DisposeAsync().ConfigureAwait(false);
-        WriteOutput("[LanguageServer] OmniSharp stopped\r\n");
+        WriteOutput($"[LanguageServer] {_serverDisplayName} stopped\r\n");
     }
 
     private void OnStderrLine(string line) =>
-        WriteOutput($"[OmniSharp] {line}\r\n");
+        WriteOutput($"[{_serverDisplayName}] {line}\r\n");
 
     private void WriteOutput(string text, OutputChannelEntryKind kind = OutputChannelEntryKind.Information) =>
         _ = _output.WriteAsync(OutputChannelIds.Output, text, kind);
@@ -195,6 +198,12 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
         {
             return null;
         }
+    }
+
+    private static string GetServerDisplayName(string executable)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(executable);
+        return string.IsNullOrWhiteSpace(fileName) ? "LanguageServer" : fileName;
     }
 
     private sealed record LanguageServerRuntimeSettings(

@@ -92,6 +92,8 @@ internal static class Bootstrapper
         {
             var registry = new LanguageProfileRegistry();
             registry.Register(new CSharpLanguageProfile());
+            registry.Register(new CppLanguageProfile());
+            registry.Register(new CLanguageProfile());
             return registry;
         });
         services.AddSingleton<IModuleHost, ModuleHost>();
@@ -118,15 +120,20 @@ internal static class Bootstrapper
         services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
         // Concretos sem alias de interface não-keyed
         services.AddSingleton<OmniSharpProvisioningService>();
+        services.AddSingleton<ClangdProvisioningService>();
         services.AddSingleton<DebuggerProvisioningService>();
 
         // IDotnetLspProvisioningService mantido — usado por OmniSharpArgumentsBuilder via cast
         services.AddSingleton<IDotnetLspProvisioningService>(
             sp => sp.GetRequiredService<OmniSharpProvisioningService>());
 
-        // Keyed por linguagem — C# LSP e debugger (ILspArgumentsBuilder keyed registrado no LanguageServer.Entrypoint)
+        // Keyed por linguagem — C# usa OmniSharp, C/C++ usa clangd
         services.AddKeyedSingleton<ILspProvisioningService>("csharp",
             (sp, _) => (ILspProvisioningService)sp.GetRequiredService<OmniSharpProvisioningService>());
+        services.AddKeyedSingleton<ILspProvisioningService>("c",
+            (sp, _) => (ILspProvisioningService)sp.GetRequiredService<ClangdProvisioningService>());
+        services.AddKeyedSingleton<ILspProvisioningService>("cpp",
+            (sp, _) => (ILspProvisioningService)sp.GetRequiredService<ClangdProvisioningService>());
         services.AddKeyedSingleton<IDebuggerProvisioningService>("csharp",
             (sp, _) => (IDebuggerProvisioningService)sp.GetRequiredService<DebuggerProvisioningService>());
 
