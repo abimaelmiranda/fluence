@@ -18,7 +18,7 @@
     <Color x:Key="FluenceColorActivityBarInactiveForeground">#9EA8B3</Color>
     <Color x:Key="FluenceColorBottomBarBackground">#4F315F</Color>
     <Color x:Key="FluenceColorBottomBarDivider">#5532363C</Color>
-    <Color x:Key="FluenceColorBottomBarContentBackground">#1F2329</Color>
+    <Color x:Key="FluenceColorBottomBarContentBackground">#202225</Color>
 
     <SolidColorBrush x:Key="FluenceBrushShell" Color="{StaticResource FluenceColorShell}"/>
     <SolidColorBrush x:Key="FluenceBrushSurface" Color="{StaticResource FluenceColorSurface}"/>

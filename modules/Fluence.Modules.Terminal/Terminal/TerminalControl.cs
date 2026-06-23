@@ -186,7 +186,7 @@ public sealed class TerminalControl : Avalonia.Controls.Control
         }
         catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException or ArgumentOutOfRangeException or IndexOutOfRangeException)
         {
-            ctx.FillRectangle(new SolidColorBrush(Color.Parse("#1A1D23")), new Rect(Bounds.Size));
+            ctx.FillRectangle(new SolidColorBrush(Color.Parse("#202225")), new Rect(Bounds.Size));
         }
     }
 
@@ -194,7 +194,7 @@ public sealed class TerminalControl : Avalonia.Controls.Control
     {
         var terminal = Terminal;
         EnsureMetrics();
-        ctx.FillRectangle(new SolidColorBrush(Color.Parse("#1A1D23")), new Rect(Bounds.Size));
+        ctx.FillRectangle(new SolidColorBrush(Color.Parse("#202225")), new Rect(Bounds.Size));
 
         if (terminal is null || _charWidth <= 0 || _charHeight <= 0)
             return;
@@ -223,7 +223,7 @@ public sealed class TerminalControl : Avalonia.Controls.Control
                 // Inverse video: swap fg/bg. Use opaque defaults when transparent.
                 if (attrs.IsInverse())
                 {
-                    var invFg = bg.A == 0 ? Color.Parse("#1A1D23") : bg;
+                    var invFg = bg.A == 0 ? Color.Parse("#202225") : bg;
                     var invBg = fg == DefaultFg ? Color.Parse("#F2F5F8") : fg;
                     fg = invFg;
                     bg = invBg;
@@ -305,7 +305,7 @@ public sealed class TerminalControl : Avalonia.Controls.Control
                             FlowDirection.LeftToRight,
                             ccTypeface,
                             fontSize,
-                            new SolidColorBrush(Color.Parse("#1A1D23")));
+                            new SolidColorBrush(Color.Parse("#202225")));
                         ctx.DrawText(ft, new Point(px, py));
                     }
                 }
