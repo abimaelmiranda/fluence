@@ -913,7 +913,6 @@ public sealed class DebugService(
     public async ValueTask DisposeAsync()
     {
         await StopAsync().ConfigureAwait(false);
-        _gate.Dispose();
     }
 
 }
