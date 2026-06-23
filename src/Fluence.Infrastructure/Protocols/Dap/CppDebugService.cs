@@ -278,7 +278,7 @@ public sealed class CppDebugService(
             configureArgs,
             context.ProjectRoot,
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputLogLevel.Error),
             cancellationToken).ConfigureAwait(false);
         if (!configureResult.Succeeded)
             return false;
@@ -290,7 +290,7 @@ public sealed class CppDebugService(
             buildArgs,
             context.ProjectRoot,
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputLogLevel.Error),
             cancellationToken).ConfigureAwait(false);
         return buildResult.Succeeded;
     }
@@ -368,7 +368,7 @@ public sealed class CppDebugService(
 
     private void OnAdapterOutputReceived(object? sender, DebugAdapterOutputEvent e)
     {
-        _ = output.WriteAsync(OutputChannelIds.Debug, e.Text, e.IsError ? OutputChannelEntryKind.Error : OutputChannelEntryKind.Information);
+        _ = output.WriteAsync(OutputChannelIds.Debug, e.Text, e.IsError ? OutputLogLevel.Error : OutputLogLevel.Information);
     }
 
     private void ShowWarning(string message) =>
@@ -441,7 +441,7 @@ public sealed class CppDebugService(
         }
         catch (Exception ex)
         {
-            await output.WriteAsync(OutputChannelIds.Debug, $"[debug] failed to inspect stop: {ex.Message}\r\n", OutputChannelEntryKind.Error).ConfigureAwait(false);
+            await output.WriteAsync(OutputChannelIds.Debug, $"[debug] failed to inspect stop: {ex.Message}\r\n", OutputLogLevel.Error).ConfigureAwait(false);
         }
     }
 

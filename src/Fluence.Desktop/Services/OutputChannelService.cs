@@ -28,7 +28,7 @@ public sealed class OutputChannelService : IOutputChannelService
     public Task WriteAsync(
         string channelId,
         string text,
-        OutputChannelEntryKind kind = OutputChannelEntryKind.Information,
+        OutputLogLevel kind = OutputLogLevel.Information,
         CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested || string.IsNullOrEmpty(text))

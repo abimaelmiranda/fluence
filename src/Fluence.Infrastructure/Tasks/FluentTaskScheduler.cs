@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Tasks;
+using Fluence.Core.Models.Output;
 
 namespace Fluence.Infrastructure.Tasks;
 
@@ -18,6 +19,7 @@ public sealed class FluentTaskScheduler : ITaskScheduler, IDisposable
     private readonly SemaphoreSlim _highPrioritySignal = new(0);
     private readonly SemaphoreSlim _lowPrioritySignal = new(0);
     private readonly CancellationTokenSource _disposeCts = new();
+    private readonly IOutputChannelService? _output;
     private int _highPriorityActive;
     private int _highPriorityQueued;
 
@@ -29,8 +31,11 @@ public sealed class FluentTaskScheduler : ITaskScheduler, IDisposable
 
     private sealed record ScheduledWork(TaskPriority Priority, Func<CancellationToken, Task> Work, CancellationToken Token);
 
-    public FluentTaskScheduler()
+    public FluentTaskScheduler() : this(null) { }
+
+    public FluentTaskScheduler(IOutputChannelService? output)
     {
+        _output = output;
         _ = Task.Run(ProcessHighPriorityQueueAsync);
         _ = Task.Run(ProcessLowPriorityQueueAsync);
     }
@@ -62,7 +67,9 @@ public sealed class FluentTaskScheduler : ITaskScheduler, IDisposable
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[Scheduler] ScheduleLatest failed: {ex.Message}");
+                _ = _output?.WriteAsync(OutputChannelIds.Output,
+                    $"[Scheduler] ScheduleLatest failed: {ex.Message}{Environment.NewLine}",
+                    OutputLogLevel.Error);
             }
         });
     }
@@ -220,7 +227,9 @@ public sealed class FluentTaskScheduler : ITaskScheduler, IDisposable
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[Scheduler] task failed: {ex.Message}");
+            _ = _output?.WriteAsync(OutputChannelIds.Output,
+                $"[Scheduler] Task failed: {ex.Message}{Environment.NewLine}",
+                OutputLogLevel.Error);
         }
         finally
         {

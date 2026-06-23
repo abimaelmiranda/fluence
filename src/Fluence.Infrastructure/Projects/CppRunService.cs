@@ -95,7 +95,7 @@ public sealed class CppRunService(
             configureArgs,
             context.ProjectRoot,
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputLogLevel.Error),
             cancellationToken).ConfigureAwait(false);
         if (!configureResult.Succeeded)
             return;
@@ -111,7 +111,7 @@ public sealed class CppRunService(
             buildArgs,
             context.ProjectRoot,
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputLogLevel.Error),
             cancellationToken).ConfigureAwait(false);
         if (!buildResult.Succeeded)
             return;
@@ -133,7 +133,7 @@ public sealed class CppRunService(
             Array.Empty<string>(),
             Path.GetDirectoryName(executable),
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputLogLevel.Error),
             cancellationToken).ConfigureAwait(false);
     }
 

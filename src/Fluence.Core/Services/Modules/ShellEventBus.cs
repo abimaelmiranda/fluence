@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Tasks;
+using Fluence.Core.Models.Output;
 
 namespace Fluence.Core.Services.Modules;
 
@@ -11,12 +12,19 @@ public sealed class ShellEventBus : IShellEventBus
 {
     private readonly Lock _lock = new();
     private readonly IUiDispatcher? _dispatcher;
+    private readonly IOutputChannelService? _output;
     private readonly Dictionary<Type, List<Action<IShellEvent>>> _syncHandlers = new();
     private readonly Dictionary<object, Action<IShellEvent>> _syncWrappers = new();
 
     public ShellEventBus() { }
 
     public ShellEventBus(IUiDispatcher dispatcher) { _dispatcher = dispatcher; }
+
+    public ShellEventBus(IUiDispatcher dispatcher, IOutputChannelService output)
+    {
+        _dispatcher = dispatcher;
+        _output = output;
+    }
 
     public void Publish(IShellEvent shellEvent)
     {
@@ -80,7 +88,7 @@ public sealed class ShellEventBus : IShellEventBus
         InvokeSync(handler, shellEvent);
     }
 
-    private static void InvokeSync(Action<IShellEvent> handler, IShellEvent shellEvent)
+    private void InvokeSync(Action<IShellEvent> handler, IShellEvent shellEvent)
     {
         try
         {
@@ -88,7 +96,9 @@ public sealed class ShellEventBus : IShellEventBus
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Shell event handler failed for {shellEvent.GetType().Name}: {ex}");
+            var message = $"[ShellEventBus] Handler failed for {shellEvent.GetType().Name}: {ex.Message}{Environment.NewLine}";
+            if (_output is not null)
+                _ = _output.WriteAsync(OutputChannelIds.Output, message, OutputLogLevel.Error);
         }
     }
 

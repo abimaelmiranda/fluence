@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Models.Lifecycle;
 using Fluence.Core.Models.Modules;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Workspace.Enums;
 
 namespace Fluence.Core.Services.Modules;
@@ -10,7 +12,8 @@ namespace Fluence.Core.Services.Modules;
 public sealed class ShutdownCoordinator(
     IModuleHost host,
     IReadOnlyList<IModule> modules,
-    IProcessSpawner processSpawner) : IShutdownCoordinator
+    IProcessSpawner processSpawner,
+    IOutputChannelService output) : IShutdownCoordinator
 {
     private static readonly TimeSpan ModuleShutdownTimeout = TimeSpan.FromSeconds(3);
 
@@ -51,18 +54,21 @@ public sealed class ShutdownCoordinator(
                             .WaitAsync(ModuleShutdownTimeout, cancellationToken)
                             .ConfigureAwait(false);
                     }
-                    catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
-                        Debug.WriteLine($"Module {module.Id} stop canceled after {started.ElapsedMilliseconds}ms: {ex.Message}");
                     }
-                    catch (TimeoutException ex)
+                    catch (TimeoutException)
                     {
-                        Debug.WriteLine($"Module {module.Id} stop timed out after {started.ElapsedMilliseconds}ms: {ex.Message}");
+                        _ = output.WriteAsync(OutputChannelIds.Output,
+                            $"[shutdown] {module.DisplayName} stop timed out after {started.ElapsedMilliseconds}ms{Environment.NewLine}",
+                            OutputLogLevel.Warning, CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"Module {module.Id} stop failed after {started.ElapsedMilliseconds}ms: {ex}");
                         host.SetModuleState(module.Id, ModuleState.Faulted);
+                        _ = output.WriteAsync(OutputChannelIds.Output,
+                            $"[shutdown] {module.DisplayName} stop failed: {ex.Message}{Environment.NewLine}",
+                            OutputLogLevel.Error, CancellationToken.None);
                     }
                 }
 
@@ -73,18 +79,17 @@ public sealed class ShutdownCoordinator(
                         .WaitAsync(ModuleShutdownTimeout, cancellationToken)
                         .ConfigureAwait(false);
                 }
-                catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    Debug.WriteLine($"Module {module.Id} dispose canceled after {started.ElapsedMilliseconds}ms: {ex.Message}");
                 }
-                catch (TimeoutException ex)
+                catch (TimeoutException)
                 {
-                    Debug.WriteLine($"Module {module.Id} dispose timed out after {started.ElapsedMilliseconds}ms: {ex.Message}");
+                    Debug.WriteLine($"Module {module.Id} dispose timed out after {started.ElapsedMilliseconds}ms");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Module {module.Id} dispose failed after {started.ElapsedMilliseconds}ms: {ex}");
                     host.SetModuleState(module.Id, ModuleState.Faulted);
+                    Debug.WriteLine($"Module {module.Id} dispose failed after {started.ElapsedMilliseconds}ms: {ex}");
                 }
             }
 
