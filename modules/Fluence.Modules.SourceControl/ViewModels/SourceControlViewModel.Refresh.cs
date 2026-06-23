@@ -23,7 +23,7 @@ public sealed partial class SourceControlViewModel
         var root = await _git.GetRepositoryRootAsync(workspaceRoot);
         if (root is null)
         {
-            WriteOutput("[SourceControl] No Git repository found\r\n", OutputChannelEntryKind.Warning);
+            WriteOutput("[SourceControl] No Git repository found\r\n", OutputLogLevel.Warning);
             SetNoRepository();
             return;
         }
@@ -83,14 +83,12 @@ public sealed partial class SourceControlViewModel
                 BehindCount = aheadBehind.Behind;
             });
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException)
         {
-            Debug.WriteLine($"Source control refresh canceled: {ex}");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Source control refresh failed: {ex}");
-            WriteOutput($"[SourceControl] Refresh failed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
+            WriteOutput($"[SourceControl] Refresh failed: {ex.Message}\r\n", OutputLogLevel.Error);
         }
         finally
         {
@@ -202,8 +200,7 @@ public sealed partial class SourceControlViewModel
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Source control periodic refresh failed: {ex}");
-            WriteOutput($"[SourceControl] Periodic refresh stopped: {ex.Message}\r\n", OutputChannelEntryKind.Error);
+            WriteOutput($"[SourceControl] Periodic refresh stopped: {ex.Message}\r\n", OutputLogLevel.Error);
         }
     }
 

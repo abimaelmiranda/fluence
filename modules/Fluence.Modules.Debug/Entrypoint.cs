@@ -17,6 +17,7 @@ using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -46,6 +47,8 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
 
     public string DisplayName => "Debug";
 
+    public const string ChannelId = OutputChannelIds.Debug;
+
     public int StartupOrder => 1100;
 
     public void Register(IServiceCollection services)
@@ -71,6 +74,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
                         activeTabId == "Debug" &&
                         services.GetRequiredService<IDebugStateService>().Snapshot.IsActive)),
             ],
+            OutputChannel = new OutputChannelDescriptor(ChannelId, "Debug"),
         };
 
     public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)

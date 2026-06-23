@@ -10,6 +10,7 @@ using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
@@ -38,6 +39,8 @@ public sealed class Entrypoint : IModule
 
     public string DisplayName => "Editor";
 
+    public const string ChannelId = "editor";
+
     public int StartupOrder => 400;
 
     public void Register(IServiceCollection services)
@@ -61,6 +64,7 @@ public sealed class Entrypoint : IModule
                     services => services.GetRequiredService<EditorViewModel>(),
                     PanelVisibilityRule.Always),
             ],
+            OutputChannel = new OutputChannelDescriptor(ChannelId, "Editor"),
         };
 
     public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)

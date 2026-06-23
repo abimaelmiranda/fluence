@@ -33,7 +33,7 @@ internal sealed partial class LanguageServerService
 
     private void OnClientDisconnected()
     {
-        WriteOutput($"[LanguageServer] {_serverDisplayName} disconnected\r\n", OutputChannelEntryKind.Warning);
+        WriteOutput($"[LanguageServer] {_serverDisplayName} disconnected\r\n", OutputLogLevel.Warning);
         var client = _client;
         _client = null;
         _holder.Client = null;

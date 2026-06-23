@@ -2,6 +2,8 @@ using System.Resources;
 using System.Threading.Tasks;
 using System.Threading;
 using Fluence.Core.Abstractions.Keybindings;
+using Fluence.Core.Models.Modules;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Settings;
@@ -25,7 +27,12 @@ public sealed class Entrypoint : IModule
 
     public string DisplayName => "Settings";
 
+    public const string ChannelId = "settings";
+
     public int StartupOrder => 100;
+
+    public ModuleContributions GetContributions() =>
+        new() { OutputChannel = new OutputChannelDescriptor(ChannelId, "Settings") };
 
     public void Register(IServiceCollection services)
     {

@@ -59,7 +59,12 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant, IC
 
     public string DisplayName => "Language Server";
 
+    public const string ChannelId = "language-server";
+
     public int StartupOrder => 900;
+
+    public ModuleContributions GetContributions() =>
+        new() { OutputChannel = new OutputChannelDescriptor(ChannelId, "Language Server") };
 
     public void Register(IServiceCollection services)
     {

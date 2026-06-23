@@ -7,6 +7,8 @@ using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Modules;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.LspSetup.ViewModels;
 using Fluence.Core.Events.Provisioning;
@@ -28,7 +30,12 @@ public sealed class Entrypoint : IModule, IConditionalModule
 
     public string DisplayName => "LSP Setup";
 
+    public const string ChannelId = "lsp-setup";
+
     public int StartupOrder => 800;
+
+    public ModuleContributions GetContributions() =>
+        new() { OutputChannel = new OutputChannelDescriptor(ChannelId, "LSP Setup") };
 
     public void Register(IServiceCollection services)
     {

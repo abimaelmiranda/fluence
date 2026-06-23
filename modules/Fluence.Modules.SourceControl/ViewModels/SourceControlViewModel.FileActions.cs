@@ -1,10 +1,10 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Modules.SourceControl.Models;
 using Fluence.Core.Events.Workspace;
 
@@ -86,7 +86,7 @@ public sealed partial class SourceControlViewModel
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Open diff failed for {change.FilePath}: {ex}");
+            WriteOutput($"[SourceControl] Open diff failed for {change.FileName}: {ex.Message}\r\n", OutputLogLevel.Error);
         }
     }
 
@@ -105,7 +105,7 @@ public sealed partial class SourceControlViewModel
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Open changed file failed for {path}: {ex}");
+            WriteOutput($"[SourceControl] Open changed file failed: {ex.Message}\r\n", OutputLogLevel.Error);
         }
 
         return Task.CompletedTask;
@@ -141,13 +141,12 @@ public sealed partial class SourceControlViewModel
             await action();
             await RefreshCoreAsync();
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException)
         {
-            Debug.WriteLine($"Source control file action canceled: {ex}");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Source control file action failed: {ex}");
+            WriteOutput($"[SourceControl] File action failed: {ex.Message}\r\n", OutputLogLevel.Error);
         }
     }
 }

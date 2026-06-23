@@ -15,6 +15,7 @@ using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Jobs;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -54,7 +55,12 @@ public sealed class Entrypoint : IModule, IConditionalModule
 
     public string DisplayName => ".NET CLI";
 
+    public const string ChannelId = "dotnet-cli";
+
     public int StartupOrder => 700;
+
+    public ModuleContributions GetContributions() =>
+        new() { OutputChannel = new OutputChannelDescriptor(ChannelId, ".NET CLI") };
 
     public void Register(IServiceCollection services)
     {

@@ -266,7 +266,7 @@ public sealed class DebugService(
         }
         catch (OperationCanceledException)
         {
-            await output.WriteAsync(OutputChannelIds.Debug, "[debug] Debug adapter did not respond to command in time.\r\n", OutputChannelEntryKind.Error).ConfigureAwait(false);
+            await output.WriteAsync(OutputChannelIds.Debug, "[debug] Debug adapter did not respond to command in time.\r\n", OutputLogLevel.Error).ConfigureAwait(false);
         }
     }
 
@@ -434,7 +434,7 @@ public sealed class DebugService(
         }
         catch (Exception ex)
         {
-            await output.WriteAsync(OutputChannelIds.Debug, string.Format(_loc.Get("Debug.Log.ErrorRefreshingInspection"), ex.Message) + "\r\n", OutputChannelEntryKind.Error)
+            await output.WriteAsync(OutputChannelIds.Debug, string.Format(_loc.Get("Debug.Log.ErrorRefreshingInspection"), ex.Message) + "\r\n", OutputLogLevel.Error)
                 .ConfigureAwait(false);
         }
     }
@@ -452,7 +452,7 @@ public sealed class DebugService(
                 ct => output.WriteAsync(
                     OutputChannelIds.Debug,
                     string.Format(_loc.Get("Debug.Log.NetcoredbgTerminated"), hint) + "\r\n",
-                    OutputChannelEntryKind.Error,
+                    OutputLogLevel.Error,
                     ct));
         }
         scheduler.Schedule("debug.stop", TaskPriority.Critical, StopAsync);
@@ -476,7 +476,7 @@ public sealed class DebugService(
             ct => output.WriteAsync(
                 OutputChannelIds.Debug,
                 text,
-                isError ? OutputChannelEntryKind.Error : OutputChannelEntryKind.Information,
+                isError ? OutputLogLevel.Error : OutputLogLevel.Information,
                 ct));
     }
 
@@ -626,7 +626,7 @@ public sealed class DebugService(
             ct => output.WriteAsync(
                 OutputChannelIds.Run,
                 line + Environment.NewLine,
-                isError ? OutputChannelEntryKind.Error : OutputChannelEntryKind.Information,
+                isError ? OutputLogLevel.Error : OutputLogLevel.Information,
                 ct));
     }
 

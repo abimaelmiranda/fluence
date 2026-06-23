@@ -166,8 +166,8 @@ internal sealed partial class LanguageServerService : ILanguageServerService, IA
     private void OnStderrLine(string line) =>
         WriteOutput($"[{_serverDisplayName}] {line}\r\n");
 
-    private void WriteOutput(string text, OutputChannelEntryKind kind = OutputChannelEntryKind.Information) =>
-        _ = _output.WriteAsync(OutputChannelIds.Output, text, kind);
+    private void WriteOutput(string text, OutputLogLevel kind = OutputLogLevel.Information) =>
+        _ = _output.WriteAsync(Entrypoint.ChannelId, text, kind);
 
     private void WriteStartupOutput(
         string executable,

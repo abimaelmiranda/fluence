@@ -9,6 +9,7 @@ using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.SourceControl.Abstractions;
 using Fluence.Modules.SourceControl.Infrastructure;
@@ -21,6 +22,8 @@ namespace Fluence.Modules.SourceControl;
 
 public sealed class Entrypoint : IModule
 {
+    public const string ChannelId = "source-control";
+
     private IWorkspaceContext? _workspace;
     private EventHandler? _workspaceChanged;
     private SourceControlViewModel? _viewModel;
@@ -52,6 +55,7 @@ public sealed class Entrypoint : IModule
                     services => services.GetRequiredService<SourceControlViewModel>(),
                     PanelVisibilityRule.ForActivityTab("SourceControl")),
             ],
+            OutputChannel = new OutputChannelDescriptor(ChannelId, "Source Control"),
         };
 
     public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)

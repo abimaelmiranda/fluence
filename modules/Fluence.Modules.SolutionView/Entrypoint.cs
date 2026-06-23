@@ -10,6 +10,7 @@ using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
@@ -40,6 +41,8 @@ public sealed class Entrypoint : IModule, IConditionalModule
     }
 
     public string DisplayName => "Solution View";
+
+    public const string ChannelId = "solution-view";
 
     public int StartupOrder => 300;
 
@@ -73,6 +76,7 @@ public sealed class Entrypoint : IModule, IConditionalModule
                         activeTabId == "Files" &&
                         workspace.NavigationMode == WorkspaceMode.Solution)),
             ],
+            OutputChannel = new OutputChannelDescriptor(ChannelId, "Solution View"),
         };
 
     public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)

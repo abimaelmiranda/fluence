@@ -7,6 +7,7 @@ using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -33,7 +34,12 @@ public sealed class Entrypoint : IModule, IConditionalModule
 
     public string DisplayName => "NuGet Explorer";
 
+    public const string ChannelId = "nuget-explorer";
+
     public int StartupOrder => 500;
+
+    public ModuleContributions GetContributions() =>
+        new() { OutputChannel = new OutputChannelDescriptor(ChannelId, "NuGet Explorer") };
 
     public void Register(IServiceCollection services)
     {

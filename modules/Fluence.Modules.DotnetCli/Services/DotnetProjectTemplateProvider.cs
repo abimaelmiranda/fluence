@@ -103,7 +103,7 @@ public sealed class DotnetProjectTemplateProvider(
             arguments,
             workingDirectory,
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputLogLevel.Error),
             cancellationToken);
     }
 

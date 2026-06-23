@@ -8,6 +8,7 @@ using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Workspace;
@@ -24,6 +25,8 @@ public sealed class Entrypoint : IModule
     public string Id => "FileExplorer";
 
     public string DisplayName => "File Explorer";
+
+    public const string ChannelId = "file-explorer";
 
     public int StartupOrder => 200;
 
@@ -47,6 +50,7 @@ public sealed class Entrypoint : IModule
                         activeTabId == "Files" &&
                         workspace.NavigationMode == WorkspaceMode.Folder)),
             ],
+            OutputChannel = new OutputChannelDescriptor(ChannelId, "File Explorer"),
         };
 
     public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)

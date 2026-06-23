@@ -280,7 +280,7 @@ public sealed partial class PublishWizardViewModel : ViewModelBase
             arguments,
             workingDirectory,
             line => _ = _output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = _output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => _ = _output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputLogLevel.Error),
             cancellationToken);
     }
 

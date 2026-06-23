@@ -7,6 +7,7 @@ using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -23,6 +24,8 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
     public string Id => "Terminal";
 
     public string DisplayName => "Terminal";
+
+    public const string ChannelId = "terminal";
 
     public int StartupOrder => 600;
 
@@ -43,6 +46,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
                     services => services.GetRequiredService<TerminalViewModel>(),
                     PanelVisibilityRule.Always),
             ],
+            OutputChannel = new OutputChannelDescriptor(ChannelId, "Terminal"),
         };
 
     public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)

@@ -60,7 +60,7 @@ public sealed class DotnetRunService(
             target.Arguments,
             target.WorkingDirectory,
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputLogLevel.Error),
             cancellationToken,
             environment: target.Environment).ConfigureAwait(false);
     }
@@ -82,7 +82,7 @@ public sealed class DotnetRunService(
             arguments,
             workingDirectory,
             line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine),
-            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputChannelEntryKind.Error),
+            line => _ = output.WriteAsync(OutputChannelIds.Run, line + Environment.NewLine, OutputLogLevel.Error),
             cancellationToken,
             environment: null).ConfigureAwait(false);
     }

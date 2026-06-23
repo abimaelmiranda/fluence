@@ -8,6 +8,7 @@ using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -32,7 +33,12 @@ public sealed class Entrypoint : IModule, IConditionalModule
 
     public string DisplayName => "Debugger Setup";
 
+    public const string ChannelId = "debugger-setup";
+
     public int StartupOrder => 1000;
+
+    public ModuleContributions GetContributions() =>
+        new() { OutputChannel = new OutputChannelDescriptor(ChannelId, "Debugger Setup") };
 
     public void Register(IServiceCollection services)
     {

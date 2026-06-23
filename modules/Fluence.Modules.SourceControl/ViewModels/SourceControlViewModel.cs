@@ -132,8 +132,8 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
             (int)MinimumRefreshInterval.TotalSeconds,
             settings.RefreshIntervalSeconds));
 
-    private void WriteOutput(string text, OutputChannelEntryKind kind = OutputChannelEntryKind.Information) =>
-        _ = _output.WriteAsync(OutputChannelIds.Output, text, kind);
+    private void WriteOutput(string text, OutputLogLevel kind = OutputLogLevel.Information) =>
+        _ = _output.WriteAsync(Entrypoint.ChannelId, text, kind);
 
     private void FireAndForget(Func<Task> operation) => _ = RunFireAndForgetAsync(operation);
 
@@ -146,7 +146,7 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            WriteOutput($"[SourceControl] Operation failed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
+            WriteOutput($"[SourceControl] Operation failed: {ex.Message}\r\n", OutputLogLevel.Error);
         }
     }
 }

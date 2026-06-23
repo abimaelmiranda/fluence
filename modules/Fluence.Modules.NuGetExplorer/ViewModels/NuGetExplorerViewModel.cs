@@ -400,13 +400,13 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Xml.XmlException)
         {
             StatusMessage = ex.Message;
-            WriteOutput($"[NuGetExplorer] Failed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
+            WriteOutput($"[NuGetExplorer] Failed: {ex.Message}\r\n", OutputLogLevel.Error);
             _notifications.ShowError(_loc.Get("NuGetExplorer.Title"), ex.Message);
         }
         catch (Exception ex)
         {
             StatusMessage = _loc.Get("NuGetExplorer.Status.UnableToReachFeed");
-            WriteOutput($"[NuGetExplorer] Crashed: {ex.Message}\r\n", OutputChannelEntryKind.Error);
+            WriteOutput($"[NuGetExplorer] Crashed: {ex.Message}\r\n", OutputLogLevel.Error);
             _notifications.ShowError(_loc.Get("NuGetExplorer.Title"), ex.Message);
         }
         finally
@@ -467,6 +467,6 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
     private static string GetToolTabId(string solutionPath)
         => $"{ToolTabIdPrefix}{Path.GetFullPath(solutionPath)}";
 
-    private void WriteOutput(string text, OutputChannelEntryKind kind = OutputChannelEntryKind.Information) =>
-        _ = _output.WriteAsync(OutputChannelIds.Output, text, kind);
+    private void WriteOutput(string text, OutputLogLevel kind = OutputLogLevel.Information) =>
+        _ = _output.WriteAsync(Entrypoint.ChannelId, text, kind);
 }

@@ -47,7 +47,7 @@ public abstract class DotnetProjectCommandHandlerBase(
         void OnError(string line)
         {
             inspectLine?.Invoke(line, workingDirectory);
-            _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine, OutputChannelEntryKind.Error);
+            _ = output.WriteAsync(OutputChannelIds.Run, line + System.Environment.NewLine, OutputLogLevel.Error);
         }
 
         await processHost.RunAsync(

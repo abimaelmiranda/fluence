@@ -13,6 +13,7 @@ using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Events.Document;
 using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Models.Modules;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Modules.XamlViewer.Abstractions;
@@ -35,8 +36,13 @@ public sealed class Entrypoint : IModule, IConditionalModule
         var languageId = profiles.DetectWorkspaceLanguage(workspace);
         return languageId is null or "csharp";
     }
+    public const string ChannelId = "xaml-viewer";
+
     public string DisplayName => "XAML Viewer";
     public int StartupOrder => 450;
+
+    public ModuleContributions GetContributions() =>
+        new() { OutputChannel = new OutputChannelDescriptor(ChannelId, "XAML Viewer") };
 
     public void Register(IServiceCollection services)
     {
