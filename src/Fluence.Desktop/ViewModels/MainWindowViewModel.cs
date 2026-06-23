@@ -36,6 +36,7 @@ using Fluence.Core.Events.Debug;
 using Fluence.Core.Events.Provisioning;
 using Fluence.Core.Events.Workspace;
 using Fluence.Desktop.Services;
+using Fluence.Modules.Debug.ViewModels;
 
 namespace Fluence.Desktop.ViewModels;
 
@@ -57,6 +58,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly List<IDisposable> _eventSubscriptions = [];
     private readonly HashSet<string> _semanticTokensPendingFiles = new(StringComparer.OrdinalIgnoreCase);
     private IDisposable? _shellSettingsSubscription;
+    private readonly DebugConsoleViewModel _debugConsole;
 
     public QuickOpenViewModel QuickOpen { get; }
 
@@ -95,6 +97,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         IShellRegionHost regions,
         ActivityBarViewModel activityBar,
         BottomBarViewModel bottomBar,
+        DebugConsoleViewModel debugConsole,
         ISettingsService settings,
         ICommandRegistry commands,
         IKeybindingService keybindings,
@@ -113,6 +116,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settingsTool = settingsTool;
         _loc = loc;
         _fileViewerRegistry = fileViewerRegistry;
+        _debugConsole = debugConsole;
         ActivityBar = activityBar;
         BottomBar = bottomBar;
         Welcome = welcome;
@@ -149,6 +153,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         : _regions.MainContent?.ViewModel;
 
     public object? TerminalContent => _regions.BottomBarContent?.ViewModel;
+
+    public DebugConsoleViewModel DebugContent => _debugConsole;
 
     public string SidebarTitle => _regions.SidebarContent?.Title ?? SidebarPlaceholder;
 

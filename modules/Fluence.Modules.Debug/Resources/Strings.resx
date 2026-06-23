@@ -43,4 +43,7 @@
   <data name="Debug.Exception.Title" xml:space="preserve"><value>Exception</value></data>
   <data name="Debug.Exception.Message" xml:space="preserve"><value>An exception occurred.</value></data>
   <data name="Debug.Log.Exception" xml:space="preserve"><value>[debug] Exception: {0} - {1}</value></data>
+  <data name="Debug.Variables.Empty" xml:space="preserve"><value>No variables in scope</value></data>
+  <data name="Debug.Watch.ExpressionPlaceholder" xml:space="preserve"><value>Add expression...</value></data>
+  <data name="Debug.Watch.AddExpression" xml:space="preserve"><value>Add watch expression</value></data>
 </root>

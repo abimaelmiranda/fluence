@@ -40,6 +40,8 @@ public partial class DebugVariableNode : ObservableObject
     public int VariablesReference { get; }
     public bool HasChildren => VariablesReference > 0;
 
+    public bool HasType => Type is not null;
+
     public string DisplayText => Type is null
         ? $"{Name} = {Value}"
         : $"{Name} = {Value} ({Type})";

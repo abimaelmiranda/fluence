@@ -113,36 +113,12 @@
         <Border Padding="10"
                 Classes="idePanel">
             <StackPanel Spacing="8">
-                <TextBlock Text="{Binding [Debug.Label.Variables], Source={x:Static loc:Locale.Current}}"
-                           FontFamily="{StaticResource FluenceFontFamily}"
-                           FontSize="{StaticResource FluenceFontSizeSmall}"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                <ItemsControl ItemsSource="{Binding Variables}"/>
-            </StackPanel>
-        </Border>
-
-        <Border Padding="10"
-                Classes="idePanel">
-            <StackPanel Spacing="8">
                 <TextBlock Text="{Binding [Debug.Label.CallStack], Source={x:Static loc:Locale.Current}}"
                            FontFamily="{StaticResource FluenceFontFamily}"
                            FontSize="{StaticResource FluenceFontSizeSmall}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource FluenceBrushTextPrimary}"/>
                 <ItemsControl ItemsSource="{Binding StackFrames}"/>
-            </StackPanel>
-        </Border>
-
-        <Border Padding="10"
-                Classes="idePanel">
-            <StackPanel Spacing="8">
-                <TextBlock Text="{Binding [Debug.Label.Breakpoints], Source={x:Static loc:Locale.Current}}"
-                           FontFamily="{StaticResource FluenceFontFamily}"
-                           FontSize="{StaticResource FluenceFontSizeSmall}"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource FluenceBrushTextPrimary}"/>
-                <ItemsControl ItemsSource="{Binding Breakpoints}"/>
             </StackPanel>
         </Border>
     </StackPanel>

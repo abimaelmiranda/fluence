@@ -43,4 +43,7 @@
   <data name="Debug.Exception.Title" xml:space="preserve"><value>Exceção</value></data>
   <data name="Debug.Exception.Message" xml:space="preserve"><value>Ocorreu uma exceção.</value></data>
   <data name="Debug.Log.Exception" xml:space="preserve"><value>[debug] Exceção: {0} - {1}</value></data>
+  <data name="Debug.Variables.Empty" xml:space="preserve"><value>Nenhuma variável no escopo</value></data>
+  <data name="Debug.Watch.ExpressionPlaceholder" xml:space="preserve"><value>Adicionar expressão...</value></data>
+  <data name="Debug.Watch.AddExpression" xml:space="preserve"><value>Adicionar expressão ao watch</value></data>
 </root>

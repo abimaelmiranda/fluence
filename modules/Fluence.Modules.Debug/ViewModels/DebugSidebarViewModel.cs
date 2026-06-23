@@ -49,11 +49,7 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         RefreshState();
     }
 
-    public ObservableCollection<string> Variables { get; } = [];
-
     public ObservableCollection<string> StackFrames { get; } = [];
-
-    public ObservableCollection<string> Breakpoints { get; } = [];
 
     public void Update(DebugSession session)
     {
@@ -123,31 +119,12 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         CanControlExecution = snapshot.IsStopped && snapshot.ActiveThreadId is not null;
         CanRestartSession = snapshot.IsActive;
 
-        Replace(Variables, snapshot.Variables.Select(FormatVariable).ToArray());
-
         Replace(StackFrames, snapshot.StackFrames.Select(FormatStackFrame).ToArray());
-        Replace(Breakpoints, snapshot.Breakpoints.Select(FormatBreakpoint).ToArray());
-    }
-
-    private static string FormatVariable(DebugVariable variable)
-    {
-        var type = string.IsNullOrWhiteSpace(variable.Type) ? string.Empty : $" ({variable.Type})";
-        return $"{variable.Name} = {variable.Value}{type}";
     }
 
     private static string FormatStackFrame(DebugStackFrame frame)
     {
         return $"{frame.Name}:{frame.Line}";
-    }
-
-    private string FormatBreakpoint(DebugBreakpoint breakpoint)
-    {
-        var status = breakpoint.IsVerified
-            ? _loc.Get("Debug.Breakpoint.Verified")
-            : string.IsNullOrWhiteSpace(breakpoint.Message)
-                ? _loc.Get("Debug.Breakpoint.Pending")
-                : breakpoint.Message;
-        return $"{Path.GetFileName(breakpoint.FilePath)}:{breakpoint.Line} - {status}";
     }
 
     private static void Replace<T>(ObservableCollection<T> collection, T[] values)

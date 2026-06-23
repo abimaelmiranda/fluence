@@ -54,6 +54,9 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
     public void Register(IServiceCollection services)
     {
         services.AddSingleton<DebugSidebarViewModel>();
+        services.AddSingleton<DebugVariablesTabViewModel>();
+        services.AddSingleton<DebugWatchTabViewModel>();
+        services.AddSingleton<DebugConsoleViewModel>();
         services.AddSingleton<IDebugStateService, DebugStateService>();
         services.AddSingleton<DebugService>();
         services.AddSingleton<IDebugSessionManager, DebugSessionManager>();
