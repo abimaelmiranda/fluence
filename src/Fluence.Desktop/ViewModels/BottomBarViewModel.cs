@@ -14,11 +14,11 @@ public sealed partial class BottomBarViewModel : ViewModelBase
     [ObservableProperty]
     private string _activeTabId = BottomBarTabIds.Terminal;
 
-    public BottomBarViewModel(IOutputChannelService channels, ProblemsViewModel problems)
+    public BottomBarViewModel(IOutputChannelService channels, IOutputChannelRegistry registry, ProblemsViewModel problems)
     {
-        Output = new OutputChannelViewModel(channels, OutputChannelIds.Output);
-        Debug = new OutputChannelViewModel(channels, OutputChannelIds.Debug);
-        Run = new OutputChannelViewModel(channels, OutputChannelIds.Run);
+        Output = new OutputChannelViewModel(channels, registry);
+        Debug = new OutputChannelViewModel(channels, registry, OutputChannelIds.Debug);
+        Run = new OutputChannelViewModel(channels, registry, OutputChannelIds.Run);
         Problems = problems;
 
         Tabs =

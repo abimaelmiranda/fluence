@@ -424,21 +424,36 @@
                         IsVisible="{Binding IsBottomBarExpanded}">
                     <Grid>
                         <Grid IsVisible="{Binding BottomBar.IsOutputActive}">
-                            <Grid RowDefinitions="30,*">
+                            <Grid RowDefinitions="Auto,*">
                                 <Border Grid.Row="0"
                                         Background="{StaticResource FluenceBrushSurface}"
                                         BorderBrush="{StaticResource FluenceBrushBorder}"
-                                        BorderThickness="0,0,0,1">
-                                    <Button Classes="ideIcon bottomBarClear"
-                                            Command="{Binding BottomBar.Output.ClearCommand}"
-                                            HorizontalAlignment="Right"
-                                            Height="30"
-                                            ToolTip.Tip="{Binding [Desktop.Toolbar.ClearOutput], Source={x:Static loc:Locale.Current}}">
-                                        <materialIcons:MaterialIcon Width="18"
-                                                                    Height="18"
-                                                                    Kind="Delete"
-                                                                    Foreground="{StaticResource FluenceBrushTextSecondary}"/>
-                                    </Button>
+                                        BorderThickness="0,0,0,1"
+                                        Padding="8,5">
+                                    <Grid ColumnDefinitions="Auto,6,Auto,*,Auto">
+                                        <ComboBox Grid.Column="0"
+                                                  ItemsSource="{Binding BottomBar.Output.AvailableChannels}"
+                                                  SelectedItem="{Binding BottomBar.Output.SelectedChannel}"
+                                                  DisplayMemberBinding="{Binding DisplayName}"
+                                                  IsVisible="{Binding BottomBar.Output.IsChannelSelectorVisible}"
+                                                  MinWidth="160"
+                                                  FontSize="12"/>
+                                        <ComboBox Grid.Column="2"
+                                                  ItemsSource="{x:Static vm:OutputChannelViewModel.AvailableLogLevels}"
+                                                  SelectedItem="{Binding BottomBar.Output.SelectedLogLevel}"
+                                                  MinWidth="110"
+                                                  FontSize="12"/>
+                                        <Button Grid.Column="4"
+                                                Classes="ideIcon bottomBarClear"
+                                                Command="{Binding BottomBar.Output.ClearCommand}"
+                                                HorizontalAlignment="Right"
+                                                ToolTip.Tip="{Binding [Desktop.Toolbar.ClearOutput], Source={x:Static loc:Locale.Current}}">
+                                            <materialIcons:MaterialIcon Width="18"
+                                                                        Height="18"
+                                                                        Kind="Delete"
+                                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                        </Button>
+                                    </Grid>
                                 </Border>
                                 <ScrollViewer Grid.Row="1"
                                               VerticalScrollBarVisibility="Auto"
