@@ -121,17 +121,13 @@ public partial class EditorView : UserControl
 
     // ── Hover state ─────────────────────────────────────────────────────────
     private readonly object  _hoverGate = new();
-    private readonly object  _lspHoverGate = new();
     private readonly object  _popupCloseGate = new();
     private Timer?           _hoverTimer;
-    private Timer?           _lspHoverTimer;
     private Timer?           _popupCloseTimer;
     private HoverRequest?    _pendingHoverRequest;
-    private LspHoverRequest? _pendingLspHoverRequest;
     private int              _hoverRequestVersion;
     private int              _lspHoverRequestVersion;
     private bool             _hoverRequestInFlight;
-    private bool             _lspHoverRequestInFlight;
 
     // ── Signature help state ────────────────────────────────────────────────
     private int _signatureHelpVersion;

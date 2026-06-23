@@ -35,7 +35,10 @@ internal sealed class DapClient : IDebugAdapterClient
     private Stream? _stdout;
     private int _seq;
     private int _threadId;
+    private Task? _readLoopTask;
+    private Task? _errorLoopTask;
     private static readonly TimeSpan DisposeTimeout = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan LoopDrainTimeout = TimeSpan.FromMilliseconds(500);
 
     public DapClient(string adapterPath, string adapterId, string logPath, IProcessSpawner spawner)
     {
@@ -83,7 +86,7 @@ internal sealed class DapClient : IDebugAdapterClient
 
         _stdin = _process.StandardInput;
         _stdout = _process.StandardOutput.BaseStream;
-        _ = Task.Run(async () =>
+        _readLoopTask = Task.Run(async () =>
         {
             try { await ReadLoopAsync(_disposeCts.Token).ConfigureAwait(false); }
             catch (Exception) { }
@@ -94,7 +97,7 @@ internal sealed class DapClient : IDebugAdapterClient
                 CancelAllPendingRequests();
             }
         });
-        _ = Task.Run(async () =>
+        _errorLoopTask = Task.Run(async () =>
         {
             try { await ReadErrorLoopAsync(_process, _disposeCts.Token).ConfigureAwait(false); }
             catch (OperationCanceledException) { }
@@ -523,7 +526,7 @@ internal sealed class DapClient : IDebugAdapterClient
         string? line;
         var streamReader = process.StandardError;
         while (!cancellationToken.IsCancellationRequested
-            && (line = await streamReader.ReadLineAsync(cancellationToken)) is not null)
+            && (line = await streamReader.ReadLineAsync(cancellationToken).ConfigureAwait(false)) is not null)
         {
             await LogAsync("[stderr] " + line, CancellationToken.None).ConfigureAwait(false);
             OutputReceived?.Invoke(this, new DebugAdapterOutputEvent($"[{_adapterId}] " + line + Environment.NewLine, true));
@@ -621,6 +624,14 @@ internal sealed class DapClient : IDebugAdapterClient
             {
             }
         }
+        try
+        {
+            var loopDrain = Task.WhenAll(
+                _readLoopTask ?? Task.CompletedTask,
+                _errorLoopTask ?? Task.CompletedTask);
+            await loopDrain.WaitAsync(LoopDrainTimeout).ConfigureAwait(false);
+        }
+        catch { }
         if (_trackedProcess is not null)
             await _trackedProcess.DisposeAsync().ConfigureAwait(false);
         _trackedProcess = null;

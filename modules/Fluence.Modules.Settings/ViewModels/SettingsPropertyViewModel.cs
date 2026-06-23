@@ -103,7 +103,7 @@ public sealed partial class SettingsPropertyViewModel : ObservableObject
 
     public ObservableCollection<LanguageOptionViewModel> LanguageOptions { get; }
 
-    public ObservableCollection<SettingsStringArrayOption> KnownStringArrayOptions => RoslynRuleCatalog.KnownRules;
+    public static ObservableCollection<SettingsStringArrayOption> KnownStringArrayOptions => RoslynRuleCatalog.KnownRules;
 
     public ObservableCollection<SettingsKnownStringArrayOptionViewModel> KnownStringArrayRuleItems { get; } = [];
 

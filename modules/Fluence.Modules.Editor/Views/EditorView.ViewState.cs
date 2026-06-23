@@ -86,9 +86,7 @@ public partial class EditorView
         _activeCompletions = null;
         _completionTriggerOffset = -1;
         _pendingHoverRequest = null;
-        _pendingLspHoverRequest = null;
         _hoverRequestInFlight = false;
-        _lspHoverRequestInFlight = false;
         _pendingSemanticTokens = null;
         _pendingSemanticTokensPath = null;
         _pendingSemanticTokensVersion = 0;

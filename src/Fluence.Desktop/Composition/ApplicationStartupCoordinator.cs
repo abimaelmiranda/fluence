@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Languages;
+using Fluence.Infrastructure;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Workspace;
@@ -37,6 +38,8 @@ internal sealed class ApplicationStartupCoordinator(
         await InitializeModulesAsync(cancellationToken);
         RegisterActiveModuleContributions();
         shellRegions.Refresh();
+
+        services.GetRequiredService<MemoryMonitorService>().Start();
 
         lock (_lock)
         {

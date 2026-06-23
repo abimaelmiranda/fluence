@@ -45,6 +45,7 @@ public sealed class Entrypoint : IModule
             registry.Register(DebugSettingsJsonContext.Default.DebugSettings);
             registry.Register(FluenceCoreSettingsJsonContext.Default.ShellSettings);
             registry.Register(FluenceCoreSettingsJsonContext.Default.ProblemsSettings);
+            registry.Register(FluenceCoreSettingsJsonContext.Default.DiagnosticsSettings);
             return registry;
         });
 

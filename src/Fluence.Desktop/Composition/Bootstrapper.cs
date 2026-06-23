@@ -120,6 +120,7 @@ internal static class Bootstrapper
             registry.Register(new(OutputChannelIds.Output, "Output"));
             registry.Register(new(OutputChannelIds.Debug, "Debug"));
             registry.Register(new(OutputChannelIds.Run, "Run"));
+            registry.Register(new(OutputChannelIds.Memory, "Memory"));
             return registry;
         });
         services.AddSingleton<IProblemService, ProblemService>();
@@ -187,6 +188,7 @@ internal static class Bootstrapper
         services.AddSingleton<IRecentProjectsService, RecentProjectsService>();
         services.AddSingleton<IWorkspaceSnapshotService, WorkspaceSnapshotService>();
         services.AddSingleton<WorkspaceSnapshotCoordinator>();
+        services.AddSingleton<MemoryMonitorService>();
         services.AddSingleton<ApplicationStartupCoordinator>();
         services.AddSingleton<IStartupCoordinator>(provider =>
             provider.GetRequiredService<ApplicationStartupCoordinator>());

@@ -208,7 +208,7 @@ public sealed class ThemeLoader : IThemeLoader
         return Path.HasExtension(candidate) ? candidate : candidate + ".json";
     }
 
-    private IdeTheme ParseTheme(string json, string fallbackName)
+    private static IdeTheme ParseTheme(string json, string fallbackName)
     {
         var root = JsonNode.Parse(json) as JsonObject
             ?? throw new InvalidOperationException("Theme root must be a JSON object.");

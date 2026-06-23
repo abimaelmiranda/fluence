@@ -240,7 +240,7 @@ public sealed class DebuggerProvisioningService(IProcessHost processHost, IFluen
         return candidates.FirstOrDefault(File.Exists);
     }
 
-    private async Task<string?> DownloadCmakeAsync(string tempDir, Action<string> onOutput, CancellationToken cancellationToken)
+    private static async Task<string?> DownloadCmakeAsync(string tempDir, Action<string> onOutput, CancellationToken cancellationToken)
     {
         using var response = await Http.GetAsync(CmakeApiUrl, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();

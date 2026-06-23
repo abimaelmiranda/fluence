@@ -1,0 +1,9 @@
+root = true
+
+# Suppress CA1822 for interface-implementing properties in module Entrypoint files
+[modules/**/Entrypoint.cs]
+dotnet_diagnostic.CA1822.severity = none
+
+# Enforce ConfigureAwait(false) in infrastructure layer
+[src/Fluence.Infrastructure/**/*.cs]
+dotnet_diagnostic.CA2007.severity = warning

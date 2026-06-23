@@ -132,7 +132,7 @@ public sealed partial class Entrypoint
         }
     }
 
-    private async Task SendPendingDidChangeAsync(ILanguageServerService lsp, PendingDidChange pending, CancellationToken ct)
+    private static async Task SendPendingDidChangeAsync(ILanguageServerService lsp, PendingDidChange pending, CancellationToken ct)
     {
         try
         {

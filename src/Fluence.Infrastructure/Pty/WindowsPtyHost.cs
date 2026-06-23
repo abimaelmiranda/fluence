@@ -75,7 +75,7 @@ internal sealed class WindowsPtySession : IPtySession
 
     private async System.Threading.Tasks.Task WatchExitAsync()
     {
-        await _process.WaitForExitAsync();
+        await _process.WaitForExitAsync().ConfigureAwait(false);
         HasExited = true;
         Exited?.Invoke(this, EventArgs.Empty);
     }

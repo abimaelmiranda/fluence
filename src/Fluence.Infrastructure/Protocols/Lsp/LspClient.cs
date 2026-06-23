@@ -24,7 +24,10 @@ public sealed class LspClient : IAsyncDisposable
     private StreamWriter? _stdin;
     private Stream? _stdout;
     private int _nextId;
+    private Task? _stderrLoopTask;
+    private Task? _readLoopTask;
     private static readonly TimeSpan DisposeTimeout = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan LoopDrainTimeout = TimeSpan.FromMilliseconds(500);
 
     public event Action<string, JsonNode?, int?>? NotificationReceived;
     public event Action? Disconnected;
@@ -72,7 +75,7 @@ public sealed class LspClient : IAsyncDisposable
         _stdin = _process.StandardInput;
         _stdout = _process.StandardOutput.BaseStream;
 
-        _ = Task.Run(async () =>
+        _stderrLoopTask = Task.Run(async () =>
         {
             try
             {
@@ -83,7 +86,7 @@ public sealed class LspClient : IAsyncDisposable
             catch { }
         });
 
-        _ = Task.Run(async () =>
+        _readLoopTask = Task.Run(async () =>
         {
             try { await ReadLoopAsync(_disposeCts.Token).ConfigureAwait(false); }
             catch (Exception) { }
@@ -293,6 +296,14 @@ public sealed class LspClient : IAsyncDisposable
             {
             }
         }
+        try
+        {
+            var loopDrain = Task.WhenAll(
+                _readLoopTask ?? Task.CompletedTask,
+                _stderrLoopTask ?? Task.CompletedTask);
+            await loopDrain.WaitAsync(LoopDrainTimeout).ConfigureAwait(false);
+        }
+        catch { }
         if (_trackedProcess is not null)
             await _trackedProcess.DisposeAsync().ConfigureAwait(false);
         _trackedProcess = null;

@@ -39,7 +39,7 @@ public sealed class ProcessSpawner(IFluenceStorageService storage) : IProcessSpa
 
         var tracked = new TrackedProcess(this, process, owner);
         _processes[process.Id] = tracked;
-        process.Exited += (_, _) => _ = RemoveAsync(process.Id, persist: true);
+        process.Exited += (_, _) => ObserveException(RemoveAsync(process.Id, persist: true), $"RemoveAsync({process.Id})");
         await PersistSessionAsync(cancellationToken).ConfigureAwait(false);
         return tracked;
     }
@@ -199,7 +199,7 @@ public sealed class ProcessSpawner(IFluenceStorageService storage) : IProcessSpa
 
         public void Untrack()
         {
-            _ = owner.RemoveAsync(Id, persist: true);
+            ObserveException(owner.RemoveAsync(Id, persist: true), $"Untrack({Id})");
         }
 
         public async ValueTask DisposeAsync()
@@ -256,6 +256,13 @@ public sealed class ProcessSpawner(IFluenceStorageService storage) : IProcessSpa
         {
             return false;
         }
+    }
+
+    private static void ObserveException(Task task, string context)
+    {
+        task.ContinueWith(
+            t => Debug.WriteLine($"[ProcessSpawner] {context}: {t.Exception?.GetBaseException().Message}"),
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
     }
 
     private static DateTimeOffset? ReadStartTimeUtc(Process process)

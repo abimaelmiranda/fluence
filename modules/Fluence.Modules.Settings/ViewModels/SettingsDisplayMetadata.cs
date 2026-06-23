@@ -15,6 +15,7 @@ internal static class SettingsDisplayMetadata
         ["problems"] = "Problems",
         ["debug"] = "Debug",
         ["sourceControl"] = "Source Control",
+        ["diagnostics"] = "Diagnostics",
     };
 
     private static readonly Dictionary<string, string> PropertyNames = new(StringComparer.OrdinalIgnoreCase)
@@ -47,6 +48,8 @@ internal static class SettingsDisplayMetadata
         ["problems.MaxVisibleProblems"] = "Problems: Max Visible Problems",
         ["debug.ExceptionBreakMode"] = "Debug: Exception Break Mode",
         ["sourceControl.RefreshIntervalSeconds"] = "Source Control: Refresh Interval",
+        ["diagnostics.EnableMemoryMonitor"] = "Diagnostics: Enable Memory Monitor",
+        ["diagnostics.MemoryMonitorIntervalSeconds"] = "Diagnostics: Memory Monitor Interval",
     };
 
     private static readonly Dictionary<string, string> PropertyDescriptions = new(StringComparer.OrdinalIgnoreCase)
@@ -79,6 +82,8 @@ internal static class SettingsDisplayMetadata
         ["problems.MaxVisibleProblems"] = "Limits the number of problems shown in the Problems panel.",
         ["debug.ExceptionBreakMode"] = "Controls when the debugger stops on exceptions.",
         ["sourceControl.RefreshIntervalSeconds"] = "Controls how often Source Control refreshes Git status while a workspace is open. Minimum: 5 seconds.",
+        ["diagnostics.EnableMemoryMonitor"] = "Logs process working set and GC heap to the Output channel at the configured interval. Useful for diagnosing memory growth.",
+        ["diagnostics.MemoryMonitorIntervalSeconds"] = "Controls how often memory usage is logged, in seconds. Minimum: 5 seconds.",
     };
 
     public static string GetSectionDisplayName(string sectionName)
@@ -117,6 +122,7 @@ internal static class SettingsDisplayMetadata
             "problems" => 4,
             "debug" => 5,
             "sourceControl" => 6,
+            "diagnostics" => 7,
             _ => 100,
         };
 

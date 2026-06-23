@@ -141,6 +141,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
         lock (_loadLock)
         {
             _loadCts?.Cancel();
+            _loadCts?.Dispose();
             _loadCts = new CancellationTokenSource();
             cancellationToken = _loadCts.Token;
         }
@@ -505,7 +506,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
         }
     }
 
-    private string? GetTargetDirectory(SolutionTreeNode node)
+    private static string? GetTargetDirectory(SolutionTreeNode node)
     {
         return node.Kind switch
         {
@@ -711,6 +712,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
         foreach (var cts in _projectLoadCtsByPath.Values)
         {
             cts.Cancel();
+            cts.Dispose();
         }
 
         _projectLoadCtsByPath.Clear();

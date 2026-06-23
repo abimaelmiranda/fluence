@@ -560,7 +560,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _commands.ExecuteAsync(CommandIds.ToggleXamlPreview, cancellationToken);
 
     [RelayCommand]
-    private void OpenAbout()
+    private static void OpenAbout()
     {
         var dialog = new Views.AboutDialog();
         var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
@@ -571,7 +571,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void TriggerCrash()
+    private static void TriggerCrash()
     {
         Dispatcher.UIThread.Post(() =>
         {

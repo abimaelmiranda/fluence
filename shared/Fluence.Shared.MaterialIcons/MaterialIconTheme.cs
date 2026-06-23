@@ -67,7 +67,7 @@ internal sealed class MaterialIconTheme
         return null;
     }
 
-    private IEnumerable<string> GetExtensionCandidates(string fileName)
+    private static IEnumerable<string> GetExtensionCandidates(string fileName)
     {
         var normalized = fileName.Trim().ToLower(CultureInfo.InvariantCulture);
         for (var index = normalized.IndexOf('.'); index >= 0 && index < normalized.Length - 1; index = normalized.IndexOf('.', index + 1))
