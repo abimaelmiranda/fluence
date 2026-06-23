@@ -14,7 +14,7 @@ public interface IOutputChannelService
     Task WriteAsync(
         string channelId,
         string text,
-        OutputChannelEntryKind kind = OutputChannelEntryKind.Information,
+        OutputLogLevel kind = OutputLogLevel.Information,
         CancellationToken cancellationToken = default);
 
     void Clear(string channelId);
@@ -27,11 +27,13 @@ public sealed class OutputChannelChangedEventArgs(string channelId) : EventArgs
 
 public sealed record OutputChannelEntry(
     string Text,
-    OutputChannelEntryKind Kind,
+    OutputLogLevel Kind,
     DateTimeOffset Timestamp);
 
-public enum OutputChannelEntryKind
+public enum OutputLogLevel
 {
+    All,
+    Debug,
     Information,
     Warning,
     Error,
