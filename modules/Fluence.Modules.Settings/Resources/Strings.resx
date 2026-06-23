@@ -91,6 +91,12 @@
   <data name="Settings.Section.debug" xml:space="preserve">
     <value>Debug</value>
   </data>
+  <data name="Settings.Section.sourceControl" xml:space="preserve">
+    <value>Source Control</value>
+  </data>
+  <data name="Settings.Section.diagnostics" xml:space="preserve">
+    <value>Diagnostics</value>
+  </data>
 
   <!-- Property names -->
   <data name="Settings.Property.global.FontFamily" xml:space="preserve">
@@ -173,6 +179,15 @@
   </data>
   <data name="Settings.Property.debug.ExceptionBreakMode" xml:space="preserve">
     <value>Debug: Exception Break Mode</value>
+  </data>
+  <data name="Settings.Property.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
+    <value>Source Control: Refresh Interval</value>
+  </data>
+  <data name="Settings.Property.diagnostics.EnableMemoryMonitor" xml:space="preserve">
+    <value>Diagnostics: Enable Memory Monitor</value>
+  </data>
+  <data name="Settings.Property.diagnostics.MemoryMonitorIntervalSeconds" xml:space="preserve">
+    <value>Diagnostics: Memory Monitor Interval</value>
   </data>
 
   <!-- Property descriptions -->
@@ -257,14 +272,14 @@
   <data name="Settings.Description.debug.ExceptionBreakMode" xml:space="preserve">
     <value>Controls when the debugger stops on exceptions.</value>
   </data>
-  <data name="Settings.Section.sourceControl" xml:space="preserve">
-    <value>Source Control</value>
-  </data>
-  <data name="Settings.Property.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
-    <value>Source Control: Refresh Interval</value>
-  </data>
   <data name="Settings.Description.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
     <value>Controls how often Source Control refreshes Git status while a workspace is open. Minimum: 5 seconds.</value>
+  </data>
+  <data name="Settings.Description.diagnostics.EnableMemoryMonitor" xml:space="preserve">
+    <value>Logs process working set and GC heap to the Output channel at the configured interval. Useful for diagnosing memory growth.</value>
+  </data>
+  <data name="Settings.Description.diagnostics.MemoryMonitorIntervalSeconds" xml:space="preserve">
+    <value>Controls how often memory usage is logged, in seconds. Minimum: 5 seconds.</value>
   </data>
 
   <!-- Toolbar actions -->

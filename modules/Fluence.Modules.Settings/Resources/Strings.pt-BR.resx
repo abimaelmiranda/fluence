@@ -86,6 +86,12 @@
   <data name="Settings.Section.debug" xml:space="preserve">
     <value>Depuração</value>
   </data>
+  <data name="Settings.Section.sourceControl" xml:space="preserve">
+    <value>Controle de versão</value>
+  </data>
+  <data name="Settings.Section.diagnostics" xml:space="preserve">
+    <value>Diagnósticos</value>
+  </data>
   <data name="Settings.Property.global.FontFamily" xml:space="preserve">
     <value>Geral: Família da fonte</value>
   </data>
@@ -166,6 +172,15 @@
   </data>
   <data name="Settings.Property.debug.ExceptionBreakMode" xml:space="preserve">
     <value>Depuração: Modo de pausa em exceções</value>
+  </data>
+  <data name="Settings.Property.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
+    <value>Controle de versão: intervalo de atualização</value>
+  </data>
+  <data name="Settings.Property.diagnostics.EnableMemoryMonitor" xml:space="preserve">
+    <value>Diagnósticos: Habilitar monitor de memória</value>
+  </data>
+  <data name="Settings.Property.diagnostics.MemoryMonitorIntervalSeconds" xml:space="preserve">
+    <value>Diagnósticos: Intervalo do monitor de memória</value>
   </data>
   <data name="Settings.Description.global.FontFamily" xml:space="preserve">
     <value>Controla a família de fonte padrão da interface da IDE.</value>
@@ -248,14 +263,14 @@
   <data name="Settings.Description.debug.ExceptionBreakMode" xml:space="preserve">
     <value>Controla quando o depurador para em exceções.</value>
   </data>
-  <data name="Settings.Section.sourceControl" xml:space="preserve">
-    <value>Controle de versão</value>
-  </data>
-  <data name="Settings.Property.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
-    <value>Controle de versão: intervalo de atualização</value>
-  </data>
   <data name="Settings.Description.sourceControl.RefreshIntervalSeconds" xml:space="preserve">
     <value>Controla com que frequência o Controle de versão atualiza o status do Git enquanto um workspace está aberto. Mínimo: 5 segundos.</value>
+  </data>
+  <data name="Settings.Description.diagnostics.EnableMemoryMonitor" xml:space="preserve">
+    <value>Registra o working set do processo e o heap do GC no canal de saída no intervalo configurado. Útil para diagnosticar crescimento de memória.</value>
+  </data>
+  <data name="Settings.Description.diagnostics.MemoryMonitorIntervalSeconds" xml:space="preserve">
+    <value>Controla com que frequência o uso de memória é registrado, em segundos. Mínimo: 5 segundos.</value>
   </data>
   <data name="Settings.Action.RestoreDefaults" xml:space="preserve">
     <value>Restaurar padrões</value>
