@@ -20,6 +20,7 @@ using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Problems;
 using Fluence.Core.Abstractions.Storage;
 using Fluence.Core.Abstractions.Settings;
@@ -86,8 +87,11 @@ internal static class Bootstrapper
         viewRegistry.Register<WelcomeViewModel, WelcomeView>();
         services.AddSingleton<IViewRegistry>(viewRegistry);
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
-        services.AddSingleton<ITaskScheduler, FluentTaskScheduler>();
-        services.AddSingleton<IShellEventBus>(provider => new ShellEventBus(provider.GetRequiredService<IUiDispatcher>()));
+        services.AddSingleton<ITaskScheduler>(provider =>
+            new FluentTaskScheduler(provider.GetRequiredService<IOutputChannelService>()));
+        services.AddSingleton<IShellEventBus>(provider => new ShellEventBus(
+            provider.GetRequiredService<IUiDispatcher>(),
+            provider.GetRequiredService<IOutputChannelService>()));
         services.AddSingleton<IShellRequestBus, ShellRequestBus>();
         services.AddSingleton<ShellRegionHost>();
         services.AddSingleton<IShellRegionHost>(provider => provider.GetRequiredService<ShellRegionHost>());
@@ -110,6 +114,14 @@ internal static class Bootstrapper
         services.AddSingleton<AvaloniaUserNotificationService>();
         services.AddSingleton<IUserNotificationService>(provider => provider.GetRequiredService<AvaloniaUserNotificationService>());
         services.AddSingleton<IOutputChannelService, OutputChannelService>();
+        services.AddSingleton<IOutputChannelRegistry>(_ =>
+        {
+            var registry = new OutputChannelRegistry();
+            registry.Register(new(OutputChannelIds.Output, "Output"));
+            registry.Register(new(OutputChannelIds.Debug, "Debug"));
+            registry.Register(new(OutputChannelIds.Run, "Run"));
+            return registry;
+        });
         services.AddSingleton<IProblemService, ProblemService>();
         services.AddSingleton<IExclusiveJobCoordinator, ExclusiveJobCoordinator>();
         services.AddSingleton<IFileClipboardService, FileClipboardService>();

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Diagnostics;  // Stopwatch
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +20,8 @@ internal sealed class ApplicationStartupCoordinator(
     IReadOnlyList<IModule> modules,
     IShellRegionHost shellRegions,
     IProcessSpawner processSpawner,
-    IOutputChannelService output) : IStartupCoordinator
+    IOutputChannelService output,
+    IOutputChannelRegistry outputRegistry) : IStartupCoordinator
 {
     private readonly Lock _lock = new();
     private readonly List<IModule> _pendingActivation = [];
@@ -56,10 +57,9 @@ internal sealed class ApplicationStartupCoordinator(
             await output.WriteAsync(
                     OutputChannelIds.Output,
                     $"[startup] Previous-session process cleanup failed: {ex.Message}{Environment.NewLine}",
-                    OutputChannelEntryKind.Warning,
+                    OutputLogLevel.Warning,
                     CancellationToken.None)
                 .ConfigureAwait(false);
-            Debug.WriteLine($"Previous-session process cleanup failed: {ex}");
         }
     }
 
@@ -69,13 +69,20 @@ internal sealed class ApplicationStartupCoordinator(
         lock (_lock)
             activeIds = [.. _activatedModuleIds];
 
-        var panels = modules
+        var activeModules = modules
             .Where(m => activeIds.Contains(m.Id))
             .OrderBy(static m => m.StartupOrder)
+            .ToArray();
+
+        var panels = activeModules
             .SelectMany(static m => m.GetContributions().Panels)
             .ToArray();
 
         shellRegions.RegisterPanels(panels);
+
+        foreach (var module in activeModules)
+            if (module.GetContributions().OutputChannel is { } ch)
+                outputRegistry.Register(ch);
     }
 
     private async Task InitializeModulesAsync(CancellationToken cancellationToken)
@@ -104,11 +111,24 @@ internal sealed class ApplicationStartupCoordinator(
 
     private async Task TryInitializeModuleAsync(IModule module, IModuleHost host, CancellationToken cancellationToken)
     {
+        await output.WriteAsync(
+            OutputChannelIds.Output,
+            $"[{module.DisplayName}] Initializing...{Environment.NewLine}",
+            OutputLogLevel.Debug,
+            CancellationToken.None);
+
+        var sw = Stopwatch.StartNew();
         try
         {
             await module.InitializeAsync(host, cancellationToken);
+            sw.Stop();
             lock (_lock)
                 _activatedModuleIds.Add(module.Id);
+            await output.WriteAsync(
+                OutputChannelIds.Output,
+                $"[{module.DisplayName}] Ready ({sw.Elapsed.TotalMilliseconds:F1}ms){Environment.NewLine}",
+                OutputLogLevel.Debug,
+                CancellationToken.None);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -121,9 +141,8 @@ internal sealed class ApplicationStartupCoordinator(
             await output.WriteAsync(
                 OutputChannelIds.Output,
                 $"[startup] Module initialization failed. Id='{module.Id}', DisplayName='{module.DisplayName}', StartupOrder={module.StartupOrder}: {ex.Message}{Environment.NewLine}",
-                OutputChannelEntryKind.Error,
+                OutputLogLevel.Error,
                 CancellationToken.None);
-            Debug.WriteLine($"Module {module.Id} failed to initialize: {ex}");
         }
     }
 

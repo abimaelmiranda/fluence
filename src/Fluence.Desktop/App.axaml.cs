@@ -10,7 +10,9 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Fluence.Core.Abstractions.Localization;
+using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Settings;
+using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Settings;
 using Fluence.Desktop.Composition;
 using Fluence.Desktop.Markup;
@@ -247,7 +249,12 @@ public partial class App : Avalonia.Application
         if (IsExpectedShutdownCancellation(e.Exception))
             return;
 
-        Dispatcher.UIThread.Post(() => ShowFatalException(e.Exception));
+        var output = _serviceProvider?.GetService<IOutputChannelService>();
+        if (output is not null)
+        {
+            var message = $"[unobserved] {e.Exception.GetBaseException().Message}{Environment.NewLine}";
+            _ = output.WriteAsync(OutputChannelIds.Output, message, OutputLogLevel.Error);
+        }
     }
 
     private bool IsExpectedShutdownCancellation(Exception exception)
