@@ -397,9 +397,10 @@ public partial class EditorView
         if (document is null) return;
 
         var caretOffset = Editor.TextArea.Caret.Offset;
-        var deleteStart = FindPreviousWordStart(document, caretOffset);
+        var deleteStart = TextUtilities.GetNextCaretPosition(
+            document, caretOffset, LogicalDirection.Backward, CaretPositioningMode.WordStartOrSymbol);
 
-        if (deleteStart >= caretOffset) return;
+        if (deleteStart < 0 || deleteStart >= caretOffset) return;
 
         document.Remove(deleteStart, caretOffset - deleteStart);
         SetCaretOffset(deleteStart);
@@ -471,9 +472,12 @@ public partial class EditorView
         if (document is null) return;
 
         var caretOffset = Editor.TextArea.Caret.Offset;
-        SetCaretOffset(toStart
-            ? FindPreviousWordStart(document, caretOffset)
-            : FindNextWordEnd(document, caretOffset));
+        var direction   = toStart ? LogicalDirection.Backward : LogicalDirection.Forward;
+        var newOffset   = TextUtilities.GetNextCaretPosition(
+            document, caretOffset, direction, CaretPositioningMode.WordStartOrSymbol);
+
+        if (newOffset >= 0)
+            SetCaretOffset(newOffset);
     }
 
     private static string GetLineDelimiter(TextDocument document, int lineEndOffset)
@@ -502,39 +506,7 @@ public partial class EditorView
         Editor.TextArea.Caret.BringCaretToView();
     }
 
-    private static int FindPreviousWordStart(TextDocument document, int offset)
-    {
-        var text  = document.Text;
-        var index = Math.Clamp(offset, 0, text.Length);
 
-        while (index > 0 && char.IsWhiteSpace(text[index - 1]))
-            index--;
-
-        if (index > 0)
-        {
-            var isWord = IsWordCharacter(text[index - 1]);
-            while (index > 0 && IsWordCharacter(text[index - 1]) == isWord)
-                index--;
-        }
-
-        return index;
-    }
-
-    private static int FindNextWordEnd(TextDocument document, int offset)
-    {
-        var text  = document.Text;
-        var index = Math.Clamp(offset, 0, text.Length);
-
-        while (index < text.Length && char.IsWhiteSpace(text[index]))
-            index++;
-
-        while (index < text.Length && IsWordCharacter(text[index]))
-            index++;
-
-        return index;
-    }
-
-    private static bool IsWordCharacter(char ch) => char.IsLetterOrDigit(ch) || ch == '_';
 
     private bool TryHandleSmartEnter(KeyEventArgs e)
     {
