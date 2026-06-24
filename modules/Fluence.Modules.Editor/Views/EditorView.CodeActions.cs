@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +24,14 @@ public partial class EditorView
     private Point           _pendingCodeActionPoint;
     private int             _codeActionVersion;
 
-    private sealed record CodeActionListItem(string Label, LspCodeAction Action);
+    private abstract record CodeActionItem(string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    private sealed record CodeActionListItem(string Label, LspCodeAction Action) : CodeActionItem(Label);
+
+    private sealed record FixAllListItem(string Label, LspCodeAction TemplateAction, LspDiagnostic[] AllDiagnostics) : CodeActionItem(Label);
 
     private void ScheduleCodeActionRequest(LspDiagnostic diagnostic, Point hoverPoint)
     {
@@ -116,7 +124,7 @@ public partial class EditorView
                     return;
 
                 DiagnosticTooltipPopup.IsOpen = false;
-                ShowCodeActionPopup(diagnostic.Message, actions, hoverPoint, placementTarget: EditorSurface);
+                ShowCodeActionPopup(diagnostic.Message, actions, hoverPoint, placementTarget: EditorSurface, diagnostic: diagnostic);
             });
         }
         catch (OperationCanceledException) { }
@@ -165,19 +173,21 @@ public partial class EditorView
                 var title = diagnostic is not null
                     ? FormatDiagnosticTitle(diagnostic)
                     : _viewModel?.Localization.Get("Editor.CodeAction.QuickFix") ?? "Quick Fix";
-                ShowCodeActionPopup(title, actions, GetCaretPopupRect(), placementTarget: Editor.TextArea.TextView);
+                ShowCodeActionPopup(title, actions, GetCaretPopupRect(), placementTarget: Editor.TextArea.TextView, diagnostic: diagnostic);
             });
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[EditorView/QuickFix] {ex.Message}"); }
     }
 
-    private void ShowCodeActionPopup(string title, LspCodeAction[] actions, Point point, Control placementTarget)
+    private void ShowCodeActionPopup(string title, LspCodeAction[] actions, Point point, Control placementTarget,
+        LspDiagnostic? diagnostic = null)
     {
-        ShowCodeActionPopup(title, actions, new Rect(point.X + 12, point.Y + 18, 1, 1), placementTarget);
+        ShowCodeActionPopup(title, actions, new Rect(point.X + 12, point.Y + 18, 1, 1), placementTarget, diagnostic);
     }
 
-    private void ShowCodeActionPopup(string title, LspCodeAction[] actions, Rect placementRect, Control placementTarget)
+    private void ShowCodeActionPopup(string title, LspCodeAction[] actions, Rect placementRect, Control placementTarget,
+        LspDiagnostic? diagnostic = null)
     {
         CodeActionDiagnosticText.Text = title;
 
@@ -193,13 +203,35 @@ public partial class EditorView
             CodeActionSeparator.IsVisible = true;
             CodeActionEmptyText.IsVisible = false;
             CodeActionsListBox.IsVisible = true;
-            CodeActionsListBox.ItemsSource = actions
-                .Select(action => new CodeActionListItem(
+
+            var items = new List<CodeActionItem>(actions.Length + 2);
+            foreach (var action in actions)
+            {
+                items.Add(new CodeActionListItem(
                     action.IsPreferred
                         ? string.Format(_viewModel?.Localization.Get("Editor.CodeAction.FixPrefix") ?? "Fix: {0}", action.Title)
                         : action.Title,
-                    action))
-                .ToArray();
+                    action));
+            }
+
+            if (diagnostic?.Code is { } code)
+            {
+                var allWithCode = _diagnosticRenderer.GetAll()
+                    .Where(d => d.Code == code)
+                    .ToArray();
+                if (allWithCode.Length > 1)
+                {
+                    foreach (var action in actions.Where(a => a.IsPreferred))
+                    {
+                        var fixAllLabel = string.Format(
+                            _viewModel?.Localization.Get("Editor.CodeAction.FixAllPrefix") ?? "Fix All: {0}",
+                            action.Title);
+                        items.Add(new FixAllListItem(fixAllLabel, action, allWithCode));
+                    }
+                }
+            }
+
+            CodeActionsListBox.ItemsSource = items.ToArray();
             CodeActionsListBox.SelectedIndex = 0;
         }
 
@@ -210,12 +242,21 @@ public partial class EditorView
 
     private void ApplySelectedCodeAction()
     {
-        if (CodeActionsListBox.SelectedItem is not CodeActionListItem item)
+        if (CodeActionsListBox.SelectedItem is not CodeActionItem item)
             return;
 
-        System.Diagnostics.Debug.WriteLine($"[CodeAction] Apply: {item.Action.Title} | cmd={item.Action.CommandIdentifier} | edit={item.Action.Edit is not null}");
         CodeActionPopup.IsOpen = false;
-        _ = _viewModel?.ApplyCodeActionAsync(item.Action);
+        switch (item)
+        {
+            case CodeActionListItem single:
+                System.Diagnostics.Debug.WriteLine($"[CodeAction] Apply: {single.Action.Title} | cmd={single.Action.CommandIdentifier} | edit={single.Action.Edit is not null}");
+                _ = _viewModel?.ApplyCodeActionAsync(single.Action);
+                break;
+            case FixAllListItem fixAll:
+                System.Diagnostics.Debug.WriteLine($"[CodeAction] Fix All: {fixAll.TemplateAction.Title} | count={fixAll.AllDiagnostics.Length}");
+                _ = _viewModel?.ApplyFixAllAsync(fixAll.TemplateAction, fixAll.AllDiagnostics);
+                break;
+        }
     }
 
     private void OnCodeActionListBoxDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)

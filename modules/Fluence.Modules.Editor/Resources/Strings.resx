@@ -12,6 +12,7 @@
   <data name="Editor.CodeAction.NoQuickFixes" xml:space="preserve"><value>No quick fixes available</value></data>
   <data name="Editor.CodeAction.QuickFix" xml:space="preserve"><value>Quick Fix</value></data>
   <data name="Editor.CodeAction.FixPrefix" xml:space="preserve"><value>Fix: {0}</value></data>
+  <data name="Editor.CodeAction.FixAllPrefix" xml:space="preserve"><value>Fix All: {0}</value></data>
   <data name="Editor.Format.Feedback.Formatting" xml:space="preserve"><value>Formatting...</value></data>
   <data name="Editor.Format.Feedback.Unavailable" xml:space="preserve"><value>Format unavailable</value></data>
   <data name="Editor.Format.Feedback.Skipped" xml:space="preserve"><value>Format skipped</value></data>

@@ -118,7 +118,7 @@ public partial class EditorView
                     .OrderBy(item => item.SortText is null ? 1 : 0)
                     .ThenBy(item => item.SortText, StringComparer.Ordinal)
                     .ThenBy(item => item.IsPreselected ? 0 : 1)
-                    .Select((item, index) => new LspCompletionData(item, 100000 - index, _semanticColorizer))
+                    .Select((item, index) => new LspCompletionData(item, 100000 - index, _semanticColorizer, _editorSettings.FontFamily))
                     .ToList();
                 var caretOffsetNow = Editor.TextArea.Caret.Offset;
                 var currentPrefix = ExtractCompletionPrefix(Editor.Document, caretOffsetNow);
@@ -231,6 +231,9 @@ public partial class EditorView
         {
             var segment = new AnchorSegment(Editor.Document, Editor.TextArea.Caret.Offset, 0);
             selected.Complete(Editor.TextArea, segment, EventArgs.Empty);
+            // TODO: auto-add missing using directive after completion commit.
+            // OmniSharp does not return additionalTextEdits via completionItem/resolve;
+            // a diagnostic-driven approach was attempted but reverted — needs a better strategy.
         }
     }
 

@@ -74,7 +74,8 @@ internal sealed class CompletionService(ILanguageServerService lsp, LspClientHol
             var sortText = node["sortText"]?.GetValue<string>();
             var isPreselected = node["preselect"]?.GetValue<bool>() == true;
 
-            completions.Add(new LspCompletion(label, insertText, detail, documentation, kind, isSnippet, sortText, isPreselected));
+            completions.Add(new LspCompletion(label, insertText, detail, documentation, kind,
+                isSnippet, sortText, isPreselected));
         }
 
         return completions;

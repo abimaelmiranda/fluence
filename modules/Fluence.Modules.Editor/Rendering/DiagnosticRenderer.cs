@@ -38,6 +38,8 @@ internal sealed class DiagnosticRenderer : IBackgroundRenderer
         _visualLineMap.Clear();
     }
 
+    public IReadOnlyList<LspDiagnostic> GetAll() => _diagnostics;
+
     public LspDiagnostic? FindDiagnosticAt(int line, int character) =>
         _diagnostics.FirstOrDefault(d =>
             d.StartLine == line &&

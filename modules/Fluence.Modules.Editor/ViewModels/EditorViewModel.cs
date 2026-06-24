@@ -241,6 +241,57 @@ public sealed partial class EditorViewModel : ViewModelBase, IDisposable
     public Task SaveViewStateAsync(EditorDocumentViewState viewState, CancellationToken cancellationToken = default) =>
         _viewStateStore.SaveAsync(viewState, cancellationToken);
 
+    public async Task ApplyFixAllAsync(
+        LspCodeAction templateAction,
+        LspDiagnostic[] diagnostics,
+        CancellationToken cancellationToken = default)
+    {
+        if (_codeActionService is null || string.IsNullOrWhiteSpace(ActiveDocumentPath))
+            return;
+
+        var filePath = ActiveDocumentPath;
+        var allEdits = new Dictionary<string, List<LspTextEdit>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var diagnostic in diagnostics)
+        {
+            if (cancellationToken.IsCancellationRequested) return;
+
+            var actions = await _codeActionService.GetCodeActionsAsync(
+                filePath,
+                diagnostic.StartLine, diagnostic.StartCharacter,
+                diagnostic.EndLine, diagnostic.EndCharacter,
+                diagnostic, cancellationToken).ConfigureAwait(false);
+
+            var match = actions.FirstOrDefault(a =>
+                string.Equals(a.Title, templateAction.Title, StringComparison.OrdinalIgnoreCase));
+            if (match is null) continue;
+
+            var resolved = match;
+            if (match.Edit is null && match.CommandIdentifier is null && match.RawJson is not null)
+                resolved = await _codeActionService.ResolveAsync(match, cancellationToken) ?? match;
+            if (resolved.Edit is null) continue;
+
+            foreach (var (uri, edits) in resolved.Edit.Changes)
+            {
+                if (!allEdits.TryGetValue(uri, out var list))
+                    allEdits[uri] = list = [];
+                list.AddRange(edits);
+            }
+        }
+
+        if (cancellationToken.IsCancellationRequested) return;
+
+        foreach (var (uri, edits) in allEdits)
+        {
+            var targetPath = new Uri(uri).LocalPath;
+            var distinct = edits
+                .GroupBy(e => (e.StartLine, e.StartCharacter, e.EndLine, e.EndCharacter, e.NewText))
+                .Select(g => g.First())
+                .ToArray();
+            _events.Publish(new WorkspaceEditRequestedEvent(targetPath, distinct));
+        }
+    }
+
     public async Task ApplyCodeActionAsync(LspCodeAction action, CancellationToken cancellationToken = default)
     {
         System.Diagnostics.Debug.WriteLine($"[EditorVM] ApplyCodeAction: '{action.Title}' | service={_codeActionService is not null} | cmd={action.CommandIdentifier} | edit={action.Edit is not null} | hasRaw={action.RawJson is not null}");

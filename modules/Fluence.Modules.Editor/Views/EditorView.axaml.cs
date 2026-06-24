@@ -208,7 +208,7 @@ public partial class EditorView : UserControl
         CompletionListBox.ItemTemplate = new FuncDataTemplate<LspCompletionData>(
             (data, _) => data is null ? new TextBlock() : (Control)data.Content,
             supportsRecycling: false);
-        CodeActionsListBox.ItemTemplate = new FuncDataTemplate<CodeActionListItem>(
+        CodeActionsListBox.ItemTemplate = new FuncDataTemplate<CodeActionItem>(
             (data, _) => data is null
                 ? new TextBlock()
                 : CreateCodeActionRow(data),
@@ -217,7 +217,7 @@ public partial class EditorView : UserControl
         InitializeTextMate();
     }
 
-    private Control CreateCodeActionRow(CodeActionListItem item)
+    private Control CreateCodeActionRow(CodeActionItem item)
     {
         var grid = new Grid
         {
@@ -226,6 +226,13 @@ public partial class EditorView : UserControl
             Cursor = new Cursor(StandardCursorType.Hand),
             Margin = new Thickness(0),
             MinHeight = 28,
+        };
+
+        var badgeText = item switch
+        {
+            FixAllListItem                              => "FIX ALL",
+            CodeActionListItem { Action.IsPreferred: true } => "FIX",
+            _                                          => "ACTION",
         };
 
         var badge = new Border
@@ -238,7 +245,7 @@ public partial class EditorView : UserControl
             Margin = new Thickness(4, 4, 8, 4),
             Child = new TextBlock
             {
-                Text = item.Action.IsPreferred ? "FIX" : "ACTION",
+                Text = badgeText,
                 Foreground = new SolidColorBrush(Color.Parse("#8DBDF8")),
                 FontFamily = new FontFamily("Menlo,Consolas,Cascadia Mono,monospace"),
                 FontSize = 10,

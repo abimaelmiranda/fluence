@@ -15,17 +15,19 @@ internal sealed partial class LspCompletionData
 {
     private readonly LspCompletion _completion;
     private readonly SemanticColorizer _colorizer;
+    private readonly string _fontFamily;
 
-    public LspCompletionData(LspCompletion completion, double priority, SemanticColorizer colorizer)
+    public LspCompletionData(LspCompletion completion, double priority, SemanticColorizer colorizer, string fontFamily)
     {
         _completion = completion;
         _colorizer  = colorizer;
+        _fontFamily = fontFamily;
         Priority    = priority;
         Text        = completion.Label;
     }
 
     public string Text { get; }
-    public object Content => CreateContent(_completion, _colorizer);
+    public object Content => CreateContent(_completion, _colorizer, _fontFamily);
     public double Priority { get; }
 
     public bool MatchesPrefix(string prefix) =>
@@ -53,6 +55,9 @@ internal sealed partial class LspCompletionData
     [GeneratedRegex(@"<[^<>]*>")]
     private static partial Regex AngleBracketTagRegex();
 
+    [GeneratedRegex(@"\(using\s+([^)]+)\)")]
+    private static partial Regex UsingDetailRegex();
+
     private static void ReplaceCurrentCompletionPrefix(TextArea textArea, string text)
     {
         var document    = textArea.Document;
@@ -68,15 +73,16 @@ internal sealed partial class LspCompletionData
 
     private static bool IsCompletionChar(char ch) => char.IsLetterOrDigit(ch) || ch == '_';
 
-    private static Control CreateContent(LspCompletion completion, SemanticColorizer colorizer)
+    private static Control CreateContent(LspCompletion completion, SemanticColorizer colorizer, string fontFamily)
     {
         var kind        = GetKindLabel(completion.Kind);
         var labelBrush  = KindToTokenType(completion.Kind) is { } tt ? colorizer.GetBrush(tt) : null;
+        var monoFont    = new FontFamily(fontFamily);
 
         var label = new TextBlock
         {
             Text = completion.Label,
-            FontFamily = new FontFamily("Menlo,Consolas,Cascadia Mono,monospace"),
+            FontFamily = monoFont,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -102,17 +108,50 @@ internal sealed partial class LspCompletionData
 
         var grid = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Center,
         };
 
-        Grid.SetColumn(label,    0);
-        Grid.SetColumn(kindBadge, 1);
+        Grid.SetColumn(label, 0);
         grid.Children.Add(label);
+
+        if (IsTypeKind(completion.Kind) && ExtractDetailHint(completion.Detail) is { } hint)
+        {
+            var detailBlock = new TextBlock
+            {
+                Text = hint,
+                FontFamily = monoFont,
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x78, 0x78, 0x90)),
+                MaxWidth = 200,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Margin = new Thickness(8, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            Grid.SetColumn(detailBlock, 1);
+            grid.Children.Add(detailBlock);
+        }
+
+        Grid.SetColumn(kindBadge, 2);
         grid.Children.Add(kindBadge);
 
         return grid;
+    }
+
+    private static bool IsTypeKind(LspCompletionKind kind) =>
+        kind is LspCompletionKind.Class
+             or LspCompletionKind.Interface
+             or LspCompletionKind.Struct
+             or LspCompletionKind.Enum
+             or LspCompletionKind.Module
+             or LspCompletionKind.TypeParameter;
+
+    private static string? ExtractDetailHint(string? detail)
+    {
+        if (string.IsNullOrWhiteSpace(detail)) return null;
+        var match = UsingDetailRegex().Match(detail);
+        return match.Success ? match.Groups[1].Value.Trim() : detail;
     }
 
     private static string? KindToTokenType(LspCompletionKind kind) =>
