@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
+using Avalonia.Threading;
 using Fluence.Modules.SolutionView.Abstractions;
 using Fluence.Modules.SolutionView.Models;
 using Fluence.Modules.SolutionView.Models.Enums;
@@ -89,6 +90,14 @@ public sealed class AvaloniaSolutionFileCreationDialogService : ISolutionFileCre
         };
 
         window.Content = layout;
+        window.Opened += (_, _) =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                nameBox.Focus();
+                nameBox.SelectAll();
+            }, DispatcherPriority.Loaded);
+        };
         return ShowDialogAsync(window);
     }
 

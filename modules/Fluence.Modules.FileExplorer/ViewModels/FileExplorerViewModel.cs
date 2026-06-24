@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
@@ -29,6 +30,7 @@ public sealed class FileExplorerViewModel : ViewModelBase
     private readonly IFileOperationDialogService _fileDialogs;
     private readonly IFileService _fileService;
     private string? _currentFolderPath;
+    private HashSet<string>? _expandedPaths;
 
     public FileExplorerViewModel(
         IWorkspaceContext workspace,
@@ -82,13 +84,17 @@ public sealed class FileExplorerViewModel : ViewModelBase
 
     private void RefreshRoot()
     {
+        _expandedPaths = CaptureExpandedPaths();
         RootItems.Clear();
 
         var folderPath = _workspace.Current.CurrentFolderPath;
         _currentFolderPath = folderPath;
 
         if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+        {
+            _expandedPaths = null;
             return;
+        }
 
         try
         {
@@ -101,7 +107,57 @@ public sealed class FileExplorerViewModel : ViewModelBase
         catch (UnauthorizedAccessException) { }
         catch (IOException) { }
 
+        RestoreExpandedPaths(RootItems, _expandedPaths);
+        _expandedPaths = null;
         UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
+    }
+
+    private HashSet<string> CaptureExpandedPaths()
+    {
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CaptureExpandedPaths(RootItems, paths);
+        return paths;
+    }
+
+    private static void CaptureExpandedPaths(
+        System.Collections.Generic.IEnumerable<FileTreeItem> items,
+        ISet<string> paths)
+    {
+        foreach (var item in items)
+        {
+            if (item.IsDirectory &&
+                item.IsExpanded &&
+                !string.IsNullOrWhiteSpace(item.Path))
+            {
+                paths.Add(item.Path);
+            }
+
+            CaptureExpandedPaths(item.Children, paths);
+        }
+    }
+
+    private static void RestoreExpandedPaths(
+        System.Collections.Generic.IEnumerable<FileTreeItem> items,
+        ISet<string>? paths)
+    {
+        if (paths is null)
+            return;
+
+        foreach (var item in items)
+        {
+            if (item.IsDirectory &&
+                !string.IsNullOrWhiteSpace(item.Path) &&
+                paths.Contains(item.Path))
+            {
+                item.IsExpanded = true;
+            }
+            else if (!item.IsDirectory)
+            {
+                item.IsExpanded = false;
+            }
+
+            RestoreExpandedPaths(item.Children, paths);
+        }
     }
 
     private FileTreeItem CreateFileItem(string path)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -57,6 +58,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
     private readonly Dictionary<string, CancellationTokenSource> _projectLoadCtsByPath = new(StringComparer.OrdinalIgnoreCase);
     private string? _loadedSolutionPath;
     private SolutionWorkspaceSnapshot? _loadedSnapshot;
+    private HashSet<string>? _expandedTreeKeys;
 
     [ObservableProperty]
     private bool _isLoading;
@@ -138,6 +140,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
     private async Task LoadAsync(string solutionPath)
     {
         CancellationToken cancellationToken;
+        var expandedTreeKeys = CaptureExpandedTreeState();
         lock (_loadLock)
         {
             _loadCts?.Cancel();
@@ -146,9 +149,9 @@ public sealed partial class SolutionViewModel : ViewModelBase
             cancellationToken = _loadCts.Token;
         }
 
+        _expandedTreeKeys = expandedTreeKeys;
         IsLoading = true;
         ErrorMessage = null;
-        RootItems.Clear();
         CancelProjectLoads();
         _projectAssociations.Clear(solutionPath);
 
@@ -164,8 +167,10 @@ public sealed partial class SolutionViewModel : ViewModelBase
             if (cancellationToken.IsCancellationRequested)
                 return;
 
+            var rootItem = CreateTreeItem(snapshot.Root, deferProjectChildren: true);
             RootItems.Clear();
-            RootItems.Add(CreateTreeItem(snapshot.Root, deferProjectChildren: true));
+            RootItems.Add(rootItem);
+            RestoreExpandedTreeState(RootItems, _expandedTreeKeys);
             UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
             UpdateStartupProject(_workspace.Current.StartupProjectPath);
         }
@@ -254,6 +259,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
                 item.Children.Add(CreateTreeItem(child, deferProjectChildren: false));
 
             item.MarkChildrenLoaded();
+            RestoreExpandedTreeState(item.Children, _expandedTreeKeys);
             _projectAssociations.UpdateProject(solutionPath, projectNode);
             UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
             UpdateStartupProject(_workspace.Current.StartupProjectPath);
@@ -306,15 +312,15 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
     private ICommand? CreatePasteCommand(SolutionTreeNode node) => node.Kind switch
     {
-        SolutionTreeNodeKind.Solution when node.Path is not null => new AsyncRelayCommand(() => PasteAsync(Path.GetDirectoryName(node.Path) ?? node.Path)),
-        SolutionTreeNodeKind.Project when node.Path is not null => new AsyncRelayCommand(() => PasteAsync(Path.GetDirectoryName(node.Path) ?? node.Path)),
+        SolutionTreeNodeKind.Solution when node.Path is not null => new AsyncRelayCommand(() => PasteAsync(node)),
+        SolutionTreeNodeKind.Project when node.Path is not null => new AsyncRelayCommand(() => PasteAsync(node)),
         _ => null,
     };
 
     private ICommand? CreateDeleteCommand(SolutionTreeNode node) => node.Kind switch
     {
-        SolutionTreeNodeKind.File when node.Path is not null => new AsyncRelayCommand(() => DeleteAsync(node.Path, isDirectory: false)),
-        SolutionTreeNodeKind.Project when node.Path is not null => new AsyncRelayCommand(() => DeleteAsync(node.Path, isDirectory: false)),
+        SolutionTreeNodeKind.File when node.Path is not null => new AsyncRelayCommand(() => DeleteAsync(node, isDirectory: false)),
+        SolutionTreeNodeKind.Project when node.Path is not null => new AsyncRelayCommand(() => DeleteAsync(node, isDirectory: false)),
         SolutionTreeNodeKind.Folder when node.Path is not null => new AsyncRelayCommand(() => DeletePhysicalFolderAsync(node)),
         _ => null,
     };
@@ -427,7 +433,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
             }
 
             await _solutionStructure.CreatePhysicalFolderAsync(projectPath, targetDirectory, folderName);
-            await ReloadCurrentSolutionAsync();
+            await RefreshAfterDirectoryMutationAsync(projectPath, targetDirectory);
         }
         catch (Exception ex)
         {
@@ -497,7 +503,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
             var content = SolutionFileTemplateBuilder.Build(projectPath, targetDirectory, Path.GetFileName(targetPath), creation.Kind);
             _fileService.WriteText(targetPath, content);
-            await ReloadCurrentSolutionAsync();
+            await RefreshAfterDirectoryMutationAsync(projectPath, targetDirectory);
             _eventBus.Publish(new OpenFileRequestedEvent(targetPath));
         }
         catch (Exception ex)
@@ -557,12 +563,19 @@ public sealed partial class SolutionViewModel : ViewModelBase
         }
     }
 
-    private async Task PasteAsync(string destinationDirectory)
+    private async Task PasteAsync(SolutionTreeNode node)
     {
         try
         {
+            var destinationDirectory = GetPasteDestinationDirectory(node);
+            if (destinationDirectory is null)
+                return;
+
             await _clipboard.PasteAsync(destinationDirectory);
-            await ReloadCurrentSolutionAsync();
+
+            var projectPath = GetProjectPath(node);
+            if (projectPath is not null)
+                await RefreshAfterDirectoryMutationAsync(projectPath, destinationDirectory);
         }
         catch (Exception ex)
         {
@@ -570,16 +583,34 @@ public sealed partial class SolutionViewModel : ViewModelBase
         }
     }
 
-    private async Task DeleteAsync(string path, bool isDirectory)
+    private static string? GetPasteDestinationDirectory(SolutionTreeNode node)
+    {
+        return node.Kind switch
+        {
+            SolutionTreeNodeKind.Solution when node.Path is not null => Path.GetDirectoryName(node.Path) ?? node.Path,
+            SolutionTreeNodeKind.Project when node.Path is not null => Path.GetDirectoryName(node.Path) ?? node.Path,
+            SolutionTreeNodeKind.Folder when node.Path is not null => node.Path,
+            _ => null,
+        };
+    }
+
+    private async Task DeleteAsync(SolutionTreeNode node, bool isDirectory)
     {
         try
         {
-            var confirmed = await _fileDialogs.ConfirmDeleteAsync(path, isDirectory);
+            if (node.Path is null)
+                return;
+
+            var confirmed = await _fileDialogs.ConfirmDeleteAsync(node.Path, isDirectory);
             if (!confirmed)
                 return;
 
-            _fileService.Delete(path, isDirectory);
-            await ReloadCurrentSolutionAsync();
+            _fileService.Delete(node.Path, isDirectory);
+
+            if (node.Kind == SolutionTreeNodeKind.Project)
+                await ReloadCurrentSolutionAsync();
+            else if (GetProjectPath(node) is { } projectPath)
+                await RefreshAfterDirectoryMutationAsync(projectPath, Path.GetDirectoryName(node.Path));
         }
         catch (Exception ex)
         {
@@ -604,7 +635,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
             await _solutionStructure.RemovePhysicalFolderAsync(projectPath, node.Path);
             _fileService.Delete(node.Path, isDirectory: true);
-            await ReloadCurrentSolutionAsync();
+            await RefreshAfterDirectoryMutationAsync(projectPath, Path.GetDirectoryName(node.Path));
         }
         catch (Exception ex)
         {
@@ -647,7 +678,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
             if (selectedPaths.Count == 0) return;
 
             await _addProjectReferencesHandler.HandleAsync(new AddProjectReferencesCommand(projectPath, selectedPaths), cancellationToken);
-            await ReloadCurrentSolutionAsync();
+            await RefreshProjectBranchAsync(projectPath);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Xml.XmlException)
         {
@@ -669,7 +700,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
             await _removeProjectReferenceHandler.HandleAsync(
                 new RemoveProjectReferenceCommand(projectPath, referencedProjectPath),
                 cancellationToken);
-            await ReloadCurrentSolutionAsync();
+            await RefreshProjectBranchAsync(projectPath);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Xml.XmlException)
         {
@@ -685,6 +716,90 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
         _loadedSolutionPath = solutionPath;
         return LoadAsync(solutionPath);
+    }
+
+    private async Task RefreshProjectBranchAsync(string projectPath)
+    {
+        var solutionPath = _workspace.Current.CurrentSolutionPath;
+        if (string.IsNullOrWhiteSpace(solutionPath) || string.IsNullOrWhiteSpace(projectPath))
+            return;
+
+        var projectItem = FindProjectItem(projectPath);
+        if (projectItem is null)
+            return;
+
+        var projectKey = BuildTreeKey(string.Empty, projectItem);
+        var expandedKeys = new HashSet<string>(StringComparer.Ordinal);
+        CaptureExpandedTreeState(projectItem.Children, projectKey, expandedKeys);
+
+        try
+        {
+            var projectNode = await _solutionLoader.LoadProjectAsync(solutionPath, projectPath);
+            _projectAssociations.UpdateProject(solutionPath, projectNode);
+
+            projectItem.Children.Clear();
+            foreach (var child in projectNode.Children)
+                projectItem.Children.Add(CreateTreeItem(child, deferProjectChildren: false));
+
+            projectItem.MarkChildrenLoaded();
+            RestoreExpandedTreeState(projectItem.Children, expandedKeys, projectKey);
+            UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
+            UpdateStartupProject(_workspace.Current.StartupProjectPath);
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to refresh project", ex.Message);
+        }
+    }
+
+    private async Task RefreshAfterDirectoryMutationAsync(string projectPath, string? directoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(projectPath))
+            return;
+
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            await RefreshProjectBranchAsync(projectPath);
+            return;
+        }
+
+        var folderItem = FindFolderItem(directoryPath);
+        if (folderItem is null)
+        {
+            await RefreshProjectBranchAsync(projectPath);
+            return;
+        }
+
+        await RefreshFolderBranchAsync(folderItem, projectPath);
+    }
+
+    private async Task RefreshFolderBranchAsync(SolutionTreeItem folderItem, string projectPath)
+    {
+        if (folderItem.Path is null)
+            return;
+
+        var folderKey = BuildTreeKey(string.Empty, folderItem);
+        var expandedKeys = new HashSet<string>(StringComparer.Ordinal);
+        CaptureExpandedTreeState(folderItem.Children, folderKey, expandedKeys);
+
+        try
+        {
+            var folderNode = BuildFilesystemFolderNode(folderItem.Path, projectPath);
+
+            folderItem.Children.Clear();
+            foreach (var child in folderNode.Children)
+                folderItem.Children.Add(CreateTreeItem(child, deferProjectChildren: false));
+
+            folderItem.MarkChildrenLoaded();
+            RestoreExpandedTreeState(folderItem.Children, expandedKeys, folderKey);
+            UpdateActiveItem(_workspace.Current.TabSession.ActiveDocument?.Path);
+            UpdateStartupProject(_workspace.Current.StartupProjectPath);
+        }
+        catch (Exception ex)
+        {
+            _notifications.ShowError("Unable to refresh folder", ex.Message);
+            await RefreshProjectBranchAsync(projectPath);
+        }
     }
 
     private CancellationTokenSource ResetProjectLoad(string projectPath)
@@ -747,4 +862,216 @@ public sealed partial class SolutionViewModel : ViewModelBase
             UpdateActiveItemRecursive(item.Children, activePath);
         }
     }
+
+    private HashSet<string> CaptureExpandedTreeState()
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        CaptureExpandedTreeState(RootItems, string.Empty, keys);
+        return keys;
+    }
+
+    private static void CaptureExpandedTreeState(
+        System.Collections.Generic.IEnumerable<SolutionTreeItem> items,
+        string parentKey,
+        ISet<string> keys)
+    {
+        foreach (var item in items)
+        {
+            var key = BuildTreeKey(parentKey, item);
+            if (item.IsExpanded)
+                keys.Add(key);
+
+            CaptureExpandedTreeState(item.Children, key, keys);
+        }
+    }
+
+    private static void RestoreExpandedTreeState(
+        System.Collections.Generic.IEnumerable<SolutionTreeItem> items,
+        ISet<string>? keys,
+        string parentKey = "")
+    {
+        if (keys is null)
+            return;
+
+        foreach (var item in items)
+        {
+            var key = BuildTreeKey(parentKey, item);
+            item.IsExpanded = keys.Contains(key);
+            RestoreExpandedTreeState(item.Children, keys, key);
+        }
+    }
+
+    private static string BuildTreeKey(string parentKey, SolutionTreeItem item)
+    {
+        return string.Concat(
+            parentKey,
+            "\u001f",
+            (int)item.Kind,
+            "\u001f",
+            item.Name,
+            "\u001f",
+            item.Path ?? string.Empty,
+            "\u001f",
+            item.ProjectPath ?? string.Empty,
+            "\u001f",
+            item.ReferencedProjectPath ?? string.Empty);
+    }
+
+    private SolutionTreeItem? FindProjectItem(string projectPath)
+    {
+        return FindProjectItemRecursive(RootItems, projectPath);
+    }
+
+    private static SolutionTreeItem? FindProjectItemRecursive(
+        System.Collections.Generic.IEnumerable<SolutionTreeItem> items,
+        string projectPath)
+    {
+        foreach (var item in items)
+        {
+            if (item.Kind == SolutionTreeNodeKind.Project &&
+                string.Equals(item.Path, projectPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return item;
+            }
+
+            var found = FindProjectItemRecursive(item.Children, projectPath);
+            if (found is not null)
+                return found;
+        }
+
+        return null;
+    }
+
+    private SolutionTreeItem? FindFolderItem(string folderPath)
+    {
+        return FindFolderItemRecursive(RootItems, folderPath);
+    }
+
+    private static SolutionTreeItem? FindFolderItemRecursive(
+        System.Collections.Generic.IEnumerable<SolutionTreeItem> items,
+        string folderPath)
+    {
+        foreach (var item in items)
+        {
+            if (item.Kind == SolutionTreeNodeKind.Folder &&
+                string.Equals(item.Path, folderPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return item;
+            }
+
+            var found = FindFolderItemRecursive(item.Children, folderPath);
+            if (found is not null)
+                return found;
+        }
+
+        return null;
+    }
+
+    private static SolutionTreeNode BuildFilesystemFolderNode(string folderPath, string projectPath)
+    {
+        var children = new List<SolutionTreeNode>();
+        foreach (var childDirectory in GetVisibleDirectories(folderPath).OrderBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase))
+        {
+            children.Add(BuildFilesystemFolderNode(childDirectory, projectPath));
+        }
+
+        foreach (var filePath in GetVisibleFiles(folderPath).OrderBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase))
+        {
+            children.Add(new SolutionTreeNode(
+                SolutionTreeNodeKind.File,
+                Path.GetFileName(filePath),
+                filePath,
+                [],
+                null,
+                projectPath,
+                null));
+        }
+
+        return new SolutionTreeNode(
+            SolutionTreeNodeKind.Folder,
+            Path.GetFileName(folderPath),
+            folderPath,
+            children,
+            null,
+            projectPath,
+            null);
+    }
+
+    private static IEnumerable<string> GetVisibleDirectories(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            return [];
+
+        try
+        {
+            return Directory.EnumerateDirectories(folderPath, "*", SearchOption.TopDirectoryOnly)
+                .Where(IsVisibleDirectory)
+                .Select(Path.GetFullPath)
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private static IEnumerable<string> GetVisibleFiles(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            return [];
+
+        try
+        {
+            return Directory.EnumerateFiles(folderPath, "*", SearchOption.TopDirectoryOnly)
+                .Where(IsVisibleFile)
+                .Select(Path.GetFullPath)
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private static bool IsVisibleFile(string path)
+    {
+        return File.Exists(path) && !IsHiddenPath(path) && !HasHiddenAttributes(path);
+    }
+
+    private static bool IsVisibleDirectory(string path)
+    {
+        return Directory.Exists(path) && !IsHiddenPath(path) && !HasHiddenAttributes(path);
+    }
+
+    private static bool IsHiddenPath(string path)
+    {
+        return path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                   .Any(segment => HiddenPathSegments.Contains(segment) ||
+                                   (segment.Length > 1 && segment.StartsWith(".", StringComparison.Ordinal)));
+    }
+
+    private static bool HasHiddenAttributes(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.Hidden) == FileAttributes.Hidden;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    private static readonly HashSet<string> HiddenPathSegments = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".git",
+        ".hg",
+        ".svn",
+        ".vs",
+        "bin",
+        "debug",
+        "obj",
+        "release",
+        "testresults",
+    };
 }

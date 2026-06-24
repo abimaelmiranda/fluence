@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Fluence.Core.Abstractions.Dialogs;
 using Fluence.Core.Abstractions.File;
 using Fluence.Core.Abstractions.Notifications;
@@ -106,6 +107,14 @@ public sealed class AvaloniaFileOperationDialogService : IFileOperationDialogSer
         };
 
         window.Content = layout;
+        window.Opened += (_, _) =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                textBox.Focus();
+                textBox.SelectAll();
+            }, DispatcherPriority.Loaded);
+        };
         okButton.Click += (_, _) => window.Close(string.IsNullOrWhiteSpace(textBox.Text) ? null : textBox.Text.Trim());
         cancelButton.Click += (_, _) => window.Close(null);
 

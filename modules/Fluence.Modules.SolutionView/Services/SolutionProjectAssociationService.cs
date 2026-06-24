@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
@@ -66,6 +67,7 @@ public sealed class SolutionProjectAssociationService : IProjectAssociationServi
             if (!string.Equals(_solutionPath, normalizedSolutionPath, StringComparison.OrdinalIgnoreCase))
                 return;
 
+            RemoveProjectAssociations(normalizedProjectPath);
             _projectByFilePath[normalizedProjectPath] = normalizedProjectPath;
             if (!string.IsNullOrWhiteSpace(projectDirectory))
                 _projectByDirectoryPath[NormalizePath(projectDirectory)] = normalizedProjectPath;
@@ -119,6 +121,17 @@ public sealed class SolutionProjectAssociationService : IProjectAssociationServi
 
         foreach (var child in node.Children)
             AddFileAssociations(child, currentProjectPath, map);
+    }
+
+    private void RemoveProjectAssociations(string projectPath)
+    {
+        _projectByFilePath = _projectByFilePath
+            .Where(entry => !string.Equals(entry.Value, projectPath, StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.OrdinalIgnoreCase);
+
+        _projectByDirectoryPath = _projectByDirectoryPath
+            .Where(entry => !string.Equals(entry.Value, projectPath, StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.OrdinalIgnoreCase);
     }
 
     private static string? FindProjectByContainingDirectory(

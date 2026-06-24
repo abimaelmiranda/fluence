@@ -77,6 +77,13 @@ public partial class MainWindow : Window
         if (viewModel.IsRecordingKeybinding)
             return;
 
+        if (MatchesQuickOpenShortcut(e))
+        {
+            viewModel.QuickOpen.Toggle();
+            e.Handled = true;
+            return;
+        }
+
         if (viewModel.QuickOpen.IsVisible)
         {
             switch (e.Key)
@@ -99,6 +106,15 @@ public partial class MainWindow : Window
                     return;
             }
         }
+    }
+
+    private static bool MatchesQuickOpenShortcut(KeyEventArgs e)
+    {
+        var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+        return e.Key == Key.P &&
+               e.KeyModifiers.HasFlag(primary) &&
+               !e.KeyModifiers.HasFlag(KeyModifiers.Alt) &&
+               !e.KeyModifiers.HasFlag(KeyModifiers.Shift);
     }
 
     private void MoveQuickOpenSelection(int delta)

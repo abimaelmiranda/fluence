@@ -16,7 +16,8 @@
               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
               ScrollViewer.VerticalScrollBarVisibility="Auto">
         <TreeView.Styles>
-            <Style Selector="TreeViewItem">
+            <Style Selector="TreeViewItem" x:DataType="vm:FileTreeItem">
+                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                 <Setter Property="MinHeight" Value="20"/>
                 <Setter Property="Padding" Value="0"/>
                 <Setter Property="Margin" Value="0"/>
