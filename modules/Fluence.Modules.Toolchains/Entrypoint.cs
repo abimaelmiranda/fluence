@@ -27,9 +27,7 @@ using Fluence.Modules.DotnetCli.ViewModels;
 using Fluence.Modules.DotnetCli.Services;
 using Fluence.Modules.Toolchains.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using DebugEntrypoint = Fluence.Modules.Debug.Entrypoint;
 using DotnetCliEntrypoint = Fluence.Modules.DotnetCli.Entrypoint;
-using LanguageServerEntrypoint = Fluence.Modules.LanguageServer.Entrypoint;
 using Fluence.Core.Events.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
 
@@ -37,9 +35,7 @@ namespace Fluence.Modules.Toolchains;
 
 public sealed class Entrypoint : IModule, IModuleShutdownParticipant, IConditionalModule
 {
-    private readonly DotnetCliEntrypoint _dotnetCli = new();
-    private readonly LanguageServerEntrypoint _languageServer = new();
-    private readonly DebugEntrypoint _debug = new();
+    private readonly InternalToolchainModules _modules = new();
     private readonly List<IDisposable> _subscriptions = [];
 
     public string Id => "Toolchains";
@@ -60,9 +56,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         services.AddSingleton<CSharpToolchain>();
         services.AddSingleton<ToolchainSetupViewModel>();
 
-        _dotnetCli.Register(services);
-        _languageServer.Register(services);
-        _debug.Register(services);
+        _modules.Register(services);
 
         services.AddKeyedSingleton<IRunService>("csharp",
             (sp, _) => sp.GetRequiredService<DotnetRunService>());
@@ -73,7 +67,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
     public ModuleContributions GetContributions() =>
         new()
         {
-            Panels = _debug.GetContributions().Panels,
+            Panels = _modules.DebugPanels,
             OutputChannel = new OutputChannelDescriptor(DotnetCliEntrypoint.ChannelId, ".NET CLI"),
         };
 
@@ -85,16 +79,14 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
             .Register(new ResourceManager("Fluence.Modules.DotnetCli.Resources.Strings", typeof(DotnetCliEntrypoint).Assembly));
 
         var outputRegistry = host.Services.GetRequiredService<IOutputChannelRegistry>();
-        outputRegistry.Register(new OutputChannelDescriptor(LanguageServerEntrypoint.ChannelId, "Language Server"));
-        outputRegistry.Register(new OutputChannelDescriptor(Fluence.Modules.Debug.Entrypoint.ChannelId, "Debug"));
+        _modules.RegisterOutputChannels(outputRegistry);
 
         var registry = host.Services.GetRequiredService<IToolchainRegistry>();
         registry.Register(host.Services.GetRequiredService<CSharpToolchain>());
         registry.Register(new RoutedToolchain("c", host.Services, host.Events));
         registry.Register(new RoutedToolchain("cpp", host.Services, host.Events));
 
-        await _languageServer.InitializeAsync(host, cancellationToken).ConfigureAwait(false);
-        await _debug.InitializeAsync(host, cancellationToken).ConfigureAwait(false);
+        await _modules.InitializeAsync(host, cancellationToken).ConfigureAwait(false);
 
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
 
@@ -188,13 +180,11 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
             subscription.Dispose();
         _subscriptions.Clear();
 
-        await _debug.DisposeAsync().ConfigureAwait(false);
-        await _languageServer.DisposeAsync().ConfigureAwait(false);
+        await _modules.DisposeAsync().ConfigureAwait(false);
     }
 
     public async Task StopAsync(ModuleShutdownContext context)
     {
-        await _debug.StopAsync(context).ConfigureAwait(false);
-        await _languageServer.StopAsync(context).ConfigureAwait(false);
+        await _modules.StopAsync(context).ConfigureAwait(false);
     }
 }
