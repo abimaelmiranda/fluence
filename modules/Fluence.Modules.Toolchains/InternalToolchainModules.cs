@@ -30,23 +30,23 @@ internal sealed class InternalToolchainModules
         registry.Register(new OutputChannelDescriptor(Fluence.Modules.Debug.Entrypoint.ChannelId, "Debug"));
     }
 
-    public async Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
-    {
-        await _languageServer.InitializeAsync(host, cancellationToken).ConfigureAwait(false);
-        await _debug.InitializeAsync(host, cancellationToken).ConfigureAwait(false);
-    }
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken) =>
+        Task.WhenAll(
+            _languageServer.InitializeAsync(host, cancellationToken),
+            _debug.InitializeAsync(host, cancellationToken));
 
-    public async ValueTask DisposeAsync()
-    {
-        await _debug.DisposeAsync().ConfigureAwait(false);
-        await _languageServer.DisposeAsync().ConfigureAwait(false);
-    }
+    public ValueTask DisposeAsync() =>
+        new(Task.WhenAll(
+            _debug.DisposeAsync().AsTask(),
+            _languageServer.DisposeAsync().AsTask()));
 
-    public async Task StopAsync(ModuleShutdownContext context)
+    public Task StopAsync(ModuleShutdownContext context)
     {
+        var tasks = new List<Task>(2);
         if (_debug is IModuleShutdownParticipant debug)
-            await debug.StopAsync(context).ConfigureAwait(false);
+            tasks.Add(debug.StopAsync(context));
         if (_languageServer is IModuleShutdownParticipant languageServer)
-            await languageServer.StopAsync(context).ConfigureAwait(false);
+            tasks.Add(languageServer.StopAsync(context));
+        return tasks.Count > 0 ? Task.WhenAll(tasks) : Task.CompletedTask;
     }
 }
