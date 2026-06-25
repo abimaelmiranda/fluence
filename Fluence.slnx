@@ -16,5 +16,7 @@
     <Project Path="modules/Fluence.Modules.SolutionView/Fluence.Modules.SolutionView.csproj" />
     <Project Path="modules/Fluence.Modules.Terminal/Fluence.Modules.Terminal.csproj" />
     <Project Path="modules/Fluence.Modules.Toolchains/Fluence.Modules.Toolchains.csproj" />
+    <Project Path="modules/Fluence.Modules.Workbench/Fluence.Modules.Workbench.csproj" />
+    <Project Path="modules/Fluence.Modules.XamlViewer/Fluence.Modules.XamlViewer.csproj" />
   </Folder>
 </Solution>

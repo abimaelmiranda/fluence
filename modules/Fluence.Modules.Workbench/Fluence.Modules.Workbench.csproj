@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fluence.Core\Fluence.Core.csproj" />
+    <ProjectReference Include="..\Fluence.Modules.Editor\Fluence.Modules.Editor.csproj" />
+    <ProjectReference Include="..\Fluence.Modules.FileExplorer\Fluence.Modules.FileExplorer.csproj" />
+    <ProjectReference Include="..\Fluence.Modules.SolutionView\Fluence.Modules.SolutionView.csproj" />
+    <ProjectReference Include="..\Fluence.Modules.XamlViewer\Fluence.Modules.XamlViewer.csproj" />
+  </ItemGroup>
+</Project>

@@ -52,14 +52,11 @@ using Fluence.Infrastructure.Languages;
 using Fluence.Infrastructure.Languages.Routers;
 using Fluence.Infrastructure.Projects;
 using SettingsEntrypoint = Fluence.Modules.Settings.Entrypoint;
-using FileExplorerEntrypoint = Fluence.Modules.FileExplorer.Entrypoint;
-using SolutionViewEntrypoint = Fluence.Modules.SolutionView.Entrypoint;
-using EditorEntrypoint = Fluence.Modules.Editor.Entrypoint;
 using NuGetExplorerEntrypoint = Fluence.Modules.NuGetExplorer.Entrypoint;
 using TerminalEntrypoint = Fluence.Modules.Terminal.Entrypoint;
 using ToolchainsEntrypoint = Fluence.Modules.Toolchains.Entrypoint;
 using SourceControlEntrypoint = Fluence.Modules.SourceControl.Entrypoint;
-using XamlViewerEntrypoint = Fluence.Modules.XamlViewer.Entrypoint;
+using WorkbenchEntrypoint = Fluence.Modules.Workbench.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -193,14 +190,11 @@ internal static class Bootstrapper
         var modules = new IModule[]
         {
             new SettingsEntrypoint(),
-            new FileExplorerEntrypoint(),
-            new SolutionViewEntrypoint(),
-            new EditorEntrypoint(),
+            new WorkbenchEntrypoint(),
             new NuGetExplorerEntrypoint(),
             new TerminalEntrypoint(),
             new ToolchainsEntrypoint(),
             new SourceControlEntrypoint(),
-            new XamlViewerEntrypoint(),
         };
 
         foreach (var module in modules)
