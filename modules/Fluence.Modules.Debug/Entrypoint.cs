@@ -101,25 +101,11 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         host.Services.GetRequiredService<ILocalizationService>()
             .Register(new ResourceManager("Fluence.Modules.Debug.Resources.Strings", typeof(Entrypoint).Assembly));
 
-        // Controles de sessão — Critical: inputs diretos do usuário no debugger
+        // Stop pode vir de callers externos (MainWindowViewModel) — mantém via evento
         _subscriptions.Add(host.Events.SubscribeSync<StopDebugRequestedEvent>(_ =>
             scheduler.Schedule("debug.stop", TaskPriority.Critical,
                 _ => debug.StopAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<ReloadDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.reload", TaskPriority.Critical,
-                _ => debug.RestartAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<ContinueDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.continue", TaskPriority.Critical,
-                _ => debug.ContinueAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<StepOverDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.step-over", TaskPriority.Critical,
-                _ => debug.StepOverAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<StepIntoDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.step-into", TaskPriority.Critical,
-                _ => debug.StepIntoAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<StepOutDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.step-out", TaskPriority.Critical,
-                _ => debug.StepOutAsync())));
+        // ToggleBreakpoint vem do editor (Workbench) — mantém via evento
         _subscriptions.Add(host.Events.SubscribeSync<ToggleBreakpointRequestedEvent>(e =>
             scheduler.Schedule("debug.breakpoint", TaskPriority.Interactive,
                 _ => debug.ToggleBreakpointAsync(e.FilePath, e.Line))));
