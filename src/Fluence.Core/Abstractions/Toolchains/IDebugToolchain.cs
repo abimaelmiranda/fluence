@@ -1,8 +1,10 @@
-using Fluence.Core.Abstractions.Debugging;
+using System.Threading;
+using System.Threading.Tasks;
+using Fluence.Core.Models.Debugging;
 
 namespace Fluence.Core.Abstractions.Toolchains;
 
 public interface IDebugToolchain : IToolchain
 {
-    IDebugService Debug { get; }
+    Task<DebugAdapterSession?> PrepareDebugSessionAsync(CancellationToken ct = default);
 }
