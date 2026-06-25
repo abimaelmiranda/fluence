@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Localization;
-using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Projects;
 using Fluence.Core.Abstractions.Tasks;
@@ -16,20 +17,18 @@ using Fluence.Core.Events.Build;
 using Fluence.Core.Events.Debug;
 using Fluence.Core.Events.Provisioning;
 using Fluence.Core.Events.Toolchains;
+using Fluence.Core.Events.Workspace;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Toolchains;
 using Fluence.Core.Models.Workspace;
+using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Toolchains;
-using Fluence.Modules.Debug;
 using Fluence.Modules.DotnetCli.ViewModels;
-using Fluence.Modules.DotnetCli.Services;
 using Fluence.Modules.Toolchains.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using DotnetCliEntrypoint = Fluence.Modules.DotnetCli.Entrypoint;
-using Fluence.Core.Events.Workspace;
-using Fluence.Core.Models.Workspace.Enums;
 
 namespace Fluence.Modules.Toolchains;
 
@@ -53,15 +52,30 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
     public void Register(IServiceCollection services)
     {
         services.AddSingleton<IToolchainRegistry, ToolchainRegistry>();
+        services.AddSingleton<CppRunService>();
+        services.AddSingleton<CppDebugService>();
+        services.AddSingleton<CppDebuggerProvisioningService>();
+        services.AddSingleton<IProjectTemplateProvider, CppProjectTemplateProvider>();
+        services.AddSingleton<ToolchainDebugService>();
+        services.AddSingleton<IDebugService>(sp => sp.GetRequiredService<ToolchainDebugService>());
         services.AddSingleton<CSharpToolchain>();
+        services.AddSingleton(sp => new CppToolchain(
+            "c",
+            sp.GetRequiredService<CppRunService>(),
+            sp.GetRequiredService<CppDebugService>(),
+            sp.GetRequiredService<CppDebuggerProvisioningService>(),
+            sp.GetRequiredService<IShellEventBus>(),
+            sp.GetRequiredService<IUserNotificationService>()));
+        services.AddSingleton(sp => new CppToolchain(
+            "cpp",
+            sp.GetRequiredService<CppRunService>(),
+            sp.GetRequiredService<CppDebugService>(),
+            sp.GetRequiredService<CppDebuggerProvisioningService>(),
+            sp.GetRequiredService<IShellEventBus>(),
+            sp.GetRequiredService<IUserNotificationService>()));
         services.AddSingleton<ToolchainSetupViewModel>();
 
         _modules.Register(services);
-
-        services.AddKeyedSingleton<IRunService>("csharp",
-            (sp, _) => sp.GetRequiredService<DotnetRunService>());
-        services.AddKeyedSingleton<IDebugService>("csharp",
-            (sp, _) => sp.GetRequiredService<DebugService>());
     }
 
     public ModuleContributions GetContributions() =>
@@ -83,8 +97,8 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
 
         var registry = host.Services.GetRequiredService<IToolchainRegistry>();
         registry.Register(host.Services.GetRequiredService<CSharpToolchain>());
-        registry.Register(new RoutedToolchain("c", host.Services, host.Events));
-        registry.Register(new RoutedToolchain("cpp", host.Services, host.Events));
+        foreach (var toolchain in host.Services.GetServices<CppToolchain>())
+            registry.Register(toolchain);
 
         await _modules.InitializeAsync(host, cancellationToken).ConfigureAwait(false);
 

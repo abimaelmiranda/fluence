@@ -322,7 +322,7 @@ public sealed class DebugService(
         SelectBottomBar(BottomBarTabIds.Debug);
 
         Interlocked.Increment(ref _sessionGeneration);
-        _adapter = await adapterFactory.CreateAsync(workspaceRoot, cancellationToken).ConfigureAwait(false);
+        _adapter = await adapterFactory.CreateAsync(workspaceRoot, provisioning.GetExecutablePath(), cancellationToken).ConfigureAwait(false);
         _adapter.Stopped += OnAdapterStopped;
         _adapter.Terminated += OnAdapterTerminated;
         _adapter.Continued += OnAdapterContinued;

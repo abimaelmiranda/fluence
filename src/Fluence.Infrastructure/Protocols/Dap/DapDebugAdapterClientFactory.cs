@@ -9,26 +9,21 @@ using Fluence.Core.Abstractions.Storage;
 namespace Fluence.Infrastructure.Protocols.Dap;
 
 public sealed class DapDebugAdapterClientFactory(
-    IDebuggerProvisioningService provisioning,
     IFluenceStorageService storage,
     IProcessSpawner spawner) : IDebugAdapterClientFactory
 {
     public Task<IDebugAdapterClient> CreateAsync(
         string workspaceRoot,
+        string adapterExecutable,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!provisioning.IsProvisioned())
-        {
-            throw new FileNotFoundException(
-                "No global .NET debugger was found. Use the debugger provisioning flow to install it before debugging.",
-                provisioning.GetExecutablePath());
-        }
+        if (!File.Exists(adapterExecutable))
+            throw new FileNotFoundException("Debug adapter executable was not found.", adapterExecutable);
 
-        var executable = provisioning.GetExecutablePath();
         var logPath = storage.GetProjectPath(workspaceRoot, $"logs/dap-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.log");
-        var adapterId = Path.GetFileNameWithoutExtension(executable);
-        return Task.FromResult<IDebugAdapterClient>(new DapClient(executable, adapterId, logPath, spawner));
+        var adapterId = Path.GetFileNameWithoutExtension(adapterExecutable);
+        return Task.FromResult<IDebugAdapterClient>(new DapClient(adapterExecutable, adapterId, logPath, spawner));
     }
 }

@@ -11,7 +11,6 @@ using Fluence.Core.Events.Ui;
 using Fluence.Core.Models.Jobs;
 using Fluence.Core.Models.Toolchains;
 using Fluence.Core.Models.Workbench;
-using Fluence.Modules.Debug.Commands.DebugProject;
 using Fluence.Modules.DotnetCli.Commands;
 using Fluence.Modules.DotnetCli.Commands.Project.Build;
 using Fluence.Modules.DotnetCli.Commands.Project.Clean;
@@ -27,7 +26,7 @@ namespace Fluence.Modules.Toolchains;
 
 public sealed class CSharpToolchain(
     IServiceProvider services,
-    IShellEventBus events) : IToolchain
+    IShellEventBus events) : IDebugToolchain
 {
     public string Id => "csharp";
 
@@ -44,6 +43,8 @@ public sealed class CSharpToolchain(
         ToolchainCapability.Clean |
         ToolchainCapability.LanguageServer |
         ToolchainCapability.Debugger);
+
+    public IDebugService Debug => services.GetRequiredService<Fluence.Modules.Debug.DebugService>();
 
     public async Task<bool> EnsureAsync(
         ToolchainCapability capability,
@@ -112,8 +113,7 @@ public sealed class CSharpToolchain(
                 break;
             case ToolchainCommandKind.DebugProject:
                 if (await EnsureAsync(ToolchainCapability.Sdk | ToolchainCapability.Debugger, cancellationToken).ConfigureAwait(false))
-                    await services.GetRequiredService<ICommandHandler<DebugProjectCommand>>()
-                        .HandleAsync(new DebugProjectCommand(), cancellationToken).ConfigureAwait(false);
+                    await Debug.StartAsync(cancellationToken).ConfigureAwait(false);
                 break;
             case ToolchainCommandKind.StartLanguageServer:
                 await EnsureAsync(ToolchainCapability.LanguageServer, cancellationToken).ConfigureAwait(false);

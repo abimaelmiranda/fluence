@@ -46,11 +46,10 @@ using Fluence.Infrastructure.Protocols.Dap;
 using Fluence.Infrastructure.Protocols.Lsp;
 using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.LanguageServer;
-using Fluence.Core.Abstractions.Projects;
 using Fluence.Core.Services.Languages;
 using Fluence.Infrastructure.Languages;
-using Fluence.Infrastructure.Languages.Routers;
-using Fluence.Infrastructure.Projects;
+using Fluence.Modules.Debug;
+using Fluence.Modules.DotnetCli.Services;
 using SettingsEntrypoint = Fluence.Modules.Settings.Entrypoint;
 using NuGetExplorerEntrypoint = Fluence.Modules.NuGetExplorer.Entrypoint;
 using TerminalEntrypoint = Fluence.Modules.Terminal.Entrypoint;
@@ -59,6 +58,7 @@ using SourceControlEntrypoint = Fluence.Modules.SourceControl.Entrypoint;
 using WorkbenchEntrypoint = Fluence.Modules.Workbench.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Fluence.Core.Abstractions.Projects;
 
 namespace Fluence.Desktop.Composition;
 
@@ -122,51 +122,17 @@ internal static class Bootstrapper
         services.AddSingleton<IFluenceStorageService, FluenceStorageService>();
         services.AddSingleton<IProcessSpawner, ProcessSpawner>();
         services.AddSingleton<IProcessHost, ProcessHost>();
-        services.AddSingleton<IProjectTemplateProvider, CppProjectTemplateProvider>();
-        services.AddSingleton<CppRunService>();
-        services.AddSingleton<CppDebugService>();
+        services.AddSingleton<DotnetRunService>();
         services.AddSingleton<IDotnetSdkProvisioningService, DotnetSdkProvisioningService>();
         services.AddSingleton<ILaunchSettingsService, LaunchSettingsService>();
         services.AddSingleton<ILaunchSettingsCoordinator, LaunchSettingsCoordinator>();
         services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
-        // Concretos sem alias de interface não-keyed
         services.AddSingleton<OmniSharpProvisioningService>();
         services.AddSingleton<ClangdProvisioningService>();
         services.AddSingleton<DebuggerProvisioningService>();
-        services.AddSingleton<CppDebuggerProvisioningService>();
-
-        // IDotnetLspProvisioningService mantido — usado por OmniSharpArgumentsBuilder via cast
-        services.AddSingleton<IDotnetLspProvisioningService>(
-            sp => sp.GetRequiredService<OmniSharpProvisioningService>());
-
-        // Keyed por linguagem — C# usa OmniSharp, C/C++ usa clangd
-        services.AddKeyedSingleton<ILspProvisioningService>("csharp",
-            (sp, _) => (ILspProvisioningService)sp.GetRequiredService<OmniSharpProvisioningService>());
-        services.AddKeyedSingleton<ILspProvisioningService>("c",
-            (sp, _) => (ILspProvisioningService)sp.GetRequiredService<ClangdProvisioningService>());
-        services.AddKeyedSingleton<ILspProvisioningService>("cpp",
-            (sp, _) => (ILspProvisioningService)sp.GetRequiredService<ClangdProvisioningService>());
-        services.AddKeyedSingleton<IRunService>("c",
-            (sp, _) => sp.GetRequiredService<CppRunService>());
-        services.AddKeyedSingleton<IRunService>("cpp",
-            (sp, _) => sp.GetRequiredService<CppRunService>());
-        services.AddKeyedSingleton<IDebuggerProvisioningService>("csharp",
-            (sp, _) => (IDebuggerProvisioningService)sp.GetRequiredService<DebuggerProvisioningService>());
-        services.AddKeyedSingleton<IDebuggerProvisioningService>("c",
-            (sp, _) => sp.GetRequiredService<CppDebuggerProvisioningService>());
-        services.AddKeyedSingleton<IDebuggerProvisioningService>("cpp",
-            (sp, _) => sp.GetRequiredService<CppDebuggerProvisioningService>());
-        services.AddKeyedSingleton<IDebugService>("c",
-            (sp, _) => sp.GetRequiredService<CppDebugService>());
-        services.AddKeyedSingleton<IDebugService>("cpp",
-            (sp, _) => sp.GetRequiredService<CppDebugService>());
-
-        // Routers como singletons não-keyed — consumers injetam as mesmas interfaces de sempre
-        services.AddSingleton<ILspProvisioningService, LspProvisioningRouter>();
-        services.AddSingleton<ILspArgumentsBuilder, LspArgumentsBuilderRouter>();
-        services.AddSingleton<IDebuggerProvisioningService, DebuggerProvisioningRouter>();
-        services.AddSingleton<IDebugService, DebugServiceRouter>();
-        services.AddSingleton<IRunService, RunServiceRouter>();
+        services.AddSingleton<ILspProvisioningService>(sp => sp.GetRequiredService<OmniSharpProvisioningService>());
+        services.AddSingleton<IRunService>(sp => sp.GetRequiredService<DotnetRunService>());
+        services.AddSingleton<IDebuggerProvisioningService>(sp => sp.GetRequiredService<DebuggerProvisioningService>());
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new PortaMacOsPtyHost()

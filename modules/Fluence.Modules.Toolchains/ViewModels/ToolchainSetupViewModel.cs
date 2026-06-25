@@ -19,6 +19,7 @@ namespace Fluence.Modules.Toolchains.ViewModels;
 public sealed partial class ToolchainSetupViewModel(
     ILspProvisioningService lsp,
     IDebuggerProvisioningService debugger,
+    CppDebuggerProvisioningService cppDebugger,
     IWorkspaceContext workspace,
     IShellEventBus events,
     IUiDispatcher dispatcher) : ProvisioningSetupViewModelBase(dispatcher)
@@ -59,7 +60,7 @@ public sealed partial class ToolchainSetupViewModel(
         Capability switch
         {
             ToolchainCapability.LanguageServer => lsp.ProvisionAsync(onOutput, cancellationToken),
-            ToolchainCapability.Debugger => debugger.ProvisionAsync(onOutput, cancellationToken),
+            ToolchainCapability.Debugger => GetDebugger().ProvisionAsync(onOutput, cancellationToken),
             _ => Task.CompletedTask,
         };
 
@@ -71,7 +72,7 @@ public sealed partial class ToolchainSetupViewModel(
             return;
         }
 
-        if (Capability == ToolchainCapability.Debugger && !debugger.IsProvisioned())
+        if (Capability == ToolchainCapability.Debugger && !GetDebugger().IsProvisioned())
         {
             await PublishErrorAsync("Debugger is still unavailable.").ConfigureAwait(false);
             return;
@@ -94,4 +95,7 @@ public sealed partial class ToolchainSetupViewModel(
         Capability == ToolchainCapability.Debugger
             ? ToolTabIds.DebuggerSetup
             : ToolTabIds.LspSetup;
+
+    private IDebuggerProvisioningService GetDebugger() =>
+        ToolchainId is "c" or "cpp" ? cppDebugger : debugger;
 }
