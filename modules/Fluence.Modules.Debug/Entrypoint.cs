@@ -105,11 +105,6 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         host.Services.GetRequiredService<ILocalizationService>()
             .Register(new ResourceManager("Fluence.Modules.Debug.Resources.Strings", typeof(Entrypoint).Assembly));
 
-        // Iniciar sessão — Interactive: usuário espera resposta imediata
-        _subscriptions.Add(host.Events.SubscribeSync<DebugProjectRequestedEvent>(_ =>
-            scheduler.Schedule("debug.start", TaskPriority.Interactive,
-                ct => HandleAsync(host, ct))));
-
         // Controles de sessão — Critical: inputs diretos do usuário no debugger
         _subscriptions.Add(host.Events.SubscribeSync<StopDebugRequestedEvent>(_ =>
             scheduler.Schedule("debug.stop", TaskPriority.Critical,
@@ -148,12 +143,6 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
 
         host.SetModuleState(Id, ModuleState.Active);
         return Task.CompletedTask;
-    }
-
-    private static async Task HandleAsync(IModuleHost host, CancellationToken ct)
-    {
-        var handler = host.Services.GetRequiredService<ICommandHandler<DebugProjectCommand>>();
-        await handler.HandleAsync(new DebugProjectCommand(), ct);
     }
 
     public async ValueTask DisposeAsync()

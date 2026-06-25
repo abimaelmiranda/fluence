@@ -51,23 +51,17 @@ using Fluence.Core.Services.Languages;
 using Fluence.Infrastructure.Languages;
 using Fluence.Infrastructure.Languages.Routers;
 using Fluence.Infrastructure.Projects;
-using Fluence.Modules.DotnetCli.Services;
 using SettingsEntrypoint = Fluence.Modules.Settings.Entrypoint;
 using FileExplorerEntrypoint = Fluence.Modules.FileExplorer.Entrypoint;
 using SolutionViewEntrypoint = Fluence.Modules.SolutionView.Entrypoint;
 using EditorEntrypoint = Fluence.Modules.Editor.Entrypoint;
 using NuGetExplorerEntrypoint = Fluence.Modules.NuGetExplorer.Entrypoint;
 using TerminalEntrypoint = Fluence.Modules.Terminal.Entrypoint;
-using DotnetCliEntrypoint = Fluence.Modules.DotnetCli.Entrypoint;
-using DebuggerSetupEntrypoint = Fluence.Modules.DebuggerSetup.Entrypoint;
-using DebugEntrypoint = Fluence.Modules.Debug.Entrypoint;
+using ToolchainsEntrypoint = Fluence.Modules.Toolchains.Entrypoint;
 using SourceControlEntrypoint = Fluence.Modules.SourceControl.Entrypoint;
-using LspSetupEntrypoint = Fluence.Modules.LspSetup.Entrypoint;
-using LanguageServerEntrypoint = Fluence.Modules.LanguageServer.Entrypoint;
 using XamlViewerEntrypoint = Fluence.Modules.XamlViewer.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Fluence.Modules.Debug;
 
 namespace Fluence.Desktop.Composition;
 
@@ -155,8 +149,6 @@ internal static class Bootstrapper
             (sp, _) => (ILspProvisioningService)sp.GetRequiredService<ClangdProvisioningService>());
         services.AddKeyedSingleton<ILspProvisioningService>("cpp",
             (sp, _) => (ILspProvisioningService)sp.GetRequiredService<ClangdProvisioningService>());
-        services.AddKeyedSingleton<IRunService>("csharp",
-            (sp, _) => sp.GetRequiredService<DotnetRunService>());
         services.AddKeyedSingleton<IRunService>("c",
             (sp, _) => sp.GetRequiredService<CppRunService>());
         services.AddKeyedSingleton<IRunService>("cpp",
@@ -167,8 +159,6 @@ internal static class Bootstrapper
             (sp, _) => sp.GetRequiredService<CppDebuggerProvisioningService>());
         services.AddKeyedSingleton<IDebuggerProvisioningService>("cpp",
             (sp, _) => sp.GetRequiredService<CppDebuggerProvisioningService>());
-        services.AddKeyedSingleton<IDebugService>("csharp",
-            (sp, _) => sp.GetRequiredService<DebugService>());
         services.AddKeyedSingleton<IDebugService>("c",
             (sp, _) => sp.GetRequiredService<CppDebugService>());
         services.AddKeyedSingleton<IDebugService>("cpp",
@@ -208,11 +198,7 @@ internal static class Bootstrapper
             new EditorEntrypoint(),
             new NuGetExplorerEntrypoint(),
             new TerminalEntrypoint(),
-            new DotnetCliEntrypoint(),
-            new LspSetupEntrypoint(),
-            new LanguageServerEntrypoint(),
-            new DebuggerSetupEntrypoint(),
-            new DebugEntrypoint(),
+            new ToolchainsEntrypoint(),
             new SourceControlEntrypoint(),
             new XamlViewerEntrypoint(),
         };

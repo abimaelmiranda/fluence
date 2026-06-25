@@ -17,5 +17,6 @@
     <Project Path="modules/Fluence.Modules.NuGetExplorer/Fluence.Modules.NuGetExplorer.csproj" />
     <Project Path="modules/Fluence.Modules.SolutionView/Fluence.Modules.SolutionView.csproj" />
     <Project Path="modules/Fluence.Modules.Terminal/Fluence.Modules.Terminal.csproj" />
+    <Project Path="modules/Fluence.Modules.Toolchains/Fluence.Modules.Toolchains.csproj" />
   </Folder>
 </Solution>

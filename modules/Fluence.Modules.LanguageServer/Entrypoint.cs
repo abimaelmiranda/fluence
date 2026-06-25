@@ -25,6 +25,8 @@ using Fluence.Infrastructure.Protocols.Lsp;
 using Fluence.Core.Events.Document;
 using Fluence.Core.Events.Lsp;
 using Fluence.Core.Events.Provisioning;
+using Fluence.Core.Events.Toolchains;
+using Fluence.Core.Models.Toolchains;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fluence.Modules.LanguageServer;
@@ -372,7 +374,9 @@ public sealed partial class Entrypoint : IModule, IModuleShutdownParticipant, IC
             {
                 _provisioningPending = true;
                 _ = output.WriteAsync(OutputChannelIds.Output, "[LanguageServer] Language server provisioning required\r\n");
-                host.Events.Publish(new LspProvisioningRequiredEvent());
+                host.Events.Publish(new ToolchainProvisioningRequiredEvent(
+                    languageId ?? "csharp",
+                    ToolchainCapability.LanguageServer));
             }
             return;
         }
