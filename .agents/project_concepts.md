@@ -97,17 +97,11 @@ Core                  ← workspace, DI contracts, module host, shell contracts
 Infrastructure        ← OS/platform adapters: ProcessHost, Pty, TerminalService,
                         LSP/DAP protocol utilities, DotnetSdkProvisioningService
 Desktop               ← Avalonia shell, Bootstrapper, WelcomeScreen, UI adapters
-├── FileExplorer      ← filesystem tree navigation
-├── SolutionView      ← .sln / .csproj parsing + Buildalyzer + ProjectReferenceService
-├── Editor            ← AvaloniaEdit, tabs, TextFileService, LSP overlay, debug overlay
+├── Workbench         ← AvaloniaEdit, tabs, file explorer, solution view, XAML preview
 ├── Terminal          ← integrated OS terminal (XTerm.NET + PTY via ITerminalService)
-├── DotnetCli         ← build, run, test, restore, clean — dotnet CLI command handlers
-├── LanguageServer    ← OmniSharp lifecycle, LSP bridge, completion, diagnostics, navigation
-├── Debug             ← DAP session, breakpoints, variable evaluation, call stack
+├── Toolchains        ← C# build/run/test/restore/clean, OmniSharp, DAP debug, setup
 ├── SourceControl     ← Git CLI integration, staging, commit, diff, branch management
 ├── NuGetExplorer     ← NuGet package browsing and management
-├── LspSetup          ← OmniSharp binary provisioning
-├── DebuggerSetup     ← netcoredbg binary provisioning
 ├── Settings          ← application preferences
 └── Agent             ← (planned) AI agent with native workspace access
 ```

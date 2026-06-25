@@ -58,8 +58,8 @@ Key files:
 
 All modules implement `IIdeModule`. They reference only Core, never Infrastructure or each other (except via acyclic extension pattern).
 
-### Fluence.Modules.Editor
-Code editing surface. The central module.
+### Fluence.Modules.Workbench
+Main work surface. Owns editor, file explorer, solution view, XAML preview, tabs, and workbench panels.
 
 Responsibilities:
 - File open, edit, save via AvaloniaEdit
@@ -70,8 +70,15 @@ Responsibilities:
 - Tab management (drives `TabSession` in Workspace)
 - LSP overlay: completion, hover, signature help, diagnostics, go-to-definition
 - Debug overlay: breakpoint gutter, evaluation hover, current line indicator
+- Raw filesystem navigation
+- `.sln`/`.slnx` parsing via Buildalyzer
+- Project and file tree display
+- Project references (view, add, remove)
+- NuGet package references
+- Startup project selection
+- XAML preview and hot reload
 
-Key files: `EditorView.axaml.cs` (split into 9 partial files), `EditorViewModel.cs`, `TextFileService.cs`
+Key files: `Editor/Views/EditorView.axaml.cs` (split into partial files), `FileExplorer/ViewModels/FileExplorerViewModel.cs`, `SolutionView/ViewModels/SolutionViewModel.cs`, `XamlViewer/ViewModels/XamlViewerViewModel.cs`
 
 ### Fluence.Modules.Terminal
 Integrated interactive terminal.
@@ -88,26 +95,6 @@ Responsibilities:
 Key files: `Terminal/TerminalControl.cs`, `ViewModels/TerminalSessionViewModel.cs`, `Views/TerminalView.axaml.cs`
 
 See `.agents/fluence_terminal_pty_spec.md` for architecture and invariants.
-
-### Fluence.Modules.SolutionView
-.NET solution model and project browser.
-
-Responsibilities:
-- `.sln`/`.slnx` parsing via Buildalyzer
-- Project and file tree display
-- Project references (view, add, remove)
-- NuGet package references
-- Startup project selection
-- Context menus: Build / Run / Test / Clean / Restore per solution and project nodes
-
-### Fluence.Modules.FileExplorer
-Raw filesystem navigation. Distinct from Solution View (different domain concept).
-
-Responsibilities:
-- Filesystem tree (folders and files)
-- Expand/collapse
-- File open on double-click
-- Context menu actions (new file, rename, delete, copy path, reveal in Finder/Explorer)
 
 ### Fluence.Modules.DotnetCli
 dotnet CLI command dispatcher.

@@ -104,7 +104,7 @@ Cross-module communication goes through:
 - **Unidirectional**: the base module is completely unaware of its extensions
 - **Surface-limited**: the extending module only consumes types from the base module's declared public API (e.g. a `Contracts/` folder); it must not inject into or call the base module's internal services
 
-Example: `Fluence.Modules.Agent.SolutionBridge` may reference `Fluence.Modules.SolutionView` to read `SolutionTreeNode` — SolutionView has zero knowledge of Agent.
+Example: `Fluence.Modules.Agent.SolutionBridge` may reference `Fluence.Modules.Workbench.SolutionView` to read `SolutionTreeNode` — Workbench has zero knowledge of Agent.
 
 ### 2.5 Module State
 Each module must support a `ModuleState`:
@@ -135,17 +135,11 @@ Never let an unhandled module exception propagate to the main shell uncontrolled
 ### 2.7 Active Modules
 All of the following modules are implemented and registered:
 - `Core` — workspace, DI contracts, shell, module host
-- `FileExplorer` — filesystem tree navigation
-- `SolutionView` — .sln and .csproj parsing, project tree, context menus
-- `Editor` — AvaloniaEdit, tabs, auto-save, syntax highlighting, LSP overlay, debug overlay
+- `Workbench` — editor, file explorer, solution view, XAML preview, tabs, panels
 - `Terminal` — integrated OS terminal (XTerm.NET + PTY)
-- `DotnetCli` — build, run, test, restore, clean
-- `LanguageServer` — OmniSharp lifecycle, LSP bridge, completion, diagnostics, navigation
-- `Debug` — DAP session, breakpoints, variable evaluation, call stack
+- `Toolchains` — C# build/run/test/restore/clean, OmniSharp, DAP debug, setup routing
 - `SourceControl` — Git CLI integration, staging, commit, diff
 - `NuGetExplorer` — NuGet package browsing and management
-- `LspSetup` — OmniSharp binary provisioning
-- `DebuggerSetup` — netcoredbg binary provisioning
 - `Settings` — application preferences
 
 See `.agents/module_catalog.md` for full details on each module's responsibilities and key files.
