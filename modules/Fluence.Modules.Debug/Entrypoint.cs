@@ -3,7 +3,6 @@ using System.Resources;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Keybindings;
@@ -25,7 +24,6 @@ using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Debug.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using Fluence.Modules.Debug.Commands.DebugProject;
 using Fluence.Modules.Debug.Abstractions.Session;
 using Fluence.Modules.Debug.Json;
 using Fluence.Modules.Debug.Services;
@@ -62,7 +60,6 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         services.AddSingleton<IDebugStateService, DebugStateService>();
         services.AddSingleton<DebugService>();
         services.AddSingleton<IDebugSessionManager, DebugSessionManager>();
-        services.AddSingleton<ICommandHandler<DebugProjectCommand>, DebugProjectCommandHandler>();
     }
 
     public ModuleContributions GetContributions() =>
