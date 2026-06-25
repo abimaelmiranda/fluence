@@ -48,8 +48,6 @@ using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.LanguageServer;
 using Fluence.Core.Services.Languages;
 using Fluence.Infrastructure.Languages;
-using Fluence.Modules.Debug;
-using Fluence.Modules.DotnetCli.Services;
 using SettingsEntrypoint = Fluence.Modules.Settings.Entrypoint;
 using NuGetExplorerEntrypoint = Fluence.Modules.NuGetExplorer.Entrypoint;
 using TerminalEntrypoint = Fluence.Modules.Terminal.Entrypoint;
@@ -59,6 +57,7 @@ using WorkbenchEntrypoint = Fluence.Modules.Workbench.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Fluence.Core.Abstractions.Projects;
+using System.IO;
 
 namespace Fluence.Desktop.Composition;
 
@@ -122,16 +121,27 @@ internal static class Bootstrapper
         services.AddSingleton<IFluenceStorageService, FluenceStorageService>();
         services.AddSingleton<IProcessSpawner, ProcessSpawner>();
         services.AddSingleton<IProcessHost, ProcessHost>();
-        services.AddSingleton<DotnetRunService>();
         services.AddSingleton<IDotnetSdkProvisioningService, DotnetSdkProvisioningService>();
         services.AddSingleton<ILaunchSettingsService, LaunchSettingsService>();
         services.AddSingleton<ILaunchSettingsCoordinator, LaunchSettingsCoordinator>();
-        services.AddSingleton<IDebugAdapterClientFactory, DapDebugAdapterClientFactory>();
+        services.AddSingleton<Func<string, string, CancellationToken, Task<IDebugAdapterClient>>>(sp =>
+        {
+            var storage = sp.GetRequiredService<IFluenceStorageService>();
+            var spawner = sp.GetRequiredService<IProcessSpawner>();
+            return (workspaceRoot, adapterExecutable, ct) =>
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!File.Exists(adapterExecutable))
+                    throw new FileNotFoundException("Debug adapter executable was not found.", adapterExecutable);
+                var logPath = storage.GetProjectPath(workspaceRoot, $"logs/dap-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.log");
+                var adapterId = Path.GetFileNameWithoutExtension(adapterExecutable);
+                return Task.FromResult<IDebugAdapterClient>(new DapClient(adapterExecutable, adapterId, logPath, spawner));
+            };
+        });
         services.AddSingleton<OmniSharpProvisioningService>();
         services.AddSingleton<ClangdProvisioningService>();
         services.AddSingleton<DebuggerProvisioningService>();
         services.AddSingleton<ILspProvisioningService>(sp => sp.GetRequiredService<OmniSharpProvisioningService>());
-        services.AddSingleton<IRunService>(sp => sp.GetRequiredService<DotnetRunService>());
         services.AddSingleton<IDebuggerProvisioningService>(sp => sp.GetRequiredService<DebuggerProvisioningService>());
         services.AddSingleton<IPtyHost>(_ =>
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)

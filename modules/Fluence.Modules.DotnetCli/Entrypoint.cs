@@ -67,6 +67,7 @@ public sealed class Entrypoint : IModule, IConditionalModule
         services.AddSingleton<IProjectExecutionTargetResolver, DotnetProjectExecutionTargetResolver>();
         services.AddSingleton<RunTargetResolver>();
         services.AddSingleton<DotnetRunService>();
+        services.AddSingleton<IRunService>(sp => sp.GetRequiredService<DotnetRunService>());
         services.AddSingleton<IProjectTemplateProvider, DotnetProjectTemplateProvider>();
         services.AddSingleton<NewProjectWizardViewModel>();
         services.AddSingleton<PublishWizardViewModel>();
