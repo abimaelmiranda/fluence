@@ -14,8 +14,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fluence.Core\Fluence.Core.csproj" />
-    <ProjectReference Include="..\Fluence.Modules.Editor\Fluence.Modules.Editor.csproj" />
-    <ProjectReference Include="..\Fluence.Modules.LanguageServer\Fluence.Modules.LanguageServer.csproj" />
-    <ProjectReference Include="..\Fluence.Modules.Debug\Fluence.Modules.Debug.csproj" />
   </ItemGroup>
 </Project>
