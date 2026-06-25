@@ -19,7 +19,7 @@ Key types:
 - `IShellEventBus` — publish/subscribe channel for cross-module events
 - `ModuleContributions` / `ShellPanelContribution` — static shell contribution declaration
 - `IViewRegistry` — shell ViewModel→View mapping where needed
-- `ICommandHandler<T>` / `IQueryHandler<T,R>` — internal use-case contracts
+- `ICommandHandler<T>` — internal use-case contract
 - `ITerminalService` / `IProcessHost` — platform process contracts
 - `IStartupCoordinator` — ordered, async startup contract
 - `IShutdownCoordinator` — ordered, bounded module shutdown contract
@@ -96,16 +96,31 @@ Key files: `Terminal/TerminalControl.cs`, `ViewModels/TerminalSessionViewModel.c
 
 See `.agents/fluence_terminal_pty_spec.md` for architecture and invariants.
 
-### Fluence.Modules.DotnetCli
-dotnet CLI command dispatcher.
+### Fluence.Modules.Toolchains
+Umbrella toolchain module. Routes all build, run, and debug commands through the active toolchain. Internally orchestrates DotnetCli, LanguageServer, and Debug as sub-modules.
 
 Responsibilities:
-- Handles shell request events from Core: Build, Run, Test, Restore, Clean
-- Constructs CLI commands safely
-- Routes output through `ITerminalService`
+- `IToolchainRegistry` — selects active toolchain based on workspace language
+- Routes shell request events (Build, Run, Test, Restore, Clean, Debug) to `IToolchain.ExecuteAsync`
+- `ToolchainDebugService` — unified DAP session manager; owns start/stop/restart/step lifecycle for all languages
+- `IDebugToolchain.PrepareDebugSessionAsync` — language-specific debug prep (adapter spawn, launch config) returned as `DebugAdapterSession`
+- `CSharpToolchain` and `CppToolchain` implement language-specific run and debug preparation
+- OmniSharp and lldb-dap provisioning (download, version management, setup UI)
+- `DebugAdapterSession` record carries adapter + launch request + exception break mode
+
+Key files: `Entrypoint.cs`, `InternalToolchainModules.cs`, `CSharpToolchain.cs`, `CppToolchain.cs`, `src/Fluence.Core/Services/Toolchains/ToolchainDebugService.cs`
+
+### Fluence.Modules.DotnetCli
+dotnet CLI command handlers. Pure service-registration module — no event subscriptions. All command routing goes through Toolchains → CSharpToolchain.
+
+Responsibilities:
+- `ICommandHandler<T>` implementations for Build, Run, Test, Restore, Clean (workspace and project)
+- `DotnetRunService` — `dotnet run` execution
+- `IProjectTemplateProvider` — `dotnet new` templates
+- SDK provisioning ViewModel (`DotnetSdkSetupViewModel`)
 
 ### Fluence.Modules.LanguageServer
-OmniSharp LSP integration.
+OmniSharp LSP integration. Initialized by Toolchains, not by ApplicationStartupCoordinator directly.
 
 Responsibilities:
 - OmniSharp process lifecycle (start, stop, restart)
@@ -119,14 +134,14 @@ Responsibilities:
 - Quick fix / code actions
 
 ### Fluence.Modules.Debug
-Debug Adapter Protocol (DAP) integration.
+DAP ViewModels and debug state. Initialized by Toolchains. DAP session lifecycle lives in `ToolchainDebugService` (Core/Toolchains), not here.
 
 Responsibilities:
-- DAP session lifecycle via `DapClient` (Infrastructure)
-- Breakpoint management
-- Variable and expression evaluation
-- Call stack navigation
-- Debug state in Workspace (active/paused/stopped)
+- `IDebugStateService` / `DebugStateService` — debug session snapshot (breakpoints, stack frames, variables, status)
+- `DebugSidebarViewModel` — sidebar UI; calls `IDebugService` directly for step/continue/stop/restart
+- `DebugVariablesTabViewModel`, `DebugWatchTabViewModel`, `DebugConsoleViewModel`
+- Keybindings (F5/F10/F11/Shift+F11) registered via `ICommandRegistry`
+- `StopDebugRequestedEvent` and `ToggleBreakpointRequestedEvent` subscription (cross-module callers)
 
 ### Fluence.Modules.SourceControl
 Git integration via CLI.
@@ -146,22 +161,6 @@ Responsibilities:
 - Package search and browsing
 - Package installation, update, removal per project
 - Feeds configuration
-
-### Fluence.Modules.LspSetup
-OmniSharp provisioning.
-
-Responsibilities:
-- Downloading and managing OmniSharp binaries
-- Version management
-- Setup UI/status
-
-### Fluence.Modules.DebuggerSetup
-netcoredbg provisioning.
-
-Responsibilities:
-- Downloading and managing netcoredbg binaries
-- Version management
-- Setup UI/status
 
 ### Fluence.Modules.Settings
 Application preferences UI.

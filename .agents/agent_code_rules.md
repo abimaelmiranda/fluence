@@ -155,7 +155,7 @@ src/
   Fluence.Core          ← genuinely shared contracts only:
                           IIdeModule / IModuleHost / ModuleContributions / ShellPanelContribution / IShellEventBus
                           IWorkspaceContext / Workspace / WorkspaceMode / TabSession / OpenDocument
-                          ICommandHandler<T> / IQueryHandler<T,R>
+                          ICommandHandler<T>
                           ITerminalService / IProcessHost / IProcessSpawner / ITrackedProcess / IPtyHost
                           IStartupCoordinator / IShutdownCoordinator  (cross-module platform/lifecycle contracts)
                           IWorkspaceDialogService / IUserNotificationService  (cross-cutting ports)
@@ -229,7 +229,7 @@ TestWorkspaceRequestedEvent
 RestoreWorkspaceRequestedEvent
 CleanWorkspaceRequestedEvent
 ```
-The DotnetCli module subscribes to these in `Initialize` and dispatches to its own internal handlers. No DotnetCli types leak into `MainWindowViewModel`.
+The Toolchains module subscribes to these in `InitializeAsync` and dispatches to the active `IToolchain` via `IToolchainRegistry`. The DotnetCli module registers `ICommandHandler<T>` implementations only — it has no event subscriptions. No DotnetCli or Toolchains types leak into `MainWindowViewModel`.
 
 ---
 
@@ -257,7 +257,6 @@ Keep interfaces small and explicit:
 - `IModuleHost`
 - `IWorkspaceContext`
 - `ICommandHandler<TCommand>`
-- `IQueryHandler<TQuery, TResult>`
 - `ITerminalService`
 - `ISolutionLoader`
 
@@ -350,7 +349,6 @@ Application expresses explicit use cases:
 ### 7.2 Commands and Queries
 Use internal contracts:
 - `ICommandHandler<TCommand>`
-- `IQueryHandler<TQuery, TResult>`
 
 Every handler must implement the proper interface so Scrutor can register it.
 
