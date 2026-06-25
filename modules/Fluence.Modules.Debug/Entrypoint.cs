@@ -24,9 +24,7 @@ using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Debug.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using Fluence.Modules.Debug.Abstractions.Session;
 using Fluence.Modules.Debug.Json;
-using Fluence.Modules.Debug.Services;
 using Fluence.Core.Events.Debug;
 
 namespace Fluence.Modules.Debug;
@@ -58,7 +56,6 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         services.AddSingleton<DebugWatchTabViewModel>();
         services.AddSingleton<DebugConsoleViewModel>();
         services.AddSingleton<IDebugStateService, DebugStateService>();
-        services.AddSingleton<IDebugSessionManager, DebugSessionManager>();
     }
 
     public ModuleContributions GetContributions() =>

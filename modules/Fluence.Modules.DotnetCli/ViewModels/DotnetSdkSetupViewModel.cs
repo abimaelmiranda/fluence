@@ -9,26 +9,21 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Dotnet;
 using Fluence.Core.Abstractions.Localization;
-using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Dotnet;
 using Fluence.Core.ViewModels;
-using Fluence.Core.Events.Build;
 
 namespace Fluence.Modules.DotnetCli.ViewModels;
 
 public sealed partial class DotnetSdkSetupViewModel : ViewModelBase
 {
     private readonly IDotnetSdkProvisioningService _provisioning;
-    private readonly IShellEventBus _events;
     private readonly ILocalizationService _loc;
 
     public DotnetSdkSetupViewModel(
         IDotnetSdkProvisioningService provisioning,
-        IShellEventBus events,
         ILocalizationService loc)
     {
         _provisioning = provisioning;
-        _events = events;
         _loc = loc;
         SdkOptions =
         [
@@ -158,7 +153,6 @@ public sealed partial class DotnetSdkSetupViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(sdkStatus.ErrorMessage))
             AppendOutput($"[dotnet] {sdkStatus.ErrorMessage}");
 
-        _events.Publish(new DotnetSdkChangedEvent());
         InstallOfficialCommand.NotifyCanExecuteChanged();
     }
 

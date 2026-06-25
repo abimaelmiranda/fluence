@@ -47,22 +47,6 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<string> StackFrames { get; } = [];
 
-    public void Update(DebugSession session)
-    {
-        SessionTitle = session.IsActive
-            ? _loc.Get("Debug.Session.Active")
-            : _loc.Get("Debug.Session.NoSession");
-        Architecture = session.TargetArchitecture;
-        RefreshState();
-    }
-
-    public void Clear()
-    {
-        SessionTitle = _loc.Get("Debug.Session.NoSession");
-        Architecture = GetDefaultArchitecture();
-        RefreshState();
-    }
-
     [RelayCommand]
     private void Continue() => _ = _debugService.ContinueAsync();
 
@@ -97,12 +81,14 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         var snapshot = _debugState.Snapshot;
         if (snapshot.IsActive && !string.IsNullOrWhiteSpace(snapshot.Architecture))
             Architecture = snapshot.Architecture;
+        else if (!snapshot.IsActive)
+            Architecture = GetDefaultArchitecture();
 
         SessionTitle = snapshot.IsActive
             ? snapshot.IsStopped
                 ? string.Format(_loc.Get("Debug.Session.Stopped"), snapshot.Reason ?? _loc.Get("Debug.Session.Breakpoint"))
                 : _loc.Get("Debug.Session.Active")
-            : SessionTitle;
+            : _loc.Get("Debug.Session.NoSession");
         Status = snapshot.Status switch
         {
             DebugSessionStatus.Inactive => _loc.Get("Debug.Status.Inactive"),
