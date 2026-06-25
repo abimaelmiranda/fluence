@@ -1,0 +1,301 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avaloniaEdit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
+             xmlns:vm="using:Fluence.Modules.Workbench.Editor.ViewModels"
+             x:Class="Fluence.Modules.Workbench.Editor.Views.EditorView"
+             x:DataType="vm:EditorViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+    <Panel x:Name="EditorSurface">
+        <avaloniaEdit:TextEditor x:Name="Editor"
+                                 ShowLineNumbers="True"
+                                 FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                                 FontSize="13"
+                                 Background="{StaticResource FluenceBrushEditorBackground}"
+                                 Foreground="{StaticResource FluenceBrushEditorForeground}"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Stretch">
+            <avaloniaEdit:TextEditor.ContextMenu>
+                <ContextMenu x:Name="EditorContextMenu" Opening="OnContextMenuOpening">
+                    <MenuItem x:Name="MenuItemIntelliSense"
+                              Header="{Binding [Editor.Menu.IntelliSense], Source={x:Static loc:Locale.Current}}"
+                              InputGesture="Ctrl+Space"
+                              Click="OnMenuIntelliSense" />
+                    <Separator />
+                    <MenuItem x:Name="MenuItemDuplicateLine"
+                              Header="{Binding [Editor.Menu.DuplicateLine], Source={x:Static loc:Locale.Current}}"
+                              Click="OnMenuDuplicateLine" />
+                    <Separator />
+                    <MenuItem x:Name="MenuItemGoToDefinition"
+                              Header="{Binding [Editor.Menu.GoToDefinition], Source={x:Static loc:Locale.Current}}"
+                              InputGesture="F12"
+                              Click="OnMenuGoToDefinition" />
+                    <MenuItem x:Name="MenuItemGoToImplementation"
+                              Header="{Binding [Editor.Menu.GoToImplementation], Source={x:Static loc:Locale.Current}}"
+                              InputGesture="Ctrl+F12"
+                              Click="OnMenuGoToImplementation" />
+                    <MenuItem x:Name="MenuItemGoToTypeDefinition"
+                              Header="{Binding [Editor.Menu.GoToTypeDefinition], Source={x:Static loc:Locale.Current}}"
+                              InputGesture="Ctrl+Shift+F12"
+                              Click="OnMenuGoToTypeDefinition" />
+                </ContextMenu>
+            </avaloniaEdit:TextEditor.ContextMenu>
+        </avaloniaEdit:TextEditor>
+        <Border HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,10,14,0"
+                Padding="8,4"
+                CornerRadius="4"
+                Background="{StaticResource FluenceBrushSurfaceElevated}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="1"
+                IsVisible="{Binding IsFormatOnSaveFeedbackVisible}">
+            <TextBlock Text="{Binding FormatOnSaveFeedbackText}"
+                       Foreground="{StaticResource FluenceBrushTextSecondary}"
+                       FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                       FontSize="12"/>
+        </Border>
+        <Popup x:Name="CompletionPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight">
+            <Border Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    MinWidth="380"
+                    MaxWidth="720">
+                <ListBox x:Name="CompletionListBox"
+                         Background="{StaticResource FluenceBrushSurfaceElevated}"
+                         Foreground="{StaticResource FluenceBrushTextPrimary}"
+                         Height="240"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+            </Border>
+        </Popup>
+        <Popup x:Name="HoverPopup"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight"
+               IsLightDismissEnabled="False">
+            <Border x:Name="HoverPopupBorder"
+                    Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="1"
+                    Padding="4"
+                    CornerRadius="4"
+                    MaxHeight="300"
+                    MaxWidth="480">
+                <TreeView x:Name="HoverTree"
+                          Background="Transparent"
+                          BorderThickness="0">
+                    <TreeView.Styles>
+                        <Style Selector="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay, DataType={x:Type vm:HoverVariableNode}}"/>
+                        </Style>
+                    </TreeView.Styles>
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate x:DataType="vm:HoverVariableNode"
+                                          ItemsSource="{Binding Children}">
+                            <TextBlock Text="{Binding DisplayText}"
+                                       FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                                       FontSize="12"
+                                       Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </Border>
+        </Popup>
+        <Popup x:Name="LspHoverPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight">
+            <Border x:Name="LspHoverBorder"
+                    Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8"
+                    MaxWidth="520"
+                    MaxHeight="220">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="LspHoverText"
+                               Foreground="{StaticResource FluenceBrushTextPrimary}"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"/>
+                </ScrollViewer>
+            </Border>
+        </Popup>
+        <Popup x:Name="DiagnosticTooltipPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight">
+            <Border x:Name="DiagnosticTooltipBorder"
+                    Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="#5A2020"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8,6"
+                    MaxWidth="520"
+                    MaxHeight="200">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="DiagnosticTooltipText"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"/>
+                </ScrollViewer>
+            </Border>
+        </Popup>
+        <Popup x:Name="CodeActionPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="BottomLeft"
+               PlacementGravity="BottomRight">
+            <Border x:Name="CodeActionPopupBorder"
+                    Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8"
+                    MinWidth="340"
+                    MaxWidth="560">
+                <StackPanel Spacing="6">
+                    <TextBlock x:Name="CodeActionDiagnosticText"
+                               Foreground="{StaticResource FluenceBrushTextPrimary}"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"
+                               MaxHeight="76"/>
+                    <Separator x:Name="CodeActionSeparator"
+                               Background="{StaticResource FluenceBrushBorder}"
+                               Height="1"
+                               Margin="0"/>
+                    <TextBlock x:Name="CodeActionEmptyText"
+                               Text="{Binding [Editor.CodeAction.NoQuickFixes], Source={x:Static loc:Locale.Current}}"
+                               IsVisible="False"
+                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"/>
+                    <ListBox x:Name="CodeActionsListBox"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Padding="0"
+                             MaxHeight="220"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,1"/>
+                                <Setter Property="MinHeight" Value="28"/>
+                                <Setter Property="CornerRadius" Value="3"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:pointerover">
+                                <Setter Property="Background" Value="#263241"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:selected">
+                                <Setter Property="Background" Value="#2F4156"/>
+                            </Style>
+                        </ListBox.Styles>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+        </Popup>
+        <Popup x:Name="DebugExceptionPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="TopLeft"
+               PlacementGravity="BottomLeft">
+            <Border x:Name="DebugExceptionPopupBorder"
+                    Background="#B91C1C"
+                    BorderBrush="#FCA5A5"
+                    BorderThickness="2"
+                    CornerRadius="4"
+                    Padding="10,8"
+                    MinWidth="360"
+                    MaxWidth="680">
+                <Grid RowDefinitions="Auto,Auto"
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="10"
+                      RowSpacing="4">
+                    <TextBlock x:Name="DebugExceptionTitleText"
+                               Grid.Row="0"
+                               Grid.Column="0"
+                               Foreground="White"
+                               FontWeight="Bold"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="13"
+                               TextTrimming="CharacterEllipsis"/>
+                    <Button x:Name="DebugExceptionCloseButton"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Classes="ideIcon"
+                            Width="24"
+                            Height="24"
+                            MinHeight="24"
+                            Padding="0"
+                            Foreground="White"
+                            Background="{StaticResource FluenceBrushError}"
+                            BorderBrush="{StaticResource FluenceBrushTextPrimary}"
+                            BorderThickness="1">
+                        <Path Width="10"
+                              Height="10"
+                              Stretch="Uniform"
+                              Stroke="White"
+                              StrokeThickness="2"
+                              StrokeLineCap="Round"
+                              Data="M0,0 L10,10 M10,0 L0,10"/>
+                    </Button>
+                    <TextBlock x:Name="DebugExceptionMessageText"
+                               Grid.Row="1"
+                               Grid.Column="0"
+                               Grid.ColumnSpan="2"
+                               Foreground="#FEE2E2"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"
+                               MaxHeight="80"/>
+                </Grid>
+            </Border>
+        </Popup>
+        <Popup x:Name="SignatureHelpPopup"
+               IsLightDismissEnabled="False"
+               Placement="AnchorAndGravity"
+               PlacementAnchor="TopLeft"
+               PlacementGravity="TopRight">
+            <Border Background="{StaticResource FluenceBrushSurfaceElevated}"
+                    BorderBrush="{StaticResource FluenceBrushBorder}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8"
+                    MaxWidth="560"
+                    MaxHeight="260">
+                <StackPanel Spacing="6">
+                    <TextBlock x:Name="SignatureHelpText"
+                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                               TextWrapping="Wrap"
+                               FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                               FontSize="12"/>
+                    <ScrollViewer x:Name="SignatureHelpDocumentationScroll"
+                                  IsVisible="False"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  MaxHeight="160">
+                        <TextBlock x:Name="SignatureHelpDocumentationText"
+                                   Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                   TextWrapping="Wrap"
+                                   FontFamily="Menlo,Consolas,Cascadia Mono,monospace"
+                                   FontSize="12"/>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Panel>
+</UserControl>

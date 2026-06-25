@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using System.Resources;
+using System.Threading;
+using System.Threading.Tasks;
+using Fluence.Core.Abstractions.Commands;
+using Fluence.Core.Abstractions.Localization;
+using Fluence.Core.Abstractions.Languages;
+using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Abstractions.Tasks;
+using Fluence.Core.Models.Modules;
+using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Output;
+using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Services.Workspace;
+using Fluence.Modules.Workbench.SolutionView.Abstractions;
+using Fluence.Modules.Workbench.SolutionView.Commands;
+using Fluence.Modules.Workbench.SolutionView.Services;
+using Fluence.Modules.Workbench.SolutionView.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using Fluence.Modules.Workbench.SolutionView.Commands.OpenSolution;
+using Fluence.Modules.Workbench.SolutionView.Commands.SetStartupProject;
+using Fluence.Modules.Workbench.SolutionView.Commands.AddProjectReference;
+using Fluence.Modules.Workbench.SolutionView.Commands.RemoveProjectReference;
+using Fluence.Core.Events.Git;
+using Fluence.Core.Events.Workspace;
+
+namespace Fluence.Modules.Workbench.SolutionView;
+
+public sealed class Entrypoint : IModule, IConditionalModule
+{
+    private readonly List<IDisposable> _subscriptions = [];
+
+    public string Id => "SolutionView";
+
+    public bool ShouldActivate(IWorkspaceContext workspace, ILanguageProfileRegistry profiles)
+    {
+        var languageId = profiles.DetectWorkspaceLanguage(workspace);
+        return languageId is null or "csharp" or "c" or "cpp";
+    }
+
+    public string DisplayName => "Solution View";
+
+    public const string ChannelId = "solution-view";
+
+    public int StartupOrder => 300;
+
+    public void Register(IServiceCollection services)
+    {
+        services.AddSingleton<SolutionProjectAssociationService>();
+        services.AddSingleton<IProjectAssociationService>(provider => provider.GetRequiredService<SolutionProjectAssociationService>());
+        services.AddSingleton<SolutionViewModel>();
+        services.AddSingleton<ISolutionWorkspaceLoader, BuildalyzerSolutionWorkspaceLoader>();
+        services.AddSingleton<ISolutionStructureService, SolutionStructureService>();
+        services.AddSingleton<IProjectReferenceService, ProjectReferenceService>();
+        services.AddSingleton<IProjectReferenceDialogService, AvaloniaProjectReferenceDialogService>();
+        services.AddSingleton<ISolutionFileCreationDialogService, AvaloniaSolutionFileCreationDialogService>();
+        services.AddSingleton<ICommandHandler<OpenSolutionWorkspaceCommand>, OpenSolutionWorkspaceCommandHandler>();
+        services.AddSingleton<ICommandHandler<AddProjectReferencesCommand>, AddProjectReferencesCommandHandler>();
+        services.AddSingleton<ICommandHandler<RemoveProjectReferenceCommand>, RemoveProjectReferenceCommandHandler>();
+        services.AddSingleton<ICommandHandler<SetStartupProjectCommand>, SetStartupProjectCommandHandler>();
+    }
+
+    public ModuleContributions GetContributions() =>
+        new()
+        {
+            Panels =
+            [
+                new ShellPanelContribution(
+                    ShellRegion.Sidebar,
+                    Id,
+                    "Solution",
+                    services => services.GetRequiredService<SolutionViewModel>(),
+                    PanelVisibilityRule.Custom((workspace, activeTabId, _) =>
+                        activeTabId == "Files" &&
+                        workspace.NavigationMode == WorkspaceMode.Solution)),
+            ],
+            OutputChannel = new OutputChannelDescriptor(ChannelId, "Solution View"),
+        };
+
+    public Task InitializeAsync(IModuleHost host, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        host.Services.GetRequiredService<ILocalizationService>()
+            .Register(new ResourceManager("Fluence.Modules.Workbench.SolutionView.Resources.Strings", typeof(Entrypoint).Assembly));
+
+        var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
+
+        _subscriptions.Add(host.Events.SubscribeSync<OpenSolutionRequestedEvent>(e =>
+            scheduler.Schedule("workspace.open-solution", TaskPriority.Interactive,
+                ct => OpenSolutionAsync(host, e.Path, ct),
+                correlationId: e.Path)));
+        _subscriptions.Add(host.Events.SubscribeSync<RefreshSolutionViewRequestedEvent>(_ =>
+            scheduler.ScheduleLatest("solution.refresh", TaskPriority.Maintenance,
+                TimeSpan.FromMilliseconds(150),
+                ct => RefreshSolutionViewAsync(host, ct),
+                correlationId: "solution.refresh")));
+        _subscriptions.Add(host.Events.SubscribeSync<GitCheckoutCompletedEvent>(_ =>
+            scheduler.ScheduleLatest("solution.refresh", TaskPriority.Maintenance,
+                TimeSpan.FromMilliseconds(150),
+                ct => RefreshSolutionViewAsync(host, ct),
+                correlationId: "solution.refresh")));
+        host.SetModuleState(Id, ModuleState.Active);
+        return Task.CompletedTask;
+    }
+
+    private static async Task OpenSolutionAsync(IModuleHost host, string path, CancellationToken ct)
+    {
+        var handler = host.Services.GetRequiredService<ICommandHandler<OpenSolutionWorkspaceCommand>>();
+        await handler.HandleAsync(new OpenSolutionWorkspaceCommand(path), ct);
+    }
+
+    private static Task RefreshSolutionViewAsync(IModuleHost host, CancellationToken ct)
+    {
+        return host.Services.GetRequiredService<SolutionViewModel>().ReloadCurrentSolutionAsync();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        foreach (var subscription in _subscriptions)
+            subscription.Dispose();
+        _subscriptions.Clear();
+        return ValueTask.CompletedTask;
+    }
+}

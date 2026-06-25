@@ -16,10 +16,10 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
 {
     private readonly IModule[] _modules =
     [
-        new Fluence.Modules.FileExplorer.Entrypoint(),
-        new Fluence.Modules.SolutionView.Entrypoint(),
-        new Fluence.Modules.Editor.Entrypoint(),
-        new Fluence.Modules.XamlViewer.Entrypoint(),
+        new Fluence.Modules.Workbench.FileExplorer.Entrypoint(),
+        new Fluence.Modules.Workbench.SolutionView.Entrypoint(),
+        new Fluence.Modules.Workbench.Editor.Entrypoint(),
+        new Fluence.Modules.Workbench.XamlViewer.Entrypoint(),
     ];
 
     public string Id => "Workbench";
