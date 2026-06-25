@@ -1,5 +1,5 @@
 using System.Collections.ObjectModel;
-using System.Runtime.InteropServices;
+using ProcessArch = System.Runtime.InteropServices.Architecture;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,19 +8,15 @@ using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.Debugging.Enums;
 using Fluence.Core.Services.Debugging;
-using Fluence.Core.Abstractions.Modules;
-using Fluence.Core.Models.Modules;
-using Fluence.Core.Models.Modules.Enums;
 using Fluence.Core.ViewModels;
 using Fluence.Modules.Debug.Models;
-using Fluence.Core.Events.Debug;
 
 namespace Fluence.Modules.Debug.ViewModels;
 
 public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
 {
     private readonly IDebugStateService _debugState;
-    private readonly IShellEventBus _events;
+    private readonly IDebugService _debugService;
     private readonly ILocalizationService _loc;
 
     [ObservableProperty]
@@ -38,10 +34,10 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _canRestartSession;
 
-    public DebugSidebarViewModel(IDebugStateService debugState, IShellEventBus events, ILocalizationService loc)
+    public DebugSidebarViewModel(IDebugStateService debugState, IDebugService debugService, ILocalizationService loc)
     {
         _debugState = debugState;
-        _events = events;
+        _debugService = debugService;
         _loc = loc;
         _debugState.Changed += OnDebugStateChanged;
         _sessionTitle = _loc.Get("Debug.Session.NoSession");
@@ -51,39 +47,23 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<string> StackFrames { get; } = [];
 
-    public void Update(DebugSession session)
-    {
-        SessionTitle = session.IsActive
-            ? _loc.Get("Debug.Session.Active")
-            : _loc.Get("Debug.Session.NoSession");
-        Architecture = session.TargetArchitecture;
-        RefreshState();
-    }
-
-    public void Clear()
-    {
-        SessionTitle = _loc.Get("Debug.Session.NoSession");
-        Architecture = GetDefaultArchitecture();
-        RefreshState();
-    }
+    [RelayCommand]
+    private void Continue() => _ = _debugService.ContinueAsync();
 
     [RelayCommand]
-    private void Continue() => _events.Publish(new ContinueDebugRequestedEvent());
+    private void StepOver() => _ = _debugService.StepOverAsync();
 
     [RelayCommand]
-    private void StepOver() => _events.Publish(new StepOverDebugRequestedEvent());
+    private void StepInto() => _ = _debugService.StepIntoAsync();
 
     [RelayCommand]
-    private void StepInto() => _events.Publish(new StepIntoDebugRequestedEvent());
+    private void StepOut() => _ = _debugService.StepOutAsync();
 
     [RelayCommand]
-    private void StepOut() => _events.Publish(new StepOutDebugRequestedEvent());
+    private void Stop() => _ = _debugService.StopAsync();
 
     [RelayCommand]
-    private void Stop() => _events.Publish(new StopDebugRequestedEvent());
-
-    [RelayCommand]
-    private void Reload() => _events.Publish(new ReloadDebugRequestedEvent());
+    private void Reload() => _ = _debugService.RestartAsync();
 
     private void OnDebugStateChanged(object? sender, EventArgs e)
     {
@@ -101,12 +81,14 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         var snapshot = _debugState.Snapshot;
         if (snapshot.IsActive && !string.IsNullOrWhiteSpace(snapshot.Architecture))
             Architecture = snapshot.Architecture;
+        else if (!snapshot.IsActive)
+            Architecture = GetDefaultArchitecture();
 
         SessionTitle = snapshot.IsActive
             ? snapshot.IsStopped
                 ? string.Format(_loc.Get("Debug.Session.Stopped"), snapshot.Reason ?? _loc.Get("Debug.Session.Breakpoint"))
                 : _loc.Get("Debug.Session.Active")
-            : SessionTitle;
+            : _loc.Get("Debug.Session.NoSession");
         Status = snapshot.Status switch
         {
             DebugSessionStatus.Inactive => _loc.Get("Debug.Status.Inactive"),
@@ -122,10 +104,7 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
         Replace(StackFrames, snapshot.StackFrames.Select(FormatStackFrame).ToArray());
     }
 
-    private static string FormatStackFrame(DebugStackFrame frame)
-    {
-        return $"{frame.Name}:{frame.Line}";
-    }
+    private static string FormatStackFrame(DebugStackFrame frame) => $"{frame.Name}:{frame.Line}";
 
     private static void Replace<T>(ObservableCollection<T> collection, T[] values)
     {
@@ -135,11 +114,11 @@ public sealed partial class DebugSidebarViewModel : ViewModelBase, IDisposable
     }
 
     private static string GetDefaultArchitecture() =>
-        RuntimeInformation.ProcessArchitecture switch
+        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture switch
         {
-            System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
-            System.Runtime.InteropServices.Architecture.X64 => "x64",
-            System.Runtime.InteropServices.Architecture.X86 => "x86",
+            ProcessArch.Arm64 => "arm64",
+            ProcessArch.X64 => "x64",
+            ProcessArch.X86 => "x86",
             _ => "x64",
         };
 

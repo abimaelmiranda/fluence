@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Fluence.Core.Abstractions.Modules;
+using Fluence.Core.Events.Ui;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Workbench;
@@ -14,10 +16,16 @@ public sealed partial class BottomBarViewModel : ViewModelBase
     [ObservableProperty]
     private string _activeTabId = BottomBarTabIds.Terminal;
 
-    public BottomBarViewModel(IOutputChannelService channels, IOutputChannelRegistry registry, ProblemsViewModel problems)
+    private readonly IShellEventBus _events;
+
+    public BottomBarViewModel(
+        IOutputChannelService channels,
+        IOutputChannelRegistry registry,
+        ProblemsViewModel problems,
+        IShellEventBus events)
     {
+        _events = events;
         Output = new OutputChannelViewModel(channels, registry);
-        Debug = new OutputChannelViewModel(channels, registry, OutputChannelIds.Debug);
         Run = new OutputChannelViewModel(channels, registry, OutputChannelIds.Run);
         Problems = problems;
 
@@ -31,13 +39,12 @@ public sealed partial class BottomBarViewModel : ViewModelBase
         ];
 
         RefreshActiveTabs();
+        _events.Publish(new BottomBarTabChangedEvent(ActiveTabId));
     }
 
     public ObservableCollection<BottomBarTabViewModel> Tabs { get; }
 
     public OutputChannelViewModel Output { get; }
-
-    public OutputChannelViewModel Debug { get; }
 
     public OutputChannelViewModel Run { get; }
 
@@ -65,6 +72,7 @@ public sealed partial class BottomBarViewModel : ViewModelBase
     partial void OnActiveTabIdChanged(string value)
     {
         RefreshActiveTabs();
+        _events.Publish(new BottomBarTabChangedEvent(value));
         OnPropertyChanged(nameof(IsOutputActive));
         OnPropertyChanged(nameof(IsDebugActive));
         OnPropertyChanged(nameof(IsTerminalActive));

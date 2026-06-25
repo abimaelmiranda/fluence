@@ -3,7 +3,6 @@ using System.Resources;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Fluence.Core.Abstractions.Commands;
 using Fluence.Core.Abstractions.Debugging;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Keybindings;
@@ -21,13 +20,11 @@ using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Debug.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using Fluence.Modules.Debug.Commands.DebugProject;
-using Fluence.Modules.Debug.Abstractions.Session;
 using Fluence.Modules.Debug.Json;
-using Fluence.Modules.Debug.Services;
 using Fluence.Core.Events.Debug;
 
 namespace Fluence.Modules.Debug;
@@ -36,6 +33,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
 {
     private readonly List<IDisposable> _subscriptions = [];
     private IDebugService? _debugService;
+    private DebugConsoleViewModel? _debugConsole;
 
     public string Id => "Debug";
 
@@ -58,9 +56,6 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         services.AddSingleton<DebugWatchTabViewModel>();
         services.AddSingleton<DebugConsoleViewModel>();
         services.AddSingleton<IDebugStateService, DebugStateService>();
-        services.AddSingleton<DebugService>();
-        services.AddSingleton<IDebugSessionManager, DebugSessionManager>();
-        services.AddSingleton<ICommandHandler<DebugProjectCommand>, DebugProjectCommandHandler>();
     }
 
     public ModuleContributions GetContributions() =>
@@ -76,6 +71,12 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
                     PanelVisibilityRule.Custom((_, activeTabId, services) =>
                         activeTabId == "Debug" &&
                         services.GetRequiredService<IDebugStateService>().Snapshot.IsActive)),
+                new ShellPanelContribution(
+                    ShellRegion.BottomBar,
+                    "DebugConsole",
+                    "Debug",
+                    services => services.GetRequiredService<DebugConsoleViewModel>(),
+                    PanelVisibilityRule.ForBottomBarTab(BottomBarTabIds.Debug)),
             ],
             OutputChannel = new OutputChannelDescriptor(ChannelId, "Debug"),
         };
@@ -86,6 +87,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
         var debug = host.Services.GetRequiredService<IDebugService>();
         _debugService = debug;
+        _debugConsole = host.Services.GetRequiredService<DebugConsoleViewModel>();
         var commands = host.Services.GetRequiredService<ICommandRegistry>();
 
         host.Services.GetRequiredService<ISettingsRegistry>()
@@ -96,30 +98,11 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         host.Services.GetRequiredService<ILocalizationService>()
             .Register(new ResourceManager("Fluence.Modules.Debug.Resources.Strings", typeof(Entrypoint).Assembly));
 
-        // Iniciar sessão — Interactive: usuário espera resposta imediata
-        _subscriptions.Add(host.Events.SubscribeSync<DebugProjectRequestedEvent>(_ =>
-            scheduler.Schedule("debug.start", TaskPriority.Interactive,
-                ct => HandleAsync(host, ct))));
-
-        // Controles de sessão — Critical: inputs diretos do usuário no debugger
+        // Stop pode vir de callers externos (MainWindowViewModel) — mantém via evento
         _subscriptions.Add(host.Events.SubscribeSync<StopDebugRequestedEvent>(_ =>
             scheduler.Schedule("debug.stop", TaskPriority.Critical,
                 _ => debug.StopAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<ReloadDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.reload", TaskPriority.Critical,
-                _ => debug.RestartAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<ContinueDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.continue", TaskPriority.Critical,
-                _ => debug.ContinueAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<StepOverDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.step-over", TaskPriority.Critical,
-                _ => debug.StepOverAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<StepIntoDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.step-into", TaskPriority.Critical,
-                _ => debug.StepIntoAsync())));
-        _subscriptions.Add(host.Events.SubscribeSync<StepOutDebugRequestedEvent>(_ =>
-            scheduler.Schedule("debug.step-out", TaskPriority.Critical,
-                _ => debug.StepOutAsync())));
+        // ToggleBreakpoint vem do editor (Workbench) — mantém via evento
         _subscriptions.Add(host.Events.SubscribeSync<ToggleBreakpointRequestedEvent>(e =>
             scheduler.Schedule("debug.breakpoint", TaskPriority.Interactive,
                 _ => debug.ToggleBreakpointAsync(e.FilePath, e.Line))));
@@ -141,12 +124,6 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         return Task.CompletedTask;
     }
 
-    private static async Task HandleAsync(IModuleHost host, CancellationToken ct)
-    {
-        var handler = host.Services.GetRequiredService<ICommandHandler<DebugProjectCommand>>();
-        await handler.HandleAsync(new DebugProjectCommand(), ct);
-    }
-
     public async ValueTask DisposeAsync()
     {
         foreach (var subscription in _subscriptions)
@@ -154,6 +131,8 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         _subscriptions.Clear();
 
         var service = _debugService;
+        _debugConsole?.Dispose();
+        _debugConsole = null;
         _debugService = null;
         if (service is not null)
             await service.StopAsync().ConfigureAwait(false);
@@ -162,6 +141,8 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
     public Task StopAsync(ModuleShutdownContext context)
     {
         var service = _debugService;
+        _debugConsole?.Dispose();
+        _debugConsole = null;
         _debugService = null;
         return service?.StopAsync(context.CancellationToken) ?? Task.CompletedTask;
     }

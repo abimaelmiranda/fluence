@@ -5,5 +5,6 @@ public enum PanelVisibilityKind
     Always,
     WorkspaceMode,
     ActivityTab,
+    BottomBarTab,
     Custom,
 }

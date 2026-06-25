@@ -1,25 +1,40 @@
 using System.Collections.Generic;
+using System;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Fluence.Core.Abstractions.Output;
+using Fluence.Core.Abstractions.Tasks;
+using Fluence.Core.Models.Output;
 using Fluence.Core.ViewModels;
 
 namespace Fluence.Modules.Debug.ViewModels;
 
-public sealed partial class DebugConsoleViewModel : ViewModelBase
+public sealed partial class DebugConsoleViewModel : ViewModelBase, IDisposable
 {
     public const string ConsoleSubTabId = "Console";
     public const string VariablesSubTabId = "Variables";
     public const string WatchSubTabId = "Watch";
 
+    private readonly IOutputChannelService _channels;
+    private readonly IUiDispatcher _dispatcher;
+
     [ObservableProperty]
     private string _activeSubTabId = ConsoleSubTabId;
 
+    [ObservableProperty]
+    private string _text = string.Empty;
+
     public DebugConsoleViewModel(
         DebugVariablesTabViewModel variables,
-        DebugWatchTabViewModel watch)
+        DebugWatchTabViewModel watch,
+        IOutputChannelService channels,
+        IUiDispatcher dispatcher)
     {
         Variables = variables;
         Watch = watch;
+        _channels = channels;
+        _dispatcher = dispatcher;
 
         SubTabs =
         [
@@ -29,6 +44,8 @@ public sealed partial class DebugConsoleViewModel : ViewModelBase
         ];
 
         RefreshActiveTabs();
+        RefreshText();
+        _channels.ChannelChanged += OnChannelChanged;
     }
 
     public IReadOnlyList<DebugConsoleTabViewModel> SubTabs { get; }
@@ -67,5 +84,26 @@ public sealed partial class DebugConsoleViewModel : ViewModelBase
     {
         foreach (var tab in SubTabs)
             tab.IsActive = tab.Id == ActiveSubTabId;
+    }
+
+    [RelayCommand]
+    private void Clear() => _channels.Clear(OutputChannelIds.Debug);
+
+    private void OnChannelChanged(object? sender, OutputChannelChangedEventArgs e)
+    {
+        if (!string.Equals(e.ChannelId, OutputChannelIds.Debug, StringComparison.Ordinal))
+            return;
+
+        _dispatcher.Post(RefreshText);
+    }
+
+    private void RefreshText()
+    {
+        Text = string.Concat(_channels.GetEntries(OutputChannelIds.Debug).Select(e => e.Text));
+    }
+
+    public void Dispose()
+    {
+        _channels.ChannelChanged -= OnChannelChanged;
     }
 }

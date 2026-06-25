@@ -17,7 +17,7 @@ using Fluence.Core.Services.Debugging;
 
 namespace Fluence.Infrastructure.Protocols.Dap;
 
-internal sealed class DapClient : IDebugAdapterClient
+public sealed class DapClient : IDebugAdapterClient
 {
     private readonly string _adapterPath;
     private readonly string _adapterId;

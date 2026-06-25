@@ -33,17 +33,10 @@
     <ProjectReference Include="..\Fluence.Core\Fluence.Core.csproj" />
     <ProjectReference Include="..\Fluence.Infrastructure\Fluence.Infrastructure.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.Settings\Fluence.Modules.Settings.csproj" />
-    <ProjectReference Include="..\..\modules\Fluence.Modules.FileExplorer\Fluence.Modules.FileExplorer.csproj" />
+    <ProjectReference Include="..\..\modules\Fluence.Modules.Workbench\Fluence.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.NuGetExplorer\Fluence.Modules.NuGetExplorer.csproj" />
-    <ProjectReference Include="..\..\modules\Fluence.Modules.SolutionView\Fluence.Modules.SolutionView.csproj" />
-    <ProjectReference Include="..\..\modules\Fluence.Modules.Editor\Fluence.Modules.Editor.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.Terminal\Fluence.Modules.Terminal.csproj" />
-    <ProjectReference Include="..\..\modules\Fluence.Modules.DotnetCli\Fluence.Modules.DotnetCli.csproj" />
-    <ProjectReference Include="..\..\modules\Fluence.Modules.Debug\Fluence.Modules.Debug.csproj" />
-    <ProjectReference Include="..\..\modules\Fluence.Modules.DebuggerSetup\Fluence.Modules.DebuggerSetup.csproj" />
+    <ProjectReference Include="..\..\modules\Fluence.Modules.Toolchains\Fluence.Modules.Toolchains.csproj" />
     <ProjectReference Include="..\..\modules\Fluence.Modules.SourceControl\Fluence.Modules.SourceControl.csproj" />
-    <ProjectReference Include="..\..\modules\Fluence.Modules.LspSetup\Fluence.Modules.LspSetup.csproj" />
-    <ProjectReference Include="..\..\modules\Fluence.Modules.LanguageServer\Fluence.Modules.LanguageServer.csproj" />
-    <ProjectReference Include="..\..\modules\Fluence.Modules.XamlViewer\Fluence.Modules.XamlViewer.csproj" />
   </ItemGroup>
 </Project>

@@ -16,6 +16,9 @@ public sealed record PanelVisibilityRule(
     public static PanelVisibilityRule ForActivityTab(string tabId) =>
         new(PanelVisibilityKind.ActivityTab, ActivityTabId: tabId);
 
+    public static PanelVisibilityRule ForBottomBarTab(string tabId) =>
+        new(PanelVisibilityKind.BottomBarTab, ActivityTabId: tabId);
+
     public static PanelVisibilityRule Custom(Func<Fluence.Core.Models.Workspace.Workspace, string?, IServiceProvider, bool> predicate) =>
         new(PanelVisibilityKind.Custom, Predicate: predicate);
 }

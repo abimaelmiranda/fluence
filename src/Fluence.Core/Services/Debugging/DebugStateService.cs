@@ -54,13 +54,7 @@ public sealed class DebugStateService : IDebugStateService
                 breakpoints.Add(new DebugBreakpoint(filePath, line));
             }
 
-            _snapshot = _snapshot with
-            {
-                Breakpoints = breakpoints
-                    .OrderBy(b => b.FilePath, StringComparer.OrdinalIgnoreCase)
-                    .ThenBy(b => b.Line)
-                    .ToArray(),
-            };
+            _snapshot = _snapshot with { Breakpoints = breakpoints.ToArray() };
         }
 
         Changed?.Invoke(this, EventArgs.Empty);

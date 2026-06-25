@@ -11,6 +11,7 @@ using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Terminal.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,7 +45,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant
                     Id,
                     "Terminal",
                     services => services.GetRequiredService<TerminalViewModel>(),
-                    PanelVisibilityRule.Always),
+                    PanelVisibilityRule.ForBottomBarTab(BottomBarTabIds.Terminal)),
             ],
             OutputChannel = new OutputChannelDescriptor(ChannelId, "Terminal"),
         };

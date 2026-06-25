@@ -12,9 +12,6 @@ using Fluence.Core.Json;
 using Fluence.Core.Models.Workspace.Enums;
 using Fluence.Core.Services.Keybindings;
 using Fluence.Core.Services.Settings;
-using Fluence.Modules.Debug.Json;
-using Fluence.Modules.Editor.Json;
-using Fluence.Modules.LanguageServer.Json;
 using Fluence.Modules.Settings.Services;
 using Fluence.Modules.Settings.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,9 +37,6 @@ public sealed class Entrypoint : IModule
         {
             var registry = new SettingsRegistry();
             registry.Register(FluenceCoreSettingsJsonContext.Default.GlobalSettings);
-            registry.Register(EditorSettingsJsonContext.Default.EditorSettings);
-            registry.Register(LanguageServerSettingsJsonContext.Default.LanguageServerSettings);
-            registry.Register(DebugSettingsJsonContext.Default.DebugSettings);
             registry.Register(FluenceCoreSettingsJsonContext.Default.ShellSettings);
             registry.Register(FluenceCoreSettingsJsonContext.Default.ProblemsSettings);
             registry.Register(FluenceCoreSettingsJsonContext.Default.DiagnosticsSettings);
