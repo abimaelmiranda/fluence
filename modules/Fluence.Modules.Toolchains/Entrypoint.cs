@@ -4,6 +4,7 @@ using System.Resources;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Debugging;
+using Fluence.Core.Abstractions.Infrastructure;
 using Fluence.Core.Abstractions.Languages;
 using Fluence.Core.Abstractions.Localization;
 using Fluence.Core.Abstractions.Modules;
@@ -53,7 +54,6 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
     {
         services.AddSingleton<IToolchainRegistry, ToolchainRegistry>();
         services.AddSingleton<CppRunService>();
-        services.AddSingleton<CppDebugService>();
         services.AddSingleton<CppDebuggerProvisioningService>();
         services.AddSingleton<IProjectTemplateProvider, CppProjectTemplateProvider>();
         services.AddSingleton<ToolchainDebugService>();
@@ -62,15 +62,23 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         services.AddSingleton(sp => new CppToolchain(
             "c",
             sp.GetRequiredService<CppRunService>(),
-            sp.GetRequiredService<CppDebugService>(),
             sp.GetRequiredService<CppDebuggerProvisioningService>(),
+            sp.GetRequiredService<IDebugService>(),
+            sp.GetRequiredService<IWorkspaceContext>(),
+            sp.GetRequiredService<Func<string, string, CancellationToken, Task<IDebugAdapterClient>>>(),
+            sp.GetRequiredService<IProcessHost>(),
+            sp.GetRequiredService<IOutputChannelService>(),
             sp.GetRequiredService<IShellEventBus>(),
             sp.GetRequiredService<IUserNotificationService>()));
         services.AddSingleton(sp => new CppToolchain(
             "cpp",
             sp.GetRequiredService<CppRunService>(),
-            sp.GetRequiredService<CppDebugService>(),
             sp.GetRequiredService<CppDebuggerProvisioningService>(),
+            sp.GetRequiredService<IDebugService>(),
+            sp.GetRequiredService<IWorkspaceContext>(),
+            sp.GetRequiredService<Func<string, string, CancellationToken, Task<IDebugAdapterClient>>>(),
+            sp.GetRequiredService<IProcessHost>(),
+            sp.GetRequiredService<IOutputChannelService>(),
             sp.GetRequiredService<IShellEventBus>(),
             sp.GetRequiredService<IUserNotificationService>()));
         services.AddSingleton<ToolchainSetupViewModel>();
