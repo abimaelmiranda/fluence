@@ -21,6 +21,7 @@ using Fluence.Core.Models.Output;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
 using Fluence.Core.Models.Workspace.Enums;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.Services.Workspace;
 using Fluence.Modules.Debug.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +37,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
 {
     private readonly List<IDisposable> _subscriptions = [];
     private IDebugService? _debugService;
+    private DebugConsoleViewModel? _debugConsole;
 
     public string Id => "Debug";
 
@@ -76,6 +78,12 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
                     PanelVisibilityRule.Custom((_, activeTabId, services) =>
                         activeTabId == "Debug" &&
                         services.GetRequiredService<IDebugStateService>().Snapshot.IsActive)),
+                new ShellPanelContribution(
+                    ShellRegion.BottomBar,
+                    "DebugConsole",
+                    "Debug",
+                    services => services.GetRequiredService<DebugConsoleViewModel>(),
+                    PanelVisibilityRule.ForBottomBarTab(BottomBarTabIds.Debug)),
             ],
             OutputChannel = new OutputChannelDescriptor(ChannelId, "Debug"),
         };
@@ -86,6 +94,7 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         var scheduler = host.Services.GetRequiredService<ITaskScheduler>();
         var debug = host.Services.GetRequiredService<IDebugService>();
         _debugService = debug;
+        _debugConsole = host.Services.GetRequiredService<DebugConsoleViewModel>();
         var commands = host.Services.GetRequiredService<ICommandRegistry>();
 
         host.Services.GetRequiredService<ISettingsRegistry>()
@@ -154,6 +163,8 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
         _subscriptions.Clear();
 
         var service = _debugService;
+        _debugConsole?.Dispose();
+        _debugConsole = null;
         _debugService = null;
         if (service is not null)
             await service.StopAsync().ConfigureAwait(false);
@@ -162,6 +173,8 @@ public sealed class Entrypoint : IModule, IModuleShutdownParticipant, ICondition
     public Task StopAsync(ModuleShutdownContext context)
     {
         var service = _debugService;
+        _debugConsole?.Dispose();
+        _debugConsole = null;
         _debugService = null;
         return service?.StopAsync(context.CancellationToken) ?? Task.CompletedTask;
     }

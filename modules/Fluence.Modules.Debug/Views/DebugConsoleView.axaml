@@ -1,0 +1,220 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Fluence.Core.Services.Localization"
+             xmlns:vm="using:Fluence.Modules.Debug.ViewModels"
+             x:Class="Fluence.Modules.Debug.Views.DebugConsoleView"
+             x:DataType="vm:DebugConsoleViewModel"
+             Background="{StaticResource FluenceBrushBottomBarContentBackground}">
+    <Grid RowDefinitions="30,*">
+        <Border Grid.Row="0"
+                Background="{StaticResource FluenceBrushSurface}"
+                BorderBrush="{StaticResource FluenceBrushBorder}"
+                BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+                <ScrollViewer Grid.Column="0"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding SubTabs}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DebugConsoleTabViewModel">
+                                <Button Command="{Binding SelectCommand}"
+                                        CommandParameter="{Binding Id}"
+                                        Classes="ideGhost"
+                                        MinWidth="96"
+                                        Height="30"
+                                        Padding="12,0"
+                                        HorizontalContentAlignment="Left">
+                                    <TextBlock Text="{Binding Title}"
+                                               Classes="ideValue"
+                                               Classes.active="{Binding IsActive}"
+                                               VerticalAlignment="Center"/>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <Button Grid.Column="1"
+                        Classes="ideGhost"
+                        Command="{Binding ClearCommand}"
+                        IsVisible="{Binding IsConsoleActive}"
+                        MinWidth="56"
+                        Height="30"
+                        ToolTip.Tip="{Binding [Desktop.Toolbar.ClearDebug], Source={x:Static loc:Locale.Current}}">
+                    <TextBlock Text="Clear"
+                               FontSize="12"
+                               Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <ScrollViewer IsVisible="{Binding IsConsoleActive}"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Background="{StaticResource FluenceBrushBottomBarContentBackground}">
+                <SelectableTextBlock Text="{Binding Text, Mode=OneWay}"
+                                     TextWrapping="NoWrap"
+                                     FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                     FontSize="13"
+                                     Foreground="{StaticResource FluenceBrushTextPrimary}"
+                                     Padding="10,8"
+                                     VerticalAlignment="Top"
+                                     HorizontalAlignment="Left"/>
+            </ScrollViewer>
+
+            <Grid IsVisible="{Binding IsVariablesActive}"
+                  Background="{StaticResource FluenceBrushBottomBarContentBackground}">
+                <TextBlock Text="{Binding [Debug.Variables.Empty], Source={x:Static loc:Locale.Current}}"
+                           IsVisible="{Binding Variables.IsEmpty}"
+                           FontFamily="{StaticResource FluenceFontFamily}"
+                           FontSize="{StaticResource FluenceFontSizeSmall}"
+                           Foreground="{StaticResource FluenceBrushTextSecondary}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+                <ScrollViewer IsVisible="{Binding !Variables.IsEmpty}"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto">
+                    <TreeView ItemsSource="{Binding Variables.RootVariables}"
+                              Background="Transparent">
+                        <TreeView.Styles>
+                            <Style Selector="TreeViewItem" x:DataType="vm:DebugVariableNode">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                            </Style>
+                        </TreeView.Styles>
+                        <TreeView.ItemTemplate>
+                            <TreeDataTemplate x:DataType="vm:DebugVariableNode"
+                                              ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="4"
+                                            Margin="0,1">
+                                    <TextBlock Text="{Binding Name}"
+                                               FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                               FontSize="13"
+                                               Foreground="{StaticResource FluenceBrushAccent}"/>
+                                    <TextBlock Text="="
+                                               FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                               FontSize="13"
+                                               Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding Value}"
+                                               FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                               FontSize="13"
+                                               Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                                    <TextBlock Text="{Binding Type}"
+                                               IsVisible="{Binding HasType}"
+                                               FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                               FontSize="13"
+                                               Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                               FontStyle="Italic"/>
+                                </StackPanel>
+                            </TreeDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid IsVisible="{Binding IsWatchActive}"
+                  RowDefinitions="Auto,*"
+                  Background="{StaticResource FluenceBrushBottomBarContentBackground}">
+                <Grid Grid.Row="0"
+                      ColumnDefinitions="*,Auto"
+                      Margin="8,6">
+                    <TextBox Grid.Column="0"
+                             Text="{Binding Watch.NewExpression, Mode=TwoWay}"
+                             PlaceholderText="{Binding [Debug.Watch.ExpressionPlaceholder], Source={x:Static loc:Locale.Current}}"
+                             FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                             FontSize="13">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Return" Command="{Binding Watch.AddExpressionCommand}"/>
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <Button Grid.Column="1"
+                            Classes="ideIcon"
+                            Command="{Binding Watch.AddExpressionCommand}"
+                            Margin="4,0,0,0"
+                            ToolTip.Tip="{Binding [Debug.Watch.AddExpression], Source={x:Static loc:Locale.Current}}">
+                        <TextBlock Text="+"
+                                   FontSize="16"
+                                   Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                    </Button>
+                </Grid>
+
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Watch.Entries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DebugWatchEntry">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      MinHeight="28">
+                                    <StackPanel Grid.Column="0"
+                                                Orientation="Vertical"
+                                                Margin="8,4">
+                                        <TextBlock Text="{Binding Expression}"
+                                                   FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource FluenceBrushAccent}"/>
+                                        <TreeView ItemsSource="{Binding Results}"
+                                                  IsVisible="{Binding HasResult}"
+                                                  Background="Transparent">
+                                            <TreeView.Styles>
+                                                <Style Selector="TreeViewItem" x:DataType="vm:DebugVariableNode">
+                                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                                </Style>
+                                            </TreeView.Styles>
+                                            <TreeView.ItemTemplate>
+                                                <TreeDataTemplate x:DataType="vm:DebugVariableNode"
+                                                                  ItemsSource="{Binding Children}">
+                                                    <StackPanel Orientation="Horizontal"
+                                                                Spacing="4"
+                                                                Margin="0,1">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                   FontSize="13"
+                                                                   Foreground="{StaticResource FluenceBrushAccent}"/>
+                                                        <TextBlock Text="="
+                                                                   FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                   FontSize="13"
+                                                                   Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                                        <TextBlock Text="{Binding Value}"
+                                                                   FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                   FontSize="13"
+                                                                   Foreground="{StaticResource FluenceBrushTextPrimary}"/>
+                                                        <TextBlock Text="{Binding Type}"
+                                                                   IsVisible="{Binding HasType}"
+                                                                   FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                                   FontSize="13"
+                                                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                                   FontStyle="Italic"/>
+                                                    </StackPanel>
+                                                </TreeDataTemplate>
+                                            </TreeView.ItemTemplate>
+                                        </TreeView>
+                                        <TextBlock Text="{Binding Error}"
+                                                   IsVisible="{Binding HasError}"
+                                                   FontFamily="Menlo,Cascadia Mono,Consolas,monospace"
+                                                   FontSize="13"
+                                                   Foreground="{StaticResource FluenceBrushError}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Classes="ideIcon"
+                                            Command="{Binding RemoveCommand}"
+                                            VerticalAlignment="Top"
+                                            Margin="0,2,4,0">
+                                        <TextBlock Text="x"
+                                                   FontSize="12"
+                                                   Foreground="{StaticResource FluenceBrushTextSecondary}"/>
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

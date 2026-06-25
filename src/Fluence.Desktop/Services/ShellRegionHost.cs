@@ -5,6 +5,7 @@ using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Models.Modules;
 using Fluence.Core.Models.Modules.Enums;
+using Fluence.Core.Models.Workbench;
 using Fluence.Core.Events.Ui;
 
 namespace Fluence.Desktop.Services;
@@ -14,8 +15,10 @@ public sealed class ShellRegionHost : IShellRegionHost, IDisposable
     private readonly IServiceProvider _services;
     private readonly IWorkspaceContext _workspace;
     private readonly IDisposable _activitySubscription;
+    private readonly IDisposable _bottomBarSubscription;
     private readonly List<ShellPanelContribution> _panels = [];
     private string? _activeActivityTabId;
+    private string _activeBottomBarTabId = BottomBarTabIds.Terminal;
     private ShellRegionContent? _mainContent;
     private ShellRegionContent? _sidebarContent;
     private ShellRegionContent? _bottomBarContent;
@@ -31,6 +34,11 @@ public sealed class ShellRegionHost : IShellRegionHost, IDisposable
         _activitySubscription = events.SubscribeSync<ActivityBarTabChangedEvent>(e =>
         {
             _activeActivityTabId = e.TabId;
+            Refresh();
+        });
+        _bottomBarSubscription = events.SubscribeSync<BottomBarTabChangedEvent>(e =>
+        {
+            _activeBottomBarTabId = e.TabId;
             Refresh();
         });
     }
@@ -141,6 +149,10 @@ public sealed class ShellRegionHost : IShellRegionHost, IDisposable
                 visibility.ActivityTabId,
                 _activeActivityTabId,
                 StringComparison.Ordinal),
+            PanelVisibilityKind.BottomBarTab => string.Equals(
+                visibility.ActivityTabId,
+                _activeBottomBarTabId,
+                StringComparison.Ordinal),
             PanelVisibilityKind.Custom => visibility.Predicate?.Invoke(
                 _workspace.Current,
                 _activeActivityTabId,
@@ -153,5 +165,6 @@ public sealed class ShellRegionHost : IShellRegionHost, IDisposable
     {
         _workspace.Changed -= OnWorkspaceChanged;
         _activitySubscription.Dispose();
+        _bottomBarSubscription.Dispose();
     }
 }
