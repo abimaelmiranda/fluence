@@ -1,10 +1,10 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using Avalonia.Input;
 using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Abstractions.Modules;
+using Fluence.Modules.Workbench.Editor;
 using AvaloniaEdit.Document;
 
 namespace Fluence.Modules.Workbench.Editor.Views;
@@ -78,15 +78,16 @@ public partial class EditorView
         var selection   = textArea.Selection;
         var caretOffset = textArea.Caret.Offset;
 
-        if (!AutoPairClosers.TryGetValue(ch, out var closer))
+        var rules = CurrentLanguageRules;
+        if (!rules.TryGetAutoPairCloser(ch, out var closer))
         {
-            if (!selection.IsEmpty || !AutoPairClosingChars.Contains(ch))
+            if (!selection.IsEmpty || !rules.IsAutoPairClosingChar(ch))
                 return;
 
             if (!_editorSettings.AutoPairBrackets)
                 return;
 
-            if (IsInsideComment(document, caretOffset))
+            if (IsInsideComment(document, caretOffset, rules))
                 return;
 
             if (caretOffset < document.TextLength && document.GetCharAt(caretOffset) == ch)
@@ -100,7 +101,7 @@ public partial class EditorView
             return;
         }
 
-        if (!_editorSettings.AutoPairBrackets || IsInsideComment(document, caretOffset))
+        if (!_editorSettings.AutoPairBrackets || IsInsideComment(document, caretOffset, rules))
             return;
 
         if (!selection.IsEmpty)
@@ -150,6 +151,12 @@ public partial class EditorView
         }
 
         if (TryHandleAcceleratedUndo(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (TryHandleQuoteKey(e))
         {
             e.Handled = true;
             return;
@@ -465,6 +472,70 @@ public partial class EditorView
         return handled;
     }
 
+    private bool TryHandleQuoteKey(KeyEventArgs e)
+    {
+        var text = GetLiteralQuoteText(e);
+        if (text is null)
+            return false;
+
+        var document = Editor.Document;
+        if (document is null)
+            return false;
+
+        PerformLiteralTextInput(text);
+        return true;
+    }
+
+    private static string? GetLiteralQuoteText(KeyEventArgs e)
+    {
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) ||
+            e.KeyModifiers.HasFlag(KeyModifiers.Meta))
+        {
+            return null;
+        }
+
+        var shifted = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        var plainOrShift = e.KeyModifiers == KeyModifiers.None || e.KeyModifiers == KeyModifiers.Shift;
+        var deadKey = e.Key is Key.DeadCharProcessed or Key.ImeProcessed;
+
+        if (e.PhysicalKey == PhysicalKey.Quote ||
+            e.Key is Key.OemQuotes or Key.Oem7)
+        {
+            return shifted ? "\"" : "'";
+        }
+
+        if (e.PhysicalKey == PhysicalKey.Backquote ||
+            e.Key is Key.OemTilde or Key.Oem3)
+        {
+            return "`";
+        }
+
+        if (!plainOrShift && !deadKey)
+            return null;
+
+        if (e.KeySymbol is { Length: 1 } symbol)
+        {
+            return symbol[0] switch
+            {
+                '\'' or '"' or '`' => symbol,
+                _ => null,
+            };
+        }
+
+        if (e.KeySymbol is "dead_acute" or "Dead_Acute")
+            return "'";
+
+        if (e.KeySymbol is "dead_grave" or "Dead_Grave")
+            return "`";
+
+        return null;
+    }
+
+    private void PerformLiteralTextInput(string text)
+    {
+        Editor.TextArea.PerformTextInput(text);
+    }
+
     private void MoveCaretToLineBoundary(bool toStart)
     {
         var document = Editor.Document;
@@ -522,12 +593,12 @@ public partial class EditorView
         if (e.Key != Key.Enter || e.KeyModifiers != KeyModifiers.None)
             return false;
 
-        var document   = Editor.Document;
-        var activePath = _viewModel?.ActiveDocumentPath;
-        if (document is null || string.IsNullOrWhiteSpace(activePath))
+        var document = Editor.Document;
+        if (document is null || _viewModel?.ActiveDocumentPath is null)
             return false;
 
-        if (!string.Equals(Path.GetExtension(activePath), ".cs", StringComparison.OrdinalIgnoreCase))
+        var rules = CurrentLanguageRules;
+        if (!rules.SmartEnter)
             return false;
 
         var textArea = Editor.TextArea;
@@ -538,7 +609,7 @@ public partial class EditorView
             return false;
 
         var caretOffset = textArea.Caret.Offset;
-        if (IsInsideComment(document, caretOffset))
+        if (IsInsideComment(document, caretOffset, rules))
             return false;
 
         var line       = document.GetLineByOffset(caretOffset);
@@ -625,9 +696,11 @@ public partial class EditorView
         return spacesToRemove > 0 ? currentIndent[..^spacesToRemove] : string.Empty;
     }
 
-    private bool IsInsideComment(TextDocument document, int caretOffset)
+    private EditorLanguageRules CurrentLanguageRules => _editorLanguageRules;
+
+    private bool IsInsideComment(TextDocument document, int caretOffset, EditorLanguageRules rules)
     {
-        if (caretOffset <= 0)
+        if (caretOffset <= 0 || rules.CommentSyntax == EditorCommentSyntax.None)
             return false;
 
         var currentLine = document.GetLineByOffset(caretOffset);
@@ -659,7 +732,7 @@ public partial class EditorView
                     _blockCommentCheckpoints[ln] = state;
 
                 var l = document.GetLineByNumber(ln);
-                state = ScanLineForBlockCommentState(document.GetText(l.Offset, l.Length), l.Length, state);
+                state = ScanLineForBlockCommentState(document, l.Offset, l.Length, state);
 
                 var nextLine = ln + 1;
                 if ((nextLine - 1) % BlockCommentCheckpointInterval == 0)
@@ -672,9 +745,8 @@ public partial class EditorView
         }
 
         // Phase B: scan only the current line up to the caret — O(line_length)
-        var lineText = document.GetText(currentLine.Offset, currentLine.Length);
-        var limit    = Math.Min(caretOffset - currentLine.Offset, lineText.Length);
-        return ScanLineForBlockCommentState(lineText, limit, _cachedBlockCommentState);
+        var limit = Math.Min(caretOffset - currentLine.Offset, currentLine.Length);
+        return IsInsideCStyleCommentAt(document, currentLine.Offset, limit, _cachedBlockCommentState);
     }
 
     private int FindBlockCommentCheckpointLine(int lineNumber)
@@ -698,12 +770,16 @@ public partial class EditorView
         _blockCommentCacheLineNumber = -1;
     }
 
-    private static bool ScanLineForBlockCommentState(string lineText, int limit, bool inBlockComment)
+    private static bool ScanLineForBlockCommentState(
+        TextDocument document,
+        int lineOffset,
+        int limit,
+        bool inBlockComment)
     {
         for (var i = 0; i < limit; i++)
         {
-            var ch   = lineText[i];
-            var next = i + 1 < limit ? lineText[i + 1] : '\0';
+            var ch   = document.GetCharAt(lineOffset + i);
+            var next = i + 1 < limit ? document.GetCharAt(lineOffset + i + 1) : '\0';
 
             if (inBlockComment)
             {
@@ -724,6 +800,41 @@ public partial class EditorView
                 i++;
             }
         }
+        return inBlockComment;
+    }
+
+    // ponytail: lexical scan ignores string literals; use TextMate/LSP scopes if false positives matter.
+    private static bool IsInsideCStyleCommentAt(
+        TextDocument document,
+        int lineOffset,
+        int limit,
+        bool inBlockComment)
+    {
+        for (var i = 0; i < limit; i++)
+        {
+            var ch   = document.GetCharAt(lineOffset + i);
+            var next = i + 1 < limit ? document.GetCharAt(lineOffset + i + 1) : '\0';
+
+            if (inBlockComment)
+            {
+                if (ch == '*' && next == '/')
+                {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+
+            if (ch == '/' && next == '/')
+                return true;
+
+            if (ch == '/' && next == '*')
+            {
+                inBlockComment = true;
+                i++;
+            }
+        }
+
         return inBlockComment;
     }
 }

@@ -17,6 +17,7 @@ using Fluence.Core.Models.Debugging;
 using Fluence.Core.Models.LanguageServer;
 using Fluence.Core.Models.Theming;
 using Fluence.Core.Services;
+using Fluence.Modules.Workbench.Editor;
 using Fluence.Modules.Workbench.Editor.Completion;
 using Fluence.Modules.Workbench.Editor.Rendering;
 using Fluence.Modules.Workbench.Editor.ViewModels;
@@ -59,17 +60,6 @@ public partial class EditorView : UserControl
         [".xaml"]    = "text.xml",
     };
 
-    // ── Auto-pair tables ────────────────────────────────────────────────────
-    private static readonly Dictionary<char, char> AutoPairClosers = new()
-    {
-        ['(']  = ')',
-        ['[']  = ']',
-        ['{']  = '}',
-        ['"']  = '"',
-        ['\''] = '\'',
-    };
-    private static readonly HashSet<char> AutoPairClosingChars = new(AutoPairClosers.Values);
-
     // ── Cached static brushes ───────────────────────────────────────────────
     private static readonly ISolidColorBrush SignatureGrayBrush    = new SolidColorBrush(Color.Parse("#AAAACC"));
     private static readonly ISolidColorBrush SignatureWhiteBrush   = new SolidColorBrush(Colors.White);
@@ -101,6 +91,7 @@ public partial class EditorView : UserControl
     // ── Services ────────────────────────────────────────────────────────────
     private EditorViewModel?         _viewModel;
     private EditorSettings           _editorSettings = new();
+    private EditorLanguageRules      _editorLanguageRules = EditorLanguageRules.None;
     private IDisposable?             _editorSettingsSubscription;
     private IDisposable?             _keybindingsSubscription;
     private IDisposable?             _themeSubscription;
@@ -181,6 +172,8 @@ public partial class EditorView : UserControl
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         Editor.TextChanged    += OnEditorTextChanged;
         Editor.LostFocus      += OnEditorLostFocus;
+        // macOS US International keeps dead keys in the native IME; code editor input is literal.
+        InputMethod.SetIsInputMethodEnabled(Editor.TextArea, false);
         _breakpointMargin = new BreakpointMargin(line => _viewModel?.ToggleBreakpoint(line));
         Editor.TextArea.LeftMargins.Insert(0, _breakpointMargin);
         EnsureEditorScrollViewerSubscription();

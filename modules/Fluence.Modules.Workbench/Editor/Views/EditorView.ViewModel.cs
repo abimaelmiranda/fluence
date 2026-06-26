@@ -13,6 +13,7 @@ using Fluence.Modules.Workbench.Editor.ViewModels;
 using Fluence.Core.Events.Document;
 using Fluence.Core.Events.Lsp;
 using Fluence.Core.Models.Keybindings;
+using Fluence.Modules.Workbench.Editor;
 
 namespace Fluence.Modules.Workbench.Editor.Views;
 
@@ -182,9 +183,15 @@ public partial class EditorView
             if (_viewModel is not null)
             {
                 if (string.Equals(_viewModel.ActiveDocumentPath, _lastKnownDocumentPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    UpdateEditorLanguageRules();
                     SetEditorText(_viewModel.ActiveText);
+                }
                 else
+                {
+                    UpdateEditorLanguageRules();
                     SwitchEditorDocument(_viewModel.ActiveDocumentPath, _viewModel.ActiveText);
+                }
             }
             return;
         }
@@ -219,6 +226,7 @@ public partial class EditorView
             }
             ApplyEditorSettings(_viewModel.Settings.Get<EditorSettings>());
             UpdateMenuGestures();
+            UpdateEditorLanguageRules();
             SetEditorText(_viewModel.ActiveText);
             ApplyGrammarForPath(_viewModel.ActiveDocumentPath);
             RestoreViewStateForActiveDocument();
@@ -231,6 +239,7 @@ public partial class EditorView
         }
         else
         {
+            _editorLanguageRules = EditorLanguageRules.None;
             SetEditorText(string.Empty);
             UpdateDebugRendering();
         }
@@ -260,11 +269,13 @@ public partial class EditorView
             {
                 // Path unchanged — RefreshFromWorkspace fires this after every save.
                 // Skip popup close and completion invalidation to avoid killing active completion.
+                UpdateEditorLanguageRules();
                 ApplyGrammarForPath(newPath);
                 UpdateDebugRendering();
                 return;
             }
 
+            UpdateEditorLanguageRules();
             SwitchEditorDocument(newPath, _viewModel.ActiveText);
         }
         else if (e.PropertyName == nameof(EditorViewModel.ActiveDocumentBreakpoints) ||
@@ -287,6 +298,9 @@ public partial class EditorView
         _viewModel.PublishLiveDocumentChanged(Editor.Text, flushImmediately: false);
         _textSyncTimer!.Change(TextSyncDebounceDelay, Timeout.InfiniteTimeSpan);
     }
+
+    private void UpdateEditorLanguageRules() =>
+        _editorLanguageRules = EditorLanguageRuleCatalog.Get(_viewModel?.ActiveDocumentLanguageId);
 
     private void OnTextSyncTimerElapsed()
     {
