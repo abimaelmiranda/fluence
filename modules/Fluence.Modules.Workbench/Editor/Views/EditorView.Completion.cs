@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -10,6 +9,7 @@ using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Tasks;
+using Fluence.Core.Models.LanguageServer;
 using Fluence.Modules.Workbench.Editor.Completion;
 using Fluence.Core.Events.Lsp;
 
@@ -102,6 +102,12 @@ public partial class EditorView
                 completions.Count == 0)
                 return;
 
+            var sortedCompletions = PrepareCompletionItems(completions, ct);
+            if (ct.IsCancellationRequested ||
+                request.Version != Volatile.Read(ref _completionRequestVersion) ||
+                sortedCompletions.Count == 0)
+                return;
+
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (_completionService is null ||
@@ -113,13 +119,15 @@ public partial class EditorView
                     return;
 
                 CloseCompletionPopup();
-                _activeCompletions = completions
-                    .Where(item => !string.IsNullOrEmpty(item?.Label))
-                    .OrderBy(item => item.SortText is null ? 1 : 0)
-                    .ThenBy(item => item.SortText, StringComparer.Ordinal)
-                    .ThenBy(item => item.IsPreselected ? 0 : 1)
-                    .Select((item, index) => new LspCompletionData(item, 100000 - index, _semanticColorizer, _editorSettings.FontFamily))
-                    .ToList();
+                _activeCompletions = new List<LspCompletionData>(sortedCompletions.Count);
+                for (var i = 0; i < sortedCompletions.Count; i++)
+                {
+                    _activeCompletions.Add(new LspCompletionData(
+                        sortedCompletions[i],
+                        100000 - i,
+                        _semanticColorizer,
+                        _editorSettings.FontFamily));
+                }
                 var caretOffsetNow = Editor.TextArea.Caret.Offset;
                 var currentPrefix = ExtractCompletionPrefix(Editor.Document, caretOffsetNow);
                 _completionTriggerOffset = caretOffsetNow - currentPrefix.Length;
@@ -135,6 +143,43 @@ public partial class EditorView
         {
             FinishCompletionRequest();
         }
+    }
+
+    private static List<LspCompletion> PrepareCompletionItems(IReadOnlyList<LspCompletion> completions, CancellationToken ct)
+    {
+        var sorted = new List<LspCompletion>(completions.Count);
+        for (var i = 0; i < completions.Count; i++)
+        {
+            if (ct.IsCancellationRequested)
+                return [];
+
+            var item = completions[i];
+            if (item is not null && !string.IsNullOrEmpty(item.Label))
+                sorted.Add(item);
+        }
+
+        sorted.Sort(CompareCompletionItems);
+        return sorted;
+    }
+
+    private static int CompareCompletionItems(LspCompletion? left, LspCompletion? right)
+    {
+        if (ReferenceEquals(left, right))
+            return 0;
+        if (left is null)
+            return 1;
+        if (right is null)
+            return -1;
+
+        var sortTextResult = (left.SortText is null ? 1 : 0).CompareTo(right.SortText is null ? 1 : 0);
+        if (sortTextResult != 0)
+            return sortTextResult;
+
+        sortTextResult = string.Compare(left.SortText, right.SortText, StringComparison.Ordinal);
+        if (sortTextResult != 0)
+            return sortTextResult;
+
+        return (left.IsPreselected ? 0 : 1).CompareTo(right.IsPreselected ? 0 : 1);
     }
 
     private void FinishCompletionRequest()
@@ -243,9 +288,19 @@ public partial class EditorView
             return;
 
         var prefix = ExtractCompletionPrefix(Editor.Document, Editor.TextArea.Caret.Offset);
-        var filtered = string.IsNullOrWhiteSpace(prefix)
-            ? _activeCompletions
-            : _activeCompletions.Where(item => item.MatchesPrefix(prefix)).ToList();
+        var filtered = _activeCompletions;
+        if (!string.IsNullOrWhiteSpace(prefix))
+        {
+            _filteredCompletions.Clear();
+            _filteredCompletions.Capacity = Math.Max(_filteredCompletions.Capacity, _activeCompletions.Count);
+            for (var i = 0; i < _activeCompletions.Count; i++)
+            {
+                var item = _activeCompletions[i];
+                if (item.MatchesPrefix(prefix))
+                    _filteredCompletions.Add(item);
+            }
+            filtered = _filteredCompletions;
+        }
 
         if (filtered.Count == 0)
         {
@@ -253,6 +308,7 @@ public partial class EditorView
             return;
         }
 
+        CompletionListBox.ItemsSource = null;
         CompletionListBox.ItemsSource = filtered;
         CompletionListBox.SelectedIndex = 0;
     }
@@ -262,13 +318,13 @@ public partial class EditorView
         if (document is null || offset <= 0 || document.TextLength == 0)
             return string.Empty;
 
-        var text  = document.Text;
-        var index = Math.Clamp(offset, 0, text.Length);
+        var end   = Math.Clamp(offset, 0, document.TextLength);
+        var index = end;
 
-        while (index > 0 && IsCompletionChar(text[index - 1]))
+        while (index > 0 && IsCompletionChar(document.GetCharAt(index - 1)))
             index--;
 
-        return index < offset ? text[index..offset] : string.Empty;
+        return index < end ? document.GetText(index, end - index) : string.Empty;
     }
 
     private static bool IsCompletionChar(char ch) => char.IsLetterOrDigit(ch) || ch == '_';

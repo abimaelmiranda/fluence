@@ -13,7 +13,7 @@ public sealed class ShellEventBus : IShellEventBus
     private readonly Lock _lock = new();
     private readonly IUiDispatcher? _dispatcher;
     private readonly IOutputChannelService? _output;
-    private readonly Dictionary<Type, List<Action<IShellEvent>>> _syncHandlers = new();
+    private readonly Dictionary<Type, Action<IShellEvent>[]> _syncHandlers = new();
     private readonly Dictionary<object, Action<IShellEvent>> _syncWrappers = new();
 
     public ShellEventBus() { }
@@ -33,7 +33,7 @@ public sealed class ShellEventBus : IShellEventBus
         lock (_lock)
         {
             snapshot = _syncHandlers.TryGetValue(type, out var handlers)
-                ? handlers.ToArray()
+                ? handlers
                 : [];
         }
 
@@ -47,10 +47,17 @@ public sealed class ShellEventBus : IShellEventBus
         Action<IShellEvent> wrapper = e => handler((TEvent)e);
         lock (_lock)
         {
-            if (!_syncHandlers.TryGetValue(type, out var list))
-                _syncHandlers[type] = list = [];
             _syncWrappers[handler] = wrapper;
-            list.Add(wrapper);
+            if (!_syncHandlers.TryGetValue(type, out var handlers))
+            {
+                _syncHandlers[type] = [wrapper];
+                return new Subscription<TEvent>(this, handler);
+            }
+
+            var updated = new Action<IShellEvent>[handlers.Length + 1];
+            Array.Copy(handlers, updated, handlers.Length);
+            updated[^1] = wrapper;
+            _syncHandlers[type] = updated;
         }
 
         return new Subscription<TEvent>(this, handler);
@@ -61,12 +68,27 @@ public sealed class ShellEventBus : IShellEventBus
         var type = typeof(TEvent);
         lock (_lock)
         {
-            if (!_syncHandlers.TryGetValue(type, out var list))
+            if (!_syncHandlers.TryGetValue(type, out var handlers))
                 return;
             if (_syncWrappers.TryGetValue(handler, out var wrapper))
             {
-                list.Remove(wrapper);
                 _syncWrappers.Remove(handler);
+                var index = Array.IndexOf(handlers, wrapper);
+                if (index < 0)
+                    return;
+
+                if (handlers.Length == 1)
+                {
+                    _syncHandlers.Remove(type);
+                    return;
+                }
+
+                var updated = new Action<IShellEvent>[handlers.Length - 1];
+                if (index > 0)
+                    Array.Copy(handlers, 0, updated, 0, index);
+                if (index < handlers.Length - 1)
+                    Array.Copy(handlers, index + 1, updated, index, handlers.Length - index - 1);
+                _syncHandlers[type] = updated;
             }
         }
     }

@@ -51,11 +51,10 @@ public partial class EditorView
             var version = _pendingSemanticTokensVersion;
             if (tokens is not null && IsActiveSemanticTokenState(path, version))
             {
-                _semanticColorizer.Update(tokens);
+                ApplySemanticTokensAndRedraw(tokens);
                 _pendingSemanticTokens = null;
                 _pendingSemanticTokensPath = null;
                 _pendingSemanticTokensVersion = 0;
-                Editor.TextArea.TextView.Redraw();
             }
         });
     }
@@ -93,7 +92,12 @@ public partial class EditorView
             return;
         }
 
-        _semanticColorizer.Update(cached.Tokens);
+        ApplySemanticTokensAndRedraw(cached.Tokens);
+    }
+
+    private void ApplySemanticTokensAndRedraw(SemanticToken[] tokens)
+    {
+        _semanticColorizer.Update(tokens);
         Editor.TextArea.TextView.Redraw();
     }
 
@@ -277,6 +281,7 @@ public partial class EditorView
     private void OnEditorTextChanged(object? sender, EventArgs e)
     {
         if (_isUpdatingEditorText || _viewModel is null) return;
+        ResetBlockCommentCache();
         InvalidateLspHoverRequests();
         InvalidateCodeActionRequests(closePopup: true);
         _viewModel.PublishLiveDocumentChanged(Editor.Text, flushImmediately: false);

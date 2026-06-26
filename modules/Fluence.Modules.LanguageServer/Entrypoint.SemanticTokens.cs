@@ -10,7 +10,7 @@ namespace Fluence.Modules.LanguageServer;
 
 public sealed partial class Entrypoint
 {
-    private const int MaxSemanticTokenAttempts = 8;
+    private const int MaxSemanticTokenAttempts = 3;
     private int _semanticRequestSeq;
 
     private void QueueSemanticTokens(string filePath)

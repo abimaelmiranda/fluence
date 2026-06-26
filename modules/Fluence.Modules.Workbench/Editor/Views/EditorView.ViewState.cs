@@ -182,6 +182,7 @@ public partial class EditorView
         _pendingSemanticTokensVersion = 0;
         _semanticColorizer.Clear();
         _diagnosticRenderer.Clear();
+        ResetBlockCommentCache();
         InvalidateHoverRequests();
         InvalidateLspHoverRequests();
         InvalidateCodeActionRequests(closePopup: true);
@@ -355,38 +356,71 @@ public partial class EditorView
         int navigationVersion,
         int transitionVersion)
     {
-        const int maxAttempts = 4;
         var targetX = Math.Max(0, state?.ScrollX ?? 0);
         var targetY = Math.Max(0, state?.ScrollY ?? 0);
 
-        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        var needsLayoutWait = await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            var shouldRetry = await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (!CanRestoreViewState(path, restoreVersion, navigationVersion, transitionVersion))
-                {
-                    return false;
-                }
+            if (!CanRestoreViewState(path, restoreVersion, navigationVersion, transitionVersion))
+                return false;
 
-                if (GetEditorScrollViewer() is not { } scrollViewer)
-                    return attempt + 1 < maxAttempts && (targetX > 0 || targetY > 0);
+            if (GetEditorScrollViewer() is not { } sv)
+                return targetX > 0 || targetY > 0;
 
-                var clampedX = Math.Clamp(targetX, 0, Math.Max(0, scrollViewer.Extent.Width - scrollViewer.Viewport.Width));
-                var clampedY = Math.Clamp(targetY, 0, Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height));
-                scrollViewer.Offset = new Vector(clampedX, clampedY);
+            if ((targetX > 0 || targetY > 0) && sv.Extent.Height <= 0 && sv.Extent.Width <= 0)
+                return true; // layout not ready yet
 
-                var currentOffset = scrollViewer.Offset;
-                return attempt + 1 < maxAttempts &&
-                       (clampedX > 0 && currentOffset.X <= 0 ||
-                        clampedY > 0 && currentOffset.Y <= 0);
-            }, DispatcherPriority.Render);
+            ApplyScrollOffset(sv, targetX, targetY);
+            return false;
+        }, DispatcherPriority.Render);
 
-            if (!shouldRetry)
+        if (!needsLayoutWait)
+            return;
+
+        var svForWait = await Dispatcher.UIThread.InvokeAsync(
+            () => GetEditorScrollViewer(), DispatcherPriority.Render);
+
+        if (svForWait is not null)
+            await WaitForScrollViewerExtentAsync(svForWait);
+        else
+            await Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background);
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (!CanRestoreViewState(path, restoreVersion, navigationVersion, transitionVersion))
                 return;
+            if (GetEditorScrollViewer() is not { } sv) return;
+            ApplyScrollOffset(sv, targetX, targetY);
+        }, DispatcherPriority.Render);
+    }
 
-            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
-            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
-        }
+    private Task WaitForScrollViewerExtentAsync(ScrollViewer sv)
+    {
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (sv.Extent.Height > 0 || sv.Extent.Width > 0)
+            {
+                tcs.TrySetResult();
+                return;
+            }
+            EventHandler<ScrollChangedEventArgs>? handler = null;
+            handler = (_, _) =>
+            {
+                if (sv.Extent.Height <= 0 && sv.Extent.Width <= 0) return;
+                sv.ScrollChanged -= handler!;
+                tcs.TrySetResult();
+            };
+            sv.ScrollChanged += handler;
+        });
+        return tcs.Task;
+    }
+
+    private void ApplyScrollOffset(ScrollViewer sv, double targetX, double targetY)
+    {
+        var clampedX = Math.Clamp(targetX, 0, Math.Max(0, sv.Extent.Width - sv.Viewport.Width));
+        var clampedY = Math.Clamp(targetY, 0, Math.Max(0, sv.Extent.Height - sv.Viewport.Height));
+        sv.Offset = new Vector(clampedX, clampedY);
     }
 
     private bool CanRestoreViewState(

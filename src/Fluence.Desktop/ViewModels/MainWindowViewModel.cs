@@ -125,6 +125,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _shellSettingsSubscription = _settings.Watch<ShellSettings>()
             .Subscribe(new ActionObserver<ShellSettings>(ApplyShellSettings));
         _workspace.Changed += OnWorkspaceChanged;
+        _workspace.DocumentContentChanged += OnDocumentContentChanged;
         _regions.Changed += OnShellRegionsChanged;
         _regions.RegionExpanded += OnShellRegionExpanded;
         _eventSubscriptions.Add(_eventBus.SubscribeSync<ExpandPanelEvent>(OnExpandPanelRequested));
@@ -291,6 +292,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(SidebarDetail));
         RefreshSemanticTokensStatus();
         ActivityBar.RePublishActiveTab();
+    }
+
+    private void OnDocumentContentChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(OpenDocuments));
     }
 
     private void OnExpandPanelRequested(ExpandPanelEvent e)
@@ -806,6 +812,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _shellSettingsSubscription?.Dispose();
         _shellSettingsSubscription = null;
         _workspace.Changed -= OnWorkspaceChanged;
+        _workspace.DocumentContentChanged -= OnDocumentContentChanged;
         _regions.Changed -= OnShellRegionsChanged;
         _regions.RegionExpanded -= OnShellRegionExpanded;
     }

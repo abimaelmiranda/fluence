@@ -16,12 +16,18 @@ internal sealed partial class LspCompletionData
     private readonly LspCompletion _completion;
     private readonly SemanticColorizer _colorizer;
     private readonly string _fontFamily;
+    private readonly string _labelMatchText;
+    private readonly string _insertMatchText;
+    private readonly string? _sortMatchText;
 
     public LspCompletionData(LspCompletion completion, double priority, SemanticColorizer colorizer, string fontFamily)
     {
         _completion = completion;
         _colorizer  = colorizer;
         _fontFamily = fontFamily;
+        _labelMatchText = completion.Label;
+        _insertMatchText = completion.InsertText ?? completion.Label;
+        _sortMatchText = string.IsNullOrWhiteSpace(completion.SortText) ? null : completion.SortText;
         Priority    = priority;
         Text        = completion.Label;
     }
@@ -31,10 +37,9 @@ internal sealed partial class LspCompletionData
     public double Priority { get; }
 
     public bool MatchesPrefix(string prefix) =>
-        _completion.Label.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
-        (_completion.InsertText ?? _completion.Label).StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
-        (!string.IsNullOrWhiteSpace(_completion.SortText) &&
-         _completion.SortText.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        _labelMatchText.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+        _insertMatchText.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+        (_sortMatchText?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ?? false);
 
     public void Complete(TextArea textArea, ISegment completionSegment, EventArgs insertionRequestEventArgs)
     {

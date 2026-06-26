@@ -76,6 +76,10 @@ public partial class App : Avalonia.Application
             {
                 DataContext = mainWindowViewModel,
             };
+            mainWindow.Opened += (_, _) =>
+            {
+                Dispatcher.UIThread.Post(() => _ = StartApplicationAsync(_serviceProvider), DispatcherPriority.Background);
+            };
             _serviceProvider.GetRequiredService<AvaloniaUserNotificationService>().Attach(mainWindow);
 
             var keybindings = _serviceProvider.GetRequiredService<IKeybindingService>();
@@ -120,8 +124,6 @@ public partial class App : Avalonia.Application
             desktop.MainWindow = mainWindow;
             desktop.ShutdownRequested += OnDesktopShutdownRequested;
             desktop.Exit += OnDesktopExit;
-
-            _ = StartApplicationAsync(_serviceProvider);
         }
 
         base.OnFrameworkInitializationCompleted();

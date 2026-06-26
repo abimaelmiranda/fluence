@@ -108,7 +108,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private static bool MatchesQuickOpenShortcut(KeyEventArgs e)
+    private static bool MatchesQuickOpenShortcut(KeyEventArgs e) 
     {
         var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
         return e.Key == Key.P &&

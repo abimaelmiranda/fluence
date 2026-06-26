@@ -305,7 +305,8 @@ public sealed class FileExplorerViewModel : ViewModelBase
                 return;
 
             _fileService.Delete(item.Path, item.IsDirectory);
-            RefreshRoot();
+            var siblings = item.Parent?.Children ?? RootItems;
+            siblings.Remove(item);
         }
         catch (Exception ex)
         {
