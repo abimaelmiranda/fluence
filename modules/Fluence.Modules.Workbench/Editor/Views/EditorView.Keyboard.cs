@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Avalonia.Input;
 using Fluence.Core.Models.Keybindings;
 using Fluence.Core.Abstractions.Modules;
@@ -40,8 +41,16 @@ public partial class EditorView
             return;
         }
 
+        if (ch == '.')
+            Interlocked.Exchange(ref _completionPostImmediate, 1);
+
+        if (Interlocked.CompareExchange(ref _completionPostPending, 1, 0) != 0)
+            return;
+
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
+            Interlocked.Exchange(ref _completionPostPending, 0);
+            var immediate = Interlocked.Exchange(ref _completionPostImmediate, 0) == 1;
             if (_completionService is null || _viewModel?.ActiveDocumentPath is null)
                 return;
 
@@ -51,7 +60,7 @@ public partial class EditorView
                 return;
             }
 
-            _ = TriggerCompletionAsync(immediate: ch == '.');
+            _ = TriggerCompletionAsync(immediate);
         }, Avalonia.Threading.DispatcherPriority.Background);
     }
 
@@ -625,26 +634,37 @@ public partial class EditorView
 
         // Phase A: rebuild pre-line cache only when caret moved to a different line.
         // For forward movement (common: Enter key), scan only the delta from the old cached line.
-        // For backward movement or cache miss, do a full scan from line 1.
+        // For backward movement or cache miss, resume from the nearest checkpoint.
         if (currentLine.LineNumber != _blockCommentCacheLineNumber)
         {
             bool state;
+            var startLine = 1;
             if (_blockCommentCacheLineNumber > 0 && currentLine.LineNumber > _blockCommentCacheLineNumber)
             {
                 state = _cachedBlockCommentState;
-                for (var ln = _blockCommentCacheLineNumber; ln < currentLine.LineNumber; ln++)
-                {
-                    var l = document.GetLineByNumber(ln);
-                    state = ScanLineForBlockCommentState(document.GetText(l.Offset, l.Length), l.Length, state);
-                }
+                startLine = _blockCommentCacheLineNumber;
             }
             else
             {
-                state = false;
-                for (var ln = 1; ln < currentLine.LineNumber; ln++)
+                var checkpointLine = FindBlockCommentCheckpointLine(currentLine.LineNumber);
+                state = checkpointLine > 0 && _blockCommentCheckpoints.TryGetValue(checkpointLine, out var checkpointState)
+                    ? checkpointState
+                    : false;
+                startLine = checkpointLine > 0 ? checkpointLine : 1;
+            }
+
+            for (var ln = startLine; ln < currentLine.LineNumber; ln++)
+            {
+                if ((ln - 1) % BlockCommentCheckpointInterval == 0)
+                    _blockCommentCheckpoints[ln] = state;
+
+                var l = document.GetLineByNumber(ln);
+                state = ScanLineForBlockCommentState(document.GetText(l.Offset, l.Length), l.Length, state);
+
+                var nextLine = ln + 1;
+                if ((nextLine - 1) % BlockCommentCheckpointInterval == 0)
                 {
-                    var l = document.GetLineByNumber(ln);
-                    state = ScanLineForBlockCommentState(document.GetText(l.Offset, l.Length), l.Length, state);
+                    _blockCommentCheckpoints[nextLine] = state;
                 }
             }
             _cachedBlockCommentState = state;
@@ -655,6 +675,27 @@ public partial class EditorView
         var lineText = document.GetText(currentLine.Offset, currentLine.Length);
         var limit    = Math.Min(caretOffset - currentLine.Offset, lineText.Length);
         return ScanLineForBlockCommentState(lineText, limit, _cachedBlockCommentState);
+    }
+
+    private int FindBlockCommentCheckpointLine(int lineNumber)
+    {
+        var checkpointLine = ((lineNumber - 1) / BlockCommentCheckpointInterval) * BlockCommentCheckpointInterval + 1;
+        while (checkpointLine > 1)
+        {
+            if (_blockCommentCheckpoints.ContainsKey(checkpointLine))
+                return checkpointLine;
+
+            checkpointLine -= BlockCommentCheckpointInterval;
+        }
+
+        return 1;
+    }
+
+    private void ResetBlockCommentCache()
+    {
+        _blockCommentCheckpoints.Clear();
+        _cachedBlockCommentState = false;
+        _blockCommentCacheLineNumber = -1;
     }
 
     private static bool ScanLineForBlockCommentState(string lineText, int limit, bool inBlockComment)

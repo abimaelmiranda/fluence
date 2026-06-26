@@ -277,6 +277,7 @@ public partial class EditorView
     private void OnEditorTextChanged(object? sender, EventArgs e)
     {
         if (_isUpdatingEditorText || _viewModel is null) return;
+        ResetBlockCommentCache();
         InvalidateLspHoverRequests();
         InvalidateCodeActionRequests(closePopup: true);
         _viewModel.PublishLiveDocumentChanged(Editor.Text, flushImmediately: false);

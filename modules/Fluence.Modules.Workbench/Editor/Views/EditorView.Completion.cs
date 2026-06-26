@@ -243,9 +243,19 @@ public partial class EditorView
             return;
 
         var prefix = ExtractCompletionPrefix(Editor.Document, Editor.TextArea.Caret.Offset);
-        var filtered = string.IsNullOrWhiteSpace(prefix)
-            ? _activeCompletions
-            : _activeCompletions.Where(item => item.MatchesPrefix(prefix)).ToList();
+        var filtered = _activeCompletions;
+        if (!string.IsNullOrWhiteSpace(prefix))
+        {
+            _filteredCompletions.Clear();
+            _filteredCompletions.Capacity = Math.Max(_filteredCompletions.Capacity, _activeCompletions.Count);
+            for (var i = 0; i < _activeCompletions.Count; i++)
+            {
+                var item = _activeCompletions[i];
+                if (item.MatchesPrefix(prefix))
+                    _filteredCompletions.Add(item);
+            }
+            filtered = _filteredCompletions;
+        }
 
         if (filtered.Count == 0)
         {
@@ -253,6 +263,7 @@ public partial class EditorView
             return;
         }
 
+        CompletionListBox.ItemsSource = null;
         CompletionListBox.ItemsSource = filtered;
         CompletionListBox.SelectedIndex = 0;
     }
@@ -262,13 +273,13 @@ public partial class EditorView
         if (document is null || offset <= 0 || document.TextLength == 0)
             return string.Empty;
 
-        var text  = document.Text;
-        var index = Math.Clamp(offset, 0, text.Length);
+        var end   = Math.Clamp(offset, 0, document.TextLength);
+        var index = end;
 
-        while (index > 0 && IsCompletionChar(text[index - 1]))
+        while (index > 0 && IsCompletionChar(document.GetCharAt(index - 1)))
             index--;
 
-        return index < offset ? text[index..offset] : string.Empty;
+        return index < end ? document.GetText(index, end - index) : string.Empty;
     }
 
     private static bool IsCompletionChar(char ch) => char.IsLetterOrDigit(ch) || ch == '_';

@@ -34,7 +34,7 @@ public partial class EditorView : UserControl
     private static readonly TimeSpan DotCompletionDelay      = TimeSpan.FromMilliseconds(50);
     private static readonly TimeSpan HoverDebounceDelay      = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan LspHoverDebounceDelay   = TimeSpan.FromMilliseconds(350);
-    private static readonly TimeSpan CompletionRefreshDelay  = TimeSpan.FromMilliseconds(30);
+    private static readonly TimeSpan CompletionRefreshDelay  = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan PopupCloseDelay         = TimeSpan.FromMilliseconds(350);
     private static readonly TimeSpan ViewStateSaveDelay      = TimeSpan.FromMilliseconds(250);
 
@@ -89,6 +89,8 @@ public partial class EditorView : UserControl
     private bool   _mouseInPopup;
 
     // ── Comment cache (IsInsideComment hot-path optimization) ───────────────
+    private const int BlockCommentCheckpointInterval = 50;
+    private readonly Dictionary<int, bool> _blockCommentCheckpoints = new();
     private bool _cachedBlockCommentState;
     private int  _blockCommentCacheLineNumber = -1;
 
@@ -110,12 +112,15 @@ public partial class EditorView : UserControl
 
     // ── Completion state ────────────────────────────────────────────────────
     private List<LspCompletionData>? _activeCompletions;
+    private readonly List<LspCompletionData> _filteredCompletions = new();
     private readonly object          _completionGate = new();
     private Timer?                   _completionTimer;
     private DispatcherTimer?         _completionRefreshTimer;
     private CompletionRequest?       _pendingCompletionRequest;
     private int                      _completionRequestVersion;
     private int                      _completionTriggerOffset = -1;
+    private int                      _completionPostPending;
+    private int                      _completionPostImmediate;
     private bool                     _completionRequestInFlight;
     private bool                     _completionRefreshPending;
 

@@ -182,6 +182,7 @@ public partial class EditorView
         _pendingSemanticTokensVersion = 0;
         _semanticColorizer.Clear();
         _diagnosticRenderer.Clear();
+        ResetBlockCommentCache();
         InvalidateHoverRequests();
         InvalidateLspHoverRequests();
         InvalidateCodeActionRequests(closePopup: true);
