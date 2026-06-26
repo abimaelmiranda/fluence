@@ -1,8 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Fluence.Core.Collections;
 
 namespace Fluence.Modules.Workbench.FileExplorer.ViewModels;
 
@@ -36,13 +38,14 @@ public sealed partial class FileTreeItem : ObservableObject
         IsDirectory = isDirectory;
         _createFileItem = createFileItem;
         _createDirectoryItem = createDirectoryItem;
-        Children = [];
+        Children = new();
     }
 
     public string Name { get; }
     public string Path { get; }
     public bool IsDirectory { get; }
-    public ObservableCollection<FileTreeItem> Children { get; }
+    public FileTreeItem? Parent { get; private set; }
+    public BulkObservableCollection<FileTreeItem> Children { get; }
     public ICommand? OpenCommand { get; set; }
     public ICommand? NewFileCommand { get; set; }
     public ICommand? NewFolderCommand { get; set; }
@@ -97,18 +100,15 @@ public sealed partial class FileTreeItem : ObservableObject
 
     private void LoadChildren()
     {
-        Children.Clear();
-
         try
         {
-            foreach (var dir in Directory.GetDirectories(Path))
-                Children.Add(_createDirectoryItem(dir));
-
-            foreach (var file in Directory.GetFiles(Path))
-                Children.Add(_createFileItem(file));
+            var dirs = Directory.GetDirectories(Path).Select(_createDirectoryItem);
+            var files = Directory.GetFiles(Path).Select(_createFileItem);
+            Children.ReplaceAll(dirs.Concat(files));
+            foreach (var child in Children) child.Parent = this;
         }
-        catch (UnauthorizedAccessException) { }
-        catch (IOException) { }
+        catch (UnauthorizedAccessException) { Children.ReplaceAll([]); }
+        catch (IOException) { Children.ReplaceAll([]); }
     }
 
     public void ReloadChildren()

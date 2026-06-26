@@ -970,12 +970,12 @@ public sealed partial class SolutionViewModel : ViewModelBase
     private static SolutionTreeNode BuildFilesystemFolderNode(string folderPath, string projectPath)
     {
         var children = new List<SolutionTreeNode>();
-        foreach (var childDirectory in GetVisibleDirectories(folderPath).OrderBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase))
+        foreach (var childDirectory in GetVisibleDirectories(folderPath))
         {
             children.Add(BuildFilesystemFolderNode(childDirectory, projectPath));
         }
 
-        foreach (var filePath in GetVisibleFiles(folderPath).OrderBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase))
+        foreach (var filePath in GetVisibleFiles(folderPath))
         {
             children.Add(new SolutionTreeNode(
                 SolutionTreeNodeKind.File,
@@ -1004,10 +1004,12 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
         try
         {
-            return Directory.EnumerateDirectories(folderPath, "*", SearchOption.TopDirectoryOnly)
+            var dirs = Directory.EnumerateDirectories(folderPath, "*", SearchOption.TopDirectoryOnly)
                 .Where(IsVisibleDirectory)
                 .Select(Path.GetFullPath)
                 .ToArray();
+            Array.Sort(dirs, (a, b) => StringComparer.OrdinalIgnoreCase.Compare(Path.GetFileName(a), Path.GetFileName(b)));
+            return dirs;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -1022,10 +1024,12 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
         try
         {
-            return Directory.EnumerateFiles(folderPath, "*", SearchOption.TopDirectoryOnly)
+            var files = Directory.EnumerateFiles(folderPath, "*", SearchOption.TopDirectoryOnly)
                 .Where(IsVisibleFile)
                 .Select(Path.GetFullPath)
                 .ToArray();
+            Array.Sort(files, (a, b) => StringComparer.OrdinalIgnoreCase.Compare(Path.GetFileName(a), Path.GetFileName(b)));
+            return files;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -1045,9 +1049,15 @@ public sealed partial class SolutionViewModel : ViewModelBase
 
     private static bool IsHiddenPath(string path)
     {
-        return path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                   .Any(segment => HiddenPathSegments.Contains(segment) ||
-                                   (segment.Length > 1 && segment.StartsWith(".", StringComparison.Ordinal)));
+        var span = path.AsSpan();
+        foreach (var range in span.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]))
+        {
+            var segment = span[range];
+            if (segment.Length == 0) continue;
+            if (segment.Length > 1 && segment[0] == '.') return true;
+            if (_hiddenPathLookup.Contains(segment)) return true;
+        }
+        return false;
     }
 
     private static bool HasHiddenAttributes(string path)
@@ -1074,4 +1084,7 @@ public sealed partial class SolutionViewModel : ViewModelBase
         "release",
         "testresults",
     };
+
+    private static readonly HashSet<string>.AlternateLookup<ReadOnlySpan<char>> _hiddenPathLookup
+        = HiddenPathSegments.GetAlternateLookup<ReadOnlySpan<char>>();
 }
