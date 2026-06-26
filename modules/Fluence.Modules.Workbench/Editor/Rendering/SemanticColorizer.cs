@@ -32,24 +32,26 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
             ["variable"] = "#9CDCFE",
         };
 
-    private Dictionary<int, List<SemanticToken>> _tokensByLine = [];
+    private readonly Dictionary<int, List<SemanticToken>> _tokensByLine = [];
+    private readonly Stack<List<SemanticToken>> _lineTokenListPool = new();
+    private readonly Dictionary<IBrush, Action<VisualLineElement>> _brushSetters = [];
     private IReadOnlyDictionary<string, IBrush> _brushes = CreateBrushes(DefaultColors);
 
     public void Update(SemanticToken[] tokens)
     {
-        var map = new Dictionary<int, List<SemanticToken>>();
+        ClearTokens();
+        _tokensByLine.EnsureCapacity(Math.Min(tokens.Length, 1024));
         foreach (var token in tokens)
         {
-            if (!map.TryGetValue(token.Line, out var list))
-                map[token.Line] = list = [];
+            if (!_tokensByLine.TryGetValue(token.Line, out var list))
+                _tokensByLine[token.Line] = list = RentTokenList();
             list.Add(token);
         }
-        _tokensByLine = map;
     }
 
     public void Clear()
     {
-        _tokensByLine = [];
+        ClearTokens();
     }
 
     public IBrush? GetBrush(string tokenType) =>
@@ -66,6 +68,7 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
         }
 
         _brushes = CreateBrushes(colors);
+        _brushSetters.Clear();
     }
 
     protected override void ColorizeLine(DocumentLine line)
@@ -87,8 +90,39 @@ internal sealed class SemanticColorizer : DocumentColorizingTransformer
             var end   = Math.Min(start + token.Length, lineStart + lineLength);
             if (end <= start) continue;
 
-            ChangeLinePart(start, end, e => e.TextRunProperties.SetForegroundBrush(brush));
+            ChangeLinePart(start, end, GetBrushSetter(brush));
         }
+    }
+
+    private List<SemanticToken> RentTokenList()
+    {
+        if (_lineTokenListPool.Count == 0)
+            return [];
+
+        var list = _lineTokenListPool.Pop();
+        list.Clear();
+        return list;
+    }
+
+    private void ClearTokens()
+    {
+        foreach (var list in _tokensByLine.Values)
+        {
+            list.Clear();
+            _lineTokenListPool.Push(list);
+        }
+
+        _tokensByLine.Clear();
+    }
+
+    private Action<VisualLineElement> GetBrushSetter(IBrush brush)
+    {
+        if (_brushSetters.TryGetValue(brush, out var setter))
+            return setter;
+
+        setter = element => element.TextRunProperties.SetForegroundBrush(brush);
+        _brushSetters[brush] = setter;
+        return setter;
     }
 
     private IBrush? TokenTypeToBrush(string tokenType, string[] modifiers)

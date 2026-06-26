@@ -79,6 +79,7 @@ internal sealed class DiagnosticRenderer : IBackgroundRenderer
 
         // Reuse dictionary to avoid per-frame allocation
         _visualLineMap.Clear();
+        _visualLineMap.EnsureCapacity(textView.VisualLines.Count);
         foreach (var vl in textView.VisualLines)
             _visualLineMap[vl.FirstDocumentLine.LineNumber] = vl;
 
