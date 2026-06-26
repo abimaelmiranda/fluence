@@ -18,6 +18,7 @@ using Fluence.Core.Abstractions.Notifications;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Services.File;
 using Fluence.Core.Models.Output;
+using Fluence.Core.Collections;
 using Fluence.Core.ViewModels;
 using Fluence.Core.Abstractions.Workspace;
 using Fluence.Core.Models.Workspace;
@@ -99,11 +100,11 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
 
     public ObservableCollection<string> AvailableVersions { get; } = [];
 
-    public ObservableCollection<NuGetProjectSelection> TargetProjects { get; } = [];
+    public BulkObservableCollection<NuGetProjectSelection> TargetProjects { get; } = new();
 
-    public ObservableCollection<NuGetInstalledPackage> InstalledPackages { get; } = [];
+    public BulkObservableCollection<NuGetInstalledPackage> InstalledPackages { get; } = new();
 
-    public ObservableCollection<NuGetPackageUpdate> UpdateCandidates { get; } = [];
+    public BulkObservableCollection<NuGetPackageUpdate> UpdateCandidates { get; } = new();
 
     public bool HasSelectedBrowsePackage => SelectedBrowsePackage is not null;
 
@@ -288,32 +289,26 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
 
     private async Task LoadProjectsAsync(CancellationToken cancellationToken)
     {
-        TargetProjects.Clear();
         if (string.IsNullOrWhiteSpace(_solutionPath))
         {
+            TargetProjects.ReplaceAll([]);
             return;
         }
 
         var projects = await _projectService.GetProjectsAsync(_solutionPath, cancellationToken);
-        foreach (var project in projects)
-        {
-            TargetProjects.Add(new NuGetProjectSelection(project));
-        }
+        TargetProjects.ReplaceAll(projects.Select(p => new NuGetProjectSelection(p)));
     }
 
     private async Task LoadInstalledPackagesAsync(CancellationToken cancellationToken)
     {
-        InstalledPackages.Clear();
         if (string.IsNullOrWhiteSpace(_solutionPath))
         {
+            InstalledPackages.ReplaceAll([]);
             return;
         }
 
         var packages = await _projectService.GetInstalledPackagesAsync(_solutionPath, cancellationToken);
-        foreach (var package in packages)
-        {
-            InstalledPackages.Add(package);
-        }
+        InstalledPackages.ReplaceAll(packages);
     }
 
     private async Task RefreshUpdatesAsync()
@@ -330,7 +325,6 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
 
     private async Task LoadUpdatesAsync(CancellationToken cancellationToken)
     {
-        UpdateCandidates.Clear();
         var updates = new List<NuGetPackageUpdate>();
 
         foreach (var group in InstalledPackages.GroupBy(package => package.Id, StringComparer.OrdinalIgnoreCase))
@@ -352,10 +346,7 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
             }
         }
 
-        foreach (var update in updates.OrderBy(update => update.Id, StringComparer.OrdinalIgnoreCase))
-        {
-            UpdateCandidates.Add(update);
-        }
+        UpdateCandidates.ReplaceAll(updates.OrderBy(u => u.Id, StringComparer.OrdinalIgnoreCase));
     }
 
     private async Task LoadVersionsForSelectedPackageAsync()
@@ -433,13 +424,20 @@ public sealed partial class NuGetExplorerViewModel : ViewModelBase
     private void UpdateAlreadyInstalledFlags()
     {
         var packageId = SelectedBrowsePackage?.Id;
-        foreach (var project in TargetProjects)
+        if (packageId is null)
         {
-            project.IsAlreadyInstalled = packageId is not null &&
-                InstalledPackages.Any(p =>
-                    string.Equals(p.Id, packageId, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(p.ProjectPath, project.ProjectPath, StringComparison.OrdinalIgnoreCase));
+            foreach (var p in TargetProjects) p.IsAlreadyInstalled = false;
+            return;
         }
+
+        var installedPaths = new HashSet<string>(
+            InstalledPackages
+                .Where(p => string.Equals(p.Id, packageId, StringComparison.OrdinalIgnoreCase))
+                .Select(p => p.ProjectPath),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var project in TargetProjects)
+            project.IsAlreadyInstalled = installedPaths.Contains(project.ProjectPath);
     }
 
     private void NotifyBlockedIfNeeded()
