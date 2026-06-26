@@ -124,8 +124,9 @@ public sealed class ToolchainDebugService(
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             await _adapter.StartAsync(session.LaunchRequest, cancellationToken).ConfigureAwait(false);
-            await SyncBreakpointsAsync(debugState.Snapshot.Breakpoints, cancellationToken).ConfigureAwait(false);
-            await _adapter.SetExceptionBreakpointsAsync(session.ExceptionBreakMode, cancellationToken).ConfigureAwait(false);
+            await Task.WhenAll(
+                SyncBreakpointsAsync(debugState.Snapshot.Breakpoints, cancellationToken),
+                _adapter.SetExceptionBreakpointsAsync(session.ExceptionBreakMode, cancellationToken)).ConfigureAwait(false);
             await _adapter.CompleteConfigurationAsync(cancellationToken).ConfigureAwait(false);
             _adapterStarted = true;
             debugState.Continue();

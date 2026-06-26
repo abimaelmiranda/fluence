@@ -114,14 +114,26 @@ public sealed class DapClient : IDebugAdapterClient
         }, cancellationToken).ConfigureAwait(false);
         _exceptionBreakpointFilters = ParseExceptionBreakpointFilters(initializeResponse);
 
+        var initializedWait = Stopwatch.StartNew();
         await SendRequestAsync("launch", request.LaunchArguments, cancellationToken).ConfigureAwait(false);
 
         // Wait for the adapter's "initialized" event before returning.
         // Sending configuration before this event arrives violates the DAP contract and
         // can cause the adapter to terminate the session prematurely.
         using var initTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        initTimeout.CancelAfter(TimeSpan.FromSeconds(10));
-        await _initializedTcs.Task.WaitAsync(initTimeout.Token).ConfigureAwait(false);
+        initTimeout.CancelAfter(TimeSpan.FromSeconds(6));
+        try
+        {
+            await _initializedTcs.Task.WaitAsync(initTimeout.Token).ConfigureAwait(false);
+            await LogAsync($"[{_adapterId}] initialized event after {initializedWait.ElapsedMilliseconds}ms", CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            await LogAsync($"[{_adapterId}] initialized event timeout after {initializedWait.ElapsedMilliseconds}ms", CancellationToken.None)
+                .ConfigureAwait(false);
+            throw;
+        }
     }
 
     public async Task CompleteConfigurationAsync(CancellationToken cancellationToken = default)

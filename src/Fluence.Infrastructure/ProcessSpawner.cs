@@ -130,8 +130,7 @@ public sealed class ProcessSpawner(IFluenceStorageService storage) : IProcessSpa
                     .Select(process => new TrackedProcessSnapshot(
                         process.Id,
                         process.Owner,
-                        process.Process.StartInfo.FileName,
-                        ReadStartTimeUtc(process.Process)))
+                        process.Process.StartInfo.FileName))
                     .ToArray());
 
             var path = storage.GetUserPath(SessionFileName);
@@ -230,12 +229,7 @@ public sealed class ProcessSpawner(IFluenceStorageService storage) : IProcessSpa
 
     private static bool IsPersistedProcessMatch(Process process, TrackedProcessSnapshot snapshot)
     {
-        var currentStartTime = ReadStartTimeUtc(process);
-        if (currentStartTime is null || snapshot.StartTimeUtc is null)
-            return false;
-
-        return currentStartTime.Value == snapshot.StartTimeUtc.Value &&
-               IsExecutableMatch(process, snapshot.Executable);
+        return IsExecutableMatch(process, snapshot.Executable);
     }
 
     private static bool IsExecutableMatch(Process process, string executable)
@@ -265,17 +259,6 @@ public sealed class ProcessSpawner(IFluenceStorageService storage) : IProcessSpa
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
     }
 
-    private static DateTimeOffset? ReadStartTimeUtc(Process process)
-    {
-        try
-        {
-            return process.StartTime.ToUniversalTime();
-        }
-        catch
-        {
-            return null;
-        }
-    }
 }
 
 [JsonSerializable(typeof(ProcessSessionSnapshot))]
@@ -289,5 +272,4 @@ internal sealed record ProcessSessionSnapshot(
 internal sealed record TrackedProcessSnapshot(
     int Pid,
     string Owner,
-    string Executable,
-    DateTimeOffset? StartTimeUtc);
+    string Executable);

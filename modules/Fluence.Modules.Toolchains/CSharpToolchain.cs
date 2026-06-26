@@ -199,7 +199,7 @@ public sealed class CSharpToolchain(
         if (!buildResult.Succeeded || buildProblems.Any(p => p.Severity == ProblemSeverity.Error))
             return null;
 
-        var programPath = ResolveProgramPath(target.ProjectPath, workspaceRoot);
+        var programPath = ResolveProgramPath(target.ProjectPath);
         if (programPath is null)
             return null;
 
@@ -330,7 +330,7 @@ public sealed class CSharpToolchain(
         return obj;
     }
 
-    private static string? ResolveProgramPath(string projectPath, string workspaceRoot)
+    private static string? ResolveProgramPath(string projectPath)
     {
         var projectDirectory = Path.GetDirectoryName(projectPath);
         if (string.IsNullOrWhiteSpace(projectDirectory))
@@ -348,30 +348,70 @@ public sealed class CSharpToolchain(
         if (File.Exists(candidate))
             return candidate;
 
-        return FindBuildOutput(projectDirectory, workspaceRoot, assemblyName, targetFramework);
+        candidate = ResolveBaseOutputPathCandidate(projectDirectory, assemblyName, targetFramework);
+        if (candidate is not null)
+            return candidate;
+
+        return FindBuildOutput(projectDirectory, assemblyName, targetFramework);
     }
+
+    private static string? ResolveBaseOutputPathCandidate(
+        string projectDirectory,
+        string assemblyName,
+        string targetFramework)
+    {
+        var propsPath = FindDirectoryBuildProps(projectDirectory);
+        if (propsPath is null)
+            return null;
+
+        var propsDirectory = Path.GetDirectoryName(propsPath);
+        if (string.IsNullOrWhiteSpace(propsDirectory))
+            return null;
+
+        var baseOutputPath = FindProperty(XDocument.Load(propsPath), "BaseOutputPath");
+        if (string.IsNullOrWhiteSpace(baseOutputPath))
+            return null;
+
+        baseOutputPath = baseOutputPath
+            .Replace("$(MSBuildThisFileDirectory)", EnsureTrailingSeparator(propsDirectory), StringComparison.OrdinalIgnoreCase)
+            .Replace("$(MSBuildProjectDirectory)", projectDirectory, StringComparison.OrdinalIgnoreCase);
+        if (baseOutputPath.Contains("$(", StringComparison.Ordinal))
+            return null;
+
+        var fullBaseOutputPath = Path.IsPathRooted(baseOutputPath)
+            ? baseOutputPath
+            : Path.GetFullPath(Path.Combine(projectDirectory, baseOutputPath));
+
+        var candidate = Path.Combine(fullBaseOutputPath, "Debug", targetFramework, assemblyName + ".dll");
+        return File.Exists(candidate) ? candidate : null;
+    }
+
+    private static string? FindDirectoryBuildProps(string directory)
+    {
+        for (var current = new DirectoryInfo(directory); current is not null; current = current.Parent)
+        {
+            var candidate = Path.Combine(current.FullName, "Directory.Build.props");
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        return null;
+    }
+
+    private static string EnsureTrailingSeparator(string path) =>
+        path.EndsWith(Path.DirectorySeparatorChar) ? path : path + Path.DirectorySeparatorChar;
 
     private static string? FindBuildOutput(
         string projectDirectory,
-        string workspaceRoot,
         string assemblyName,
         string targetFramework)
     {
         var fileName = assemblyName + ".dll";
-        return EnumerateSearchRoots(projectDirectory, workspaceRoot)
-            .Where(Directory.Exists)
-            .SelectMany(root => SafeEnumerateFiles(root, fileName))
+        return SafeEnumerateFiles(projectDirectory, fileName)
             .Where(path => IsDebugBuildOutput(path, targetFramework))
             .OrderByDescending(HasRuntimeConfig)
             .ThenByDescending(File.GetLastWriteTimeUtc)
             .FirstOrDefault();
-    }
-
-    private static IEnumerable<string> EnumerateSearchRoots(string projectDirectory, string workspaceRoot)
-    {
-        yield return projectDirectory;
-        if (!string.Equals(projectDirectory, workspaceRoot, StringComparison.OrdinalIgnoreCase))
-            yield return workspaceRoot;
     }
 
     private static IEnumerable<string> SafeEnumerateFiles(string root, string fileName)
