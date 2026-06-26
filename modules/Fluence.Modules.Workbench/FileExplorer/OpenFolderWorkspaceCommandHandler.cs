@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fluence.Core.Abstractions.Commands;
@@ -23,7 +24,7 @@ public sealed class OpenFolderWorkspaceCommandHandler(
         var snapshot = await snapshots.LoadAsync(command.Path, cancellationToken);
         if (snapshot is null) return;
 
-        foreach (var tabPath in snapshot.OpenTabs)
+        foreach (var tabPath in snapshot.OpenTabs.Reverse())
         {
             if (!File.Exists(tabPath)) continue;
             try
