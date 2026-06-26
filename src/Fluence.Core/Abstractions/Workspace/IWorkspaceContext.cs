@@ -10,6 +10,8 @@ public interface IWorkspaceContext
 
     event EventHandler? Changed;
 
+    event EventHandler? DocumentContentChanged;
+
     void SetMode(WorkspaceMode mode);
 
     void OpenFile(string path, string content);

@@ -18,12 +18,22 @@ public sealed class WorkspaceContext : IWorkspaceContext
 
     public event EventHandler? Changed;
 
+    public event EventHandler? DocumentContentChanged;
+
     private void FireChanged()
     {
         if (_dispatcher is not null)
             _dispatcher.Post(() => Changed?.Invoke(this, EventArgs.Empty));
         else
             Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void FireDocumentContentChanged()
+    {
+        if (_dispatcher is not null)
+            _dispatcher.Post(() => DocumentContentChanged?.Invoke(this, EventArgs.Empty));
+        else
+            DocumentContentChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void SetMode(WorkspaceMode mode)
@@ -77,7 +87,7 @@ public sealed class WorkspaceContext : IWorkspaceContext
     public void UpdateActiveDocumentContent(string content)
     {
         Current.UpdateActiveDocumentContent(content);
-        FireChanged();
+        FireDocumentContentChanged();
     }
 
     public void ReloadDocument(string path, string content)
