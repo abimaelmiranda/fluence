@@ -7,6 +7,7 @@ using Fluence.Core.Abstractions.Modules;
 using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Abstractions.Settings;
 using Fluence.Core.Abstractions.Workspace;
+using Fluence.Core.Collections;
 using Fluence.Core.Models.Output;
 using Fluence.Core.Services;
 using Fluence.Core.ViewModels;
@@ -36,10 +37,10 @@ public sealed partial class SourceControlViewModel : ViewModelBase, IDisposable
     private string? _repoRoot;
     private GitBranch? _pendingCheckoutBranchData;
 
-    public ObservableCollection<GitFileChangeViewModel> StagedChanges { get; } = new();
-    public ObservableCollection<GitFileChangeViewModel> UnstagedChanges { get; } = new();
-    public ObservableCollection<BranchItemViewModel> Branches { get; } = new();
-    public ObservableCollection<StashItemViewModel> Stashes { get; } = new();
+    public BulkObservableCollection<GitFileChangeViewModel> StagedChanges { get; } = new();
+    public BulkObservableCollection<GitFileChangeViewModel> UnstagedChanges { get; } = new();
+    public BulkObservableCollection<BranchItemViewModel> Branches { get; } = new();
+    public BulkObservableCollection<StashItemViewModel> Stashes { get; } = new();
 
     public bool HasStashes => Stashes.Count > 0;
     public bool HasChanges => StagedChanges.Count > 0 || UnstagedChanges.Count > 0;

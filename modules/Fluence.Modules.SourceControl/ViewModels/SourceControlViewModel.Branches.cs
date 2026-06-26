@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using Fluence.Core.Abstractions.Modules;
@@ -111,8 +112,6 @@ public sealed partial class SourceControlViewModel
 
     private void ApplyBranches(System.Collections.Generic.IReadOnlyList<GitBranch> branches)
     {
-        Branches.Clear();
-        foreach (var branch in branches)
-            Branches.Add(new BranchItemViewModel(branch, CheckoutBranch, DeleteBranch));
+        Branches.ReplaceAll(branches.Select(b => new BranchItemViewModel(b, CheckoutBranch, DeleteBranch)));
     }
 }

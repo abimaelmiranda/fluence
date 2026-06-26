@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -100,13 +101,8 @@ public sealed partial class SourceControlViewModel
     {
         CurrentBranch = status.Branch;
 
-        StagedChanges.Clear();
-        foreach (var change in status.StagedChanges)
-            StagedChanges.Add(new GitFileChangeViewModel(change, StageFileAsync, UnstageFileAsync, OpenDiffAsync, OpenFileAsync, RevertFileAsync));
-
-        UnstagedChanges.Clear();
-        foreach (var change in status.UnstagedChanges)
-            UnstagedChanges.Add(new GitFileChangeViewModel(change, StageFileAsync, UnstageFileAsync, OpenDiffAsync, OpenFileAsync, RevertFileAsync));
+        StagedChanges.ReplaceAll(status.StagedChanges.Select(c => new GitFileChangeViewModel(c, StageFileAsync, UnstageFileAsync, OpenDiffAsync, OpenFileAsync, RevertFileAsync)));
+        UnstagedChanges.ReplaceAll(status.UnstagedChanges.Select(c => new GitFileChangeViewModel(c, StageFileAsync, UnstageFileAsync, OpenDiffAsync, OpenFileAsync, RevertFileAsync)));
 
         NotifyStatusPropertiesChanged();
         CommitCommand.NotifyCanExecuteChanged();
@@ -157,6 +153,7 @@ public sealed partial class SourceControlViewModel
     {
         var previousDebounce = _gitIndexDebounce;
         previousDebounce?.Cancel();
+        previousDebounce?.Dispose();
         var debounce = new CancellationTokenSource();
         _gitIndexDebounce = debounce;
         var token = debounce.Token;

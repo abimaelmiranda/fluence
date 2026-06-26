@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Fluence.Modules.SourceControl.Models;
 
@@ -7,9 +8,7 @@ public sealed partial class SourceControlViewModel
 {
     private void ApplyStashes(System.Collections.Generic.IReadOnlyList<GitStash> stashes)
     {
-        Stashes.Clear();
-        foreach (var stash in stashes)
-            Stashes.Add(new StashItemViewModel(stash, PopStash, DropStash));
+        Stashes.ReplaceAll(stashes.Select(s => new StashItemViewModel(s, PopStash, DropStash)));
 
         OnPropertyChanged(nameof(HasStashes));
     }
