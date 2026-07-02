@@ -8,6 +8,7 @@ using Fluence.Core.Abstractions.Output;
 using Fluence.Core.Models.Output;
 using Fluence.Core.Models.Workbench;
 using Fluence.Core.ViewModels;
+using Material.Icons;
 
 namespace Fluence.Desktop.ViewModels;
 
@@ -31,11 +32,11 @@ public sealed partial class BottomBarViewModel : ViewModelBase
 
         Tabs =
         [
-            new BottomBarTabViewModel(BottomBarTabIds.Output, "Output", SelectTabCommand),
-            new BottomBarTabViewModel(BottomBarTabIds.Debug, "Debug", SelectTabCommand),
-            new BottomBarTabViewModel(BottomBarTabIds.Terminal, "Terminal", SelectTabCommand),
-            new BottomBarTabViewModel(BottomBarTabIds.Run, "Run", SelectTabCommand),
-            new BottomBarTabViewModel(BottomBarTabIds.Problems, "Problems", SelectTabCommand),
+            new BottomBarTabViewModel(BottomBarTabIds.Output, "Output", MaterialIconKind.Output, SelectTabCommand),
+            new BottomBarTabViewModel(BottomBarTabIds.Debug, "Debug", MaterialIconKind.Bug, SelectTabCommand),
+            new BottomBarTabViewModel(BottomBarTabIds.Terminal, "Terminal", MaterialIconKind.Terminal, SelectTabCommand),
+            new BottomBarTabViewModel(BottomBarTabIds.Run, "Run", MaterialIconKind.Play, SelectTabCommand),
+            new BottomBarTabViewModel(BottomBarTabIds.Problems, "Problems", MaterialIconKind.AlertCircleOutline, SelectTabCommand),
         ];
 
         RefreshActiveTabs();

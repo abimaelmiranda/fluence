@@ -4,7 +4,6 @@
         xmlns:views="using:Fluence.Desktop.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:media="using:Avalonia.Media"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:loc="using:Fluence.Core.Services.Localization"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="760"
@@ -329,6 +328,7 @@
         </Grid>
 
         <Border Grid.Row="1"
+                Margin="{Binding BottomBarMargin}"
                 Background="{StaticResource FluenceBrushBottomBarBackground}"
                 BorderBrush="{StaticResource FluenceBrushBorder}"
                 BorderThickness="0,1,0,0">
@@ -361,7 +361,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:BottomBarTabViewModel">
-                                    <Border MinWidth="96"
+                                    <Border Width="44"
                                             Height="26"
                                             Background="Transparent"
                                             BorderBrush="{StaticResource FluenceBrushBottomBarDivider}"
@@ -369,28 +369,21 @@
                                             CornerRadius="0"
                                             Cursor="Hand"
                                             PointerReleased="OnBottomBarTabPointerReleased"
+                                            ToolTip.Tip="{Binding Title}"
                                             Classes="bottomBarTab"
                                             Classes.active="{Binding IsActive}">
-                                        <TextBlock Text="{Binding Title}"
-                                                   Margin="12,0"
-                                                   FontFamily="{StaticResource FluenceFontFamily}"
-                                                   FontSize="{StaticResource FluenceFontSizeSmall}"
-                                                   FontWeight="SemiBold"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource FluenceBrushTextSecondary}"
-                                                   VerticalAlignment="Center"
-                                                   Classes.active="{Binding IsActive}">
-                                                <TextBlock.Styles>
-                                                    <Style Selector="TextBlock.active">
-                                                        <Setter Property="Foreground" Value="{StaticResource FluenceBrushTextPrimary}"/>
-                                                        <Setter Property="TextDecorations">
-                                                            <media:TextDecorationCollection>
-                                                                <media:TextDecoration Location="Underline"/>
-                                                            </media:TextDecorationCollection>
-                                                        </Setter>
-                                                    </Style>
-                                                </TextBlock.Styles>
-                                        </TextBlock>
+                                        <Grid RowDefinitions="*,2">
+                                            <materialIcons:MaterialIcon Grid.Row="0"
+                                                                        Width="18"
+                                                                        Height="18"
+                                                                        Kind="{Binding IconKind}"
+                                                                        Foreground="{StaticResource FluenceBrushTextSecondary}"
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"/>
+                                            <Rectangle Grid.Row="1"
+                                                       Fill="{StaticResource FluenceBrushAccent}"
+                                                       IsVisible="{Binding IsActive}"/>
+                                        </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

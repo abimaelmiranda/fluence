@@ -167,6 +167,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public bool IsSidebarVisible => _regions.SidebarContent is not null && _isSidebarExpanded;
 
+    public Thickness BottomBarMargin => new(0, 0, (IsWorkspaceVisible ? 48 : 0) + (IsSidebarVisible ? SidebarWidth : 0), 0);
+
     public bool IsFolderMode => WorkspaceMode == WorkspaceMode.Folder;
 
     public bool IsSolutionMode => WorkspaceMode == WorkspaceMode.Solution;
@@ -265,6 +267,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsWelcomeVisible));
         OnPropertyChanged(nameof(IsWorkspaceVisible));
         OnPropertyChanged(nameof(IsSidebarVisible));
+        OnPropertyChanged(nameof(BottomBarMargin));
         OnPropertyChanged(nameof(IsFolderMode));
         OnPropertyChanged(nameof(IsSolutionMode));
         OnPropertyChanged(nameof(IsDebugging));
@@ -324,6 +327,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             _isSidebarExpanded = true;
             OnPropertyChanged(nameof(IsSidebarVisible));
+            OnPropertyChanged(nameof(BottomBarMargin));
         }
     }
 
@@ -337,6 +341,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(SidebarTitle));
         OnPropertyChanged(nameof(BottomBarTitle));
         OnPropertyChanged(nameof(IsSidebarVisible));
+        OnPropertyChanged(nameof(BottomBarMargin));
     }
 
     private void OnSemanticTokensRefreshStarted(SemanticTokensRefreshStartedEvent e)
@@ -414,6 +419,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             TerminalHeight = Math.Max(MinimumTerminalHeight, settings.TerminalHeight);
         });
     }
+
+    partial void OnSidebarWidthChanged(double value) => OnPropertyChanged(nameof(BottomBarMargin));
 
     private void RegisterCommands()
     {
@@ -541,6 +548,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 _isSidebarExpanded = !_isSidebarExpanded;
                 OnPropertyChanged(nameof(IsSidebarVisible));
+                OnPropertyChanged(nameof(BottomBarMargin));
                 return Task.CompletedTask;
             }));
         _commands.Register(new IdeCommandDefinition(
